@@ -5,16 +5,17 @@ from sympy.functions.combinatorial.numbers import stirling
 from sympy.functions.combinatorial.factorials import ff
 
 class Tree:
-    def __init__(self, left_subtree=None, right_subtree=None, n_real_valued_features=1):
+    def __init__(self, left_subtree=None, right_subtree=None):
         """
         Args:
             left_subtree ():
             right_subtree ():
         """
+        if left_subtree is None and right_subtree is not None or left_subtree is not None and right_subtree is None:
+            raise ValueError('Both subtrees must be either None or other valid trees.')
+
         self.left_subtree = left_subtree
         self.right_subtree = right_subtree
-        self.n_rv_feat = n_real_valued_features
-        self.partitioning_value = {0:0, 1:0} # pi^2_T(0) = pi^2_T(1) = 0
 
     @property
     def n_leaves(self):
@@ -44,19 +45,12 @@ class Tree:
         else:
             return False
 
-    def partitioning_function_upper_bound(self, c, m):
-        if c >
+    def __hash__(self):
+        # The hash is the sum of the depths d_i of each leaf i.
+        return self._hash_func(0)
 
+    def _hash_func(self, depth):
         if self.is_leaf():
-            return 1
-
-        if m not in self.partitioning_value:
-            if self.is_stump():
-                value = 1/2 * sum(min(2*self.n_rv_feat, binom(m,k)) for k in range(1,m))
-            else:
-                Qc = lambda k:
-                delta_lr = (self.left_subtree == self.right_subtree)
-
-            self.partitioning_value[m] = value
-
-        return self.partitioning_value[m]
+            return depth
+        else:
+            return self.left_subtree._hash_func(depth+1) + self.right_subtree._hash_func(depth+1)
