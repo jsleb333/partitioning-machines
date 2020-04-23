@@ -23,7 +23,7 @@ class TestTree:
         tree2 = Tree(leaf, Tree(leaf, leaf))
         assert tree1 == tree2
 
-    def test__hash_func(self):
+    def test_hash(self):
         leaf = Tree()
         stump = Tree(leaf, leaf)
         tree1 = Tree(stump, leaf)

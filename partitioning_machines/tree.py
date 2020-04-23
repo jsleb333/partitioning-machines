@@ -17,19 +17,28 @@ class Tree:
         self.left_subtree = left_subtree
         self.right_subtree = right_subtree
         self._n_leaves = None
+        self._hash_value = None
 
     @property
     def n_leaves(self):
         if self._n_leaves is None:
-            self.count_n_leaves()
+            self.update_tree()
         return self._n_leaves
 
-    def count_n_leaves(self):
+    def update_tree(self):
         if self.is_leaf():
             self._n_leaves = 1
+            self._hash_value = 0
         else:
-            self._n_leaves = self.left_subtree.count_n_leaves() + self.right_subtree.count_n_leaves()
+            self._n_leaves = self.left_subtree.update_tree() + self.right_subtree.update_tree()
+            self._hash_value = self.n_leaves + self.left_subtree.hash_value + self.right_subtree.hash_value
         return self._n_leaves
+
+    @property
+    def hash_value(self):
+        if self._hash_value is None:
+            self.update_tree()
+        return self._hash_value
 
     def is_leaf(self):
         return self.left_subtree is None and self.right_subtree is None
@@ -54,10 +63,4 @@ class Tree:
 
     def __hash__(self):
         # The hash is the sum of the depths d_i of each leaf i.
-        return self._hash_func(0)
-
-    def _hash_func(self, depth):
-        if self.is_leaf():
-            return depth
-        else:
-            return self.left_subtree._hash_func(depth+1) + self.right_subtree._hash_func(depth+1)
+        return self.hash_value
