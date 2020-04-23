@@ -1,5 +1,6 @@
 from partitioning_machines import vcdim_upper_bound, vcdim_lower_bound, Tree
 
+
 def test_vcdim_upper_bound():
     leaf = Tree()
     stump = Tree(leaf, leaf)

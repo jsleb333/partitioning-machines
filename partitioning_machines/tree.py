@@ -2,7 +2,7 @@
 import numpy as np
 from scipy.special import binom
 from sympy.functions.combinatorial.numbers import stirling
-from sympy.functions.combinatorial.factorials import ff
+
 
 class Tree:
     def __init__(self, left_subtree=None, right_subtree=None):
