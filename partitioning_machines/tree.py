@@ -16,13 +16,20 @@ class Tree:
 
         self.left_subtree = left_subtree
         self.right_subtree = right_subtree
+        self._n_leaves = None
 
     @property
     def n_leaves(self):
+        if self._n_leaves is None:
+            self.count_n_leaves()
+        return self._n_leaves
+
+    def count_n_leaves(self):
         if self.is_leaf():
-            return 1
+            self._n_leaves = 1
         else:
-            return self.left_subtree.n_leaves + self.right_subtree.n_leaves
+            self._n_leaves = self.left_subtree.count_n_leaves() + self.right_subtree.count_n_leaves()
+        return self._n_leaves
 
     def is_leaf(self):
         return self.left_subtree is None and self.right_subtree is None
