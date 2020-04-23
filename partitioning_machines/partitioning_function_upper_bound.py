@@ -46,15 +46,23 @@ class PartitioningFunctionUpperBound:
             min_k = tree.left_subtree.n_leaves
             max_k = m - tree.right_subtree.n_leaves
             for k in range(min_k, max_k+1):
-                N += min(2*l, binom(m, k)) * sum(
-                    sum(
-                        binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
-                        self._compute_upper_bound(tree.left_subtree, a, k, l) *
-                        self._compute_upper_bound(tree.right_subtree, b, m-k, l)
-                        for b in range(max(1,c-a), c+1)
+
+                if c == 2: # Considering c = 2 is the most common use case, we give an optimized version, avoiding the sum over a and b.
+                    N +=  min(2*l, binom(m, k)) * (1
+                            + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l)
+                            + 2 * self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
+                            + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l) *                 self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
+                            )
+                else:
+                    N += min(2*l, binom(m, k)) * sum(
+                        sum(
+                            binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
+                            self._compute_upper_bound(tree.left_subtree, a, k, l) *
+                            self._compute_upper_bound(tree.right_subtree, b, m-k, l)
+                            for b in range(max(1,c-a), c+1)
+                        )
+                        for a in range(1, c+1)
                     )
-                    for a in range(1, c+1)
-                )
 
             if tree.left_subtree == tree.right_subtree:
                 N /= 2
