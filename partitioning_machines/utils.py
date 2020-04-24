@@ -2,6 +2,12 @@ from partitioning_machines.tree import Tree
 
 
 def tree_from_sklearn_decision_tree(sklearn_tree):
+    """
+    Returns the Tree object corresponding to the scikit-learn DecisionTreeClassifier class.
+
+    Args:
+        sklearn_tree (DecisionTreeClassifier object): Learned tree needed to be converted.
+    """
     return _build_tree_from_sklearn_tree(sklearn_tree.tree_)
 
 def _build_tree_from_sklearn_tree(sklearn_tree, current_node=0):
@@ -13,4 +19,3 @@ def _build_tree_from_sklearn_tree(sklearn_tree, current_node=0):
             _build_tree_from_sklearn_tree(sklearn_tree, children_left[current_node]),
             _build_tree_from_sklearn_tree(sklearn_tree, children_right[current_node])
         )
-    
