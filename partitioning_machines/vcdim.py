@@ -2,6 +2,13 @@ from partitioning_machines.partitioning_function_upper_bound import Partitioning
 
 
 def vcdim_upper_bound(tree, n_features):
+    """
+    Computes an upper bound on the VC dimension of a tree knowing the number of available features. Implements Algorithm 2 of Appendix E of Leboeuf et al. (2020).
+
+    Args:
+        tree (Tree object): Tree structure for which to compute the bound.
+        n_features (int): Number of real-valued features.. Corresponds to the variable '\ell' in the paper.
+    """
     if tree.is_leaf():
         return 1
 
@@ -14,6 +21,13 @@ def vcdim_upper_bound(tree, n_features):
 
 
 def vcdim_lower_bound(tree, n_features):
+    """
+    Computes a lower bound on the VC dimension of a tree knowing the number of available features. Implements Algorithm 3 of Appendix E of Leboeuf et al. (2020).
+
+    Args:
+        tree (Tree object): Tree structure for which to compute the bound.
+        n_features (int): Number of real-valued features.. Corresponds to the variable '\ell' in the paper.
+    """
     if tree.is_leaf():
         return 1
     if tree.is_stump():
