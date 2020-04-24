@@ -9,6 +9,13 @@ class PartitioningFunctionUpperBound:
     It implements an optimized version of the algorithm 1 of Appendix E by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
     def __init__(self, tree, n_features):
+        """
+        At initialization, a list of all subtrees is computed and then a dict is created with subtrees as keys. This dict is used as a look-up table to store upper bound values already computed for each subtrees to avoid computing the same thing multiple times.
+
+        Args:
+            tree (Tree object): Tree structure for which to compute the bound.
+            n_features (int): Number of real-valued features.. Corresponds to the variable '\ell' in the paper.
+        """
         self.tree = tree
         self.n_features = n_features
 
@@ -18,6 +25,9 @@ class PartitioningFunctionUpperBound:
         self.pfub_table = {subtree:{} for subtree in self.subtrees}
 
     def _compute_list_of_distinct_subtrees(self, tree):
+        """
+        Depth-first search of all subtrees of the tree 'tree'.
+        """
         if not tree.is_leaf():
             self._compute_list_of_distinct_subtrees(tree.left_subtree)
             if tree.left_subtree not in self.subtrees:
@@ -31,7 +41,9 @@ class PartitioningFunctionUpperBound:
             self.subtrees.append(tree)
 
     def _compute_upper_bound(self, tree, n_parts, n_examples, n_features):
-        # Modified version of Algorithm 1 of Appendix E of Leboeuf et al. (2020)
+        """
+        Optimized implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        """
         c, m, l = n_parts, n_examples, n_features
 
         if c > m or c > tree.n_leaves:
@@ -46,8 +58,8 @@ class PartitioningFunctionUpperBound:
             min_k = tree.left_subtree.n_leaves
             max_k = m - tree.right_subtree.n_leaves
             for k in range(min_k, max_k+1):
-
-                if c == 2: # Considering c = 2 is the most common use case, we give an optimized version, avoiding the sum over a and b.
+                # Modification 2: Since c = 2 is the most common use case, we give an optimized version, avoiding the sum over a and b.
+                if c == 2:
                     N +=  min(2*l, binom(m, k)) * (1
                             + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l)
                             + 2 * self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
@@ -67,22 +79,27 @@ class PartitioningFunctionUpperBound:
             if tree.left_subtree == tree.right_subtree:
                 N /= 2
 
-            # Modification 2: Add value to look up table.
+            # Modification 3: Add value to look up table.
             self.pfub_table[tree][n_parts, n_examples, n_features] = min(N, stirling(n_examples, n_parts))
 
         return self.pfub_table[tree][n_parts, n_examples, n_features]
 
     def __call__(self, n_examples, n_parts=2):
+        """
+        Args:
+            n_examples (int): Number of examples. Corresponds to the variable 'm' in the paper.
+            n_parts (int): Number of parts. Corresponds to the variable 'c' in the paper.
+        """
         return self._compute_upper_bound(self.tree, n_parts, n_examples, self.n_features)
 
 
 def partitioning_function_upper_bound(tree, n_parts, n_examples, n_features):
     """
     Args:
-        tree (Tree object):
-        n_parts (int): Number of parts in the partitions. Corresponds to 'c' in the paper.
-        n_examples (int): Number of examples. Corresponds to 'm' in the paper.
-        n_features (int): Number of real-valued features. Corresponds to '\ell' in the paper.
+        tree (Tree object): Tree structure for which to compute the bound.
+        n_parts (int): Number of parts in the partitions. Corresponds to the variable 'c' in the paper.
+        n_examples (int): Number of examples. Corresponds to the variable 'm' in the paper.
+        n_features (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
     """
     pfub = PartitioningFunctionUpperBound(tree, n_features)
     return pfub(n_examples, n_parts)
