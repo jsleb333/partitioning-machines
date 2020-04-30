@@ -1,0 +1,1 @@
+from partitioning_machines.utils.convert_tree import tree_from_sklearn_decision_tree
