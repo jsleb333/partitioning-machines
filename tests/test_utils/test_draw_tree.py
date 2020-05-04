@@ -1,5 +1,5 @@
 from partitioning_machines import Tree
-from partitioning_machines.utils.draw_tree import VectorTree
+from partitioning_machines.utils.draw_tree import VectorTree, draw_tree
 from pytest import fixture
 
 @fixture
@@ -91,3 +91,7 @@ class TestVectorTree:
         vectorized_tree = overlapping_vectorized_trees[7]
         vectorized_tree._deoverlap_tree()
         assert vectorized_tree.positions == [0,-2,2,-3,-1,1,3,-4,-2,0,2]
+
+def test_draw_tree(trees):
+    print(draw_tree(trees[1]).build())
+    assert False

@@ -8,10 +8,11 @@ class VectorTree:
     def __init__(self, recursive_tree):
         self.recursive_tree = recursive_tree
 
-        self.left_subtrees = [0]*(2*recursive_tree.n_leaves-1)
-        self.right_subtrees = [0]*(2*recursive_tree.n_leaves-1)
-        self.layers = [0]*(2*recursive_tree.n_leaves-1)
-        self.positions = [0]*(2*recursive_tree.n_leaves-1)
+        self.n_nodes = 2*recursive_tree.n_leaves-1
+        self.left_subtrees = [0]*self.n_nodes
+        self.right_subtrees = [0]*self.n_nodes
+        self.layers = [0]*self.n_nodes
+        self.positions = [0]*self.n_nodes
 
         self._vectorize_tree()
         self._deoverlap_tree()
@@ -108,5 +109,21 @@ class VectorTree:
             self._shift_tree(self.left_subtrees[node], shift)
             self._shift_tree(self.right_subtrees[node], shift)
 
-def draw_tree(tree):
-    vectorized_tree = VectorTree(tree)
+
+def draw_tree(tree, min_node_distance=1, layer_distance='1.3cm', node_size='1cm'):
+    tree = VectorTree(tree)
+
+    pic = p2l.TexEnvironment('tikzpicture')
+    pic.options += f"""leaf/.style={{draw, diamond, minimum width={node_size}, aspect=.5}}""",
+    pic.options += f"""internal/.style={{draw, circle, minimum width={node_size}}}""",
+
+    for node in range(tree.n_nodes):
+        style = 'leaf' if tree.node_is_leaf(node) else 'internal'
+        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]:.2f}, {-tree.layers[node]}) {{}};'
+
+    for node in range(tree.n_nodes):
+        if not tree.node_is_leaf(node):
+            pic += f'\\draw (node{node}) -- (node{tree.left_subtrees[node]});'
+            pic += f'\\draw (node{node}) -- (node{tree.right_subtrees[node]});'
+
+    return pic

@@ -1,7 +1,7 @@
 """
 In this script, we compute the VCdim upper bound for the first 11 non-equivalent binary trees.
 """
-from partitioning_machines import Tree, vcdim_upper_bound
+from partitioning_machines import Tree, vcdim_upper_bound, draw_tree
 
 
 leaf = Tree() # tree 1
@@ -37,3 +37,12 @@ n_features = 10
 
 for tree in trees:
     print(vcdim_upper_bound(tree, n_features))
+
+from python2latex import Document
+
+doc = Document('test', doc_type='standalone')
+doc.add_package('tikz')
+del doc.packages['geometry']
+doc.add_to_preamble('\\usetikzlibrary{shapes}')
+doc += draw_tree(tree10)
+doc.build()
