@@ -57,6 +57,13 @@ class TestVectorTree:
         assert vectorized_tree.layers == [0,1,1,2,2]
         assert vectorized_tree.positions == [0,-1,1,-2,0]
 
+        vectorized_tree = overlapping_vectorized_trees[10]
+
+        assert vectorized_tree.left_subtrees == [1,3,5,7,9,11,13] + [-1]*8
+        assert vectorized_tree.right_subtrees == [2,4,6,8,10,12,14] + [-1]*8
+        assert vectorized_tree.layers == [0,1,1,2,2,2,2] + [3]*8
+        assert vectorized_tree.positions == [0,-1,1,-2,0,0,2,-3,-1,-1,1,-1,1,1,3]
+
     def test_node_is_leaf(self, overlapping_vectorized_trees):
         vectorized_tree = overlapping_vectorized_trees[2]
         assert vectorized_tree.node_is_leaf(2)
@@ -68,20 +75,45 @@ class TestVectorTree:
         assert vectorized_tree._find_rightest_positions_by_layer(0) == [0, 1, 2]
         assert vectorized_tree._find_rightest_positions_by_layer(1) == [-1, 0]
 
+        vectorized_tree = overlapping_vectorized_trees[10]
+        assert vectorized_tree._find_rightest_positions_by_layer(0) == [0, 1, 2, 3]
+        assert vectorized_tree._find_rightest_positions_by_layer(1) == [-1, 0, 1]
+        assert vectorized_tree._find_rightest_positions_by_layer(2) == [1, 2, 3]
+        assert vectorized_tree._find_rightest_positions_by_layer(3) == [-2, -1]
+        assert vectorized_tree._find_rightest_positions_by_layer(4) == [0, 1]
+
     def test_find_leftest_positions_by_layer(self, overlapping_vectorized_trees):
         vectorized_tree = overlapping_vectorized_trees[3]
         assert vectorized_tree._find_leftest_positions_by_layer(0) == [0, -1, -2]
         assert vectorized_tree._find_leftest_positions_by_layer(2) == [1, 0]
+
+        vectorized_tree = overlapping_vectorized_trees[10]
+        assert vectorized_tree._find_leftest_positions_by_layer(0) == [0, -1, -2, -3]
+        assert vectorized_tree._find_leftest_positions_by_layer(1) == [-1, -2, -3]
+        assert vectorized_tree._find_leftest_positions_by_layer(2) == [1, 0, -1]
+        assert vectorized_tree._find_leftest_positions_by_layer(3) == [-2, -3]
+        assert vectorized_tree._find_leftest_positions_by_layer(4) == [0, -1]
 
     def test_find_largest_overlap(self, overlapping_vectorized_trees):
         vectorized_tree = overlapping_vectorized_trees[3]
         assert vectorized_tree._find_largest_overlap(1, 2) == 0
         assert vectorized_tree._find_largest_overlap(3, 4) == -2
 
+        vectorized_tree = overlapping_vectorized_trees[10]
+        assert vectorized_tree._find_largest_overlap(1, 2) == 2
+        assert vectorized_tree._find_largest_overlap(3, 4) == 0
+        assert vectorized_tree._find_largest_overlap(5, 6) == 0
+
+
     def test_shift_tree(self, overlapping_vectorized_trees):
         vectorized_tree = overlapping_vectorized_trees[3]
         vectorized_tree._shift_tree(1, -1)
         assert vectorized_tree.positions == [0,-2,1,-3,-1,0,2]
+
+        vectorized_tree = overlapping_vectorized_trees[10]
+        vectorized_tree._shift_tree(1, -2)
+        vectorized_tree._shift_tree(2, 2)
+        assert vectorized_tree.positions == [0,-3,3,-4,-2,2,4,-5,-3,-3,-1,1,3,3,5]
 
     def test_deoverlap_tree(self, overlapping_vectorized_trees):
         vectorized_tree = overlapping_vectorized_trees[3]
@@ -92,6 +124,9 @@ class TestVectorTree:
         vectorized_tree._deoverlap_tree()
         assert vectorized_tree.positions == [0,-2,2,-3,-1,1,3,-4,-2,0,2]
 
+        vectorized_tree = overlapping_vectorized_trees[10]
+        vectorized_tree._deoverlap_tree()
+        assert vectorized_tree.positions == [0,-4,4,-6,-2,2,6,-7,-5,-3,-1,1,3,5,7]
+
 def test_draw_tree(trees):
-    print(draw_tree(trees[1]).build())
-    assert False
+    pass

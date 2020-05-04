@@ -56,8 +56,8 @@ class VectorTree:
             self._deoverlap_tree(right_node)
             overlap = self._find_largest_overlap(left_node, right_node)
             if overlap >= -1:
-                self._shift_tree(left_node, overlap/2 - 1)
-                self._shift_tree(right_node, -overlap/2 + 1)
+                self._shift_tree(left_node, -overlap/2 - 1)
+                self._shift_tree(right_node, overlap/2 + 1)
 
     def _find_largest_overlap(self, left_node, right_node):
         rightest_positions = self._find_rightest_positions_by_layer(left_node)
@@ -110,7 +110,7 @@ class VectorTree:
             self._shift_tree(self.right_subtrees[node], shift)
 
 
-def draw_tree(tree, min_node_distance=1, layer_distance='1.3cm', node_size='1cm'):
+def draw_tree(tree, min_node_distance=1.3, layer_distance=1.6, node_size='1cm'):
     tree = VectorTree(tree)
 
     pic = p2l.TexEnvironment('tikzpicture')
@@ -119,7 +119,7 @@ def draw_tree(tree, min_node_distance=1, layer_distance='1.3cm', node_size='1cm'
 
     for node in range(tree.n_nodes):
         style = 'leaf' if tree.node_is_leaf(node) else 'internal'
-        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]:.2f}, {-tree.layers[node]}) {{}};'
+        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]/2:.2f}, {-layer_distance*tree.layers[node]}) {{{tree.positions[node]}}};'
 
     for node in range(tree.n_nodes):
         if not tree.node_is_leaf(node):
