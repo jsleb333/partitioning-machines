@@ -22,9 +22,8 @@ def _vectorize_tree(tree):
     child_node_id = 1
     for layer in range(tree.depth+1):
         subtrees_in_next_layer = []
-        for order, (node_id, subtree) in enumerate(subtrees_in_layer):
+        for node_id, subtree in subtrees_in_layer:
             layers[node_id] = layer
-            orders[node_id] = order
             
             if subtree.is_leaf():
                 left_subtrees[node_id] = -1
@@ -45,7 +44,6 @@ def _vectorize_tree(tree):
     vectorized_tree = {'left_subtrees':left_subtrees,
                        'right_subtrees':right_subtrees,
                        'layers':layers,
-                       'orders':orders,
                        'positions':positions}
     
     return vectorized_tree
@@ -82,7 +80,7 @@ def _find_rightest_positions_by_layer(tree, node):
             if tree['positions'][node] > max_pos:
                 max_pos = tree['positions'][node]
             
-            if not node_is_leaf(node):
+            if not node_is_leaf(tree, node):
                 nodes_in_next_layer.append(tree['left_subtrees'][node])
                 nodes_in_next_layer.append(tree['right_subtrees'][node])
         rightest_positions_by_layer.append(max_pos)
@@ -100,7 +98,7 @@ def _find_leftest_positions_by_layer(tree, node):
             if tree['positions'][node] < min_pos:
                 min_pos = tree['positions'][node]
             
-            if not node_is_leaf(node):
+            if not node_is_leaf(tree, node):
                 nodes_in_next_layer.append(tree['left_subtrees'][node])
                 nodes_in_next_layer.append(tree['right_subtrees'][node])
         leftest_positions_by_layer.append(min_pos)
