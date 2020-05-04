@@ -127,6 +127,3 @@ class TestVectorTree:
         vectorized_tree = overlapping_vectorized_trees[10]
         vectorized_tree._deoverlap_tree()
         assert vectorized_tree.positions == [0,-4,4,-6,-2,2,6,-7,-5,-3,-1,1,3,5,7]
-
-def test_draw_tree(trees):
-    pass

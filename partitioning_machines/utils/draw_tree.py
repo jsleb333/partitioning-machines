@@ -2,7 +2,7 @@ from partitioning_machines.tree import Tree
 try:
     import python2latex as p2l
 except ImportError:
-    raise ImportError("The drawing of trees rely on the package python2latex.")
+    raise ImportError("The drawing of trees rely on the package python2latex. Please install it with 'pip install python2latex'.")
 
 class VectorTree:
     def __init__(self, recursive_tree):
@@ -110,20 +110,38 @@ class VectorTree:
             self._shift_tree(self.right_subtrees[node], shift)
 
 
-def draw_tree(tree, min_node_distance=1.3, layer_distance=1.6, node_size='1cm'):
+def tree_to_tikz(tree, min_node_distance=1.3, layer_distance=1.6, node_size=.6):
     tree = VectorTree(tree)
 
     pic = p2l.TexEnvironment('tikzpicture')
-    pic.options += f"""leaf/.style={{draw, diamond, minimum width={node_size}, aspect=.5}}""",
-    pic.options += f"""internal/.style={{draw, circle, minimum width={node_size}}}""",
+    pic.options += f"""leaf/.style={{draw, diamond, minimum width={node_size}cm, minimum height={2*node_size}cm, inner sep=0pt}}""",
+    pic.options += f"""internal/.style={{draw, circle, minimum width={node_size}cm, inner sep=0pt}}""",
 
     for node in range(tree.n_nodes):
         style = 'leaf' if tree.node_is_leaf(node) else 'internal'
-        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]/2:.2f}, {-layer_distance*tree.layers[node]}) {{{tree.positions[node]}}};'
+        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]/2:.2f}, {-layer_distance*tree.layers[node]}) {{}};'
 
     for node in range(tree.n_nodes):
         if not tree.node_is_leaf(node):
-            pic += f'\\draw (node{node}) -- (node{tree.left_subtrees[node]});'
-            pic += f'\\draw (node{node}) -- (node{tree.right_subtrees[node]});'
+            left_node = tree.left_subtrees[node]
+            right_node = tree.right_subtrees[node]
+
+            if tree.node_is_leaf(left_node):
+                pic += f'\\draw (node{node}) -- (node{left_node}.north);'
+            else:
+                pic += f'\\draw (node{node}) -- (node{left_node});'
+
+            if tree.node_is_leaf(right_node):
+                pic += f'\\draw (node{node}) -- (node{right_node}.north);'
+            else:
+                pic += f'\\draw (node{node}) -- (node{right_node});'
 
     return pic
+
+def draw_tree(tree):
+    doc = p2l.Document('test', options=('varwidth',), doc_type='standalone')
+    doc.add_package('tikz')
+    del doc.packages['geometry']
+    doc.add_to_preamble('\\usetikzlibrary{shapes}')
+    doc += tree_to_tikz(tree)
+    doc.build()
