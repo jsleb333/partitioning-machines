@@ -56,6 +56,13 @@ class Tree:
             self.update_tree()
         return self._hash_value
 
+    @property
+    def depth(self):
+        if self.is_leaf():
+            return 0
+        else:
+            return 1 + max(self.left_subtree.depth, self.right_subtree.depth)
+
     def is_leaf(self):
         """
         A leaf is a tree with no subtrees.
@@ -69,6 +76,14 @@ class Tree:
         if self.is_leaf():
             return False
         return self.left_subtree.is_leaf() and self.right_subtree.is_leaf()
+
+    def __repr__(self):
+        if self.is_leaf():
+            return 'Tree()'
+        elif self.is_stump():
+            return 'Tree(Tree(), Tree())'
+        else:
+            return f'Tree of depth {self.depth}'
 
     def __eq__(self, other):
         """

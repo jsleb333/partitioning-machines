@@ -39,3 +39,38 @@ class TestTree:
         assert hash(tree3) == 9
         assert hash(tree4) == 12
         assert hash(tree5) == 13
+
+    def test_repr(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree1 = Tree(stump, leaf)
+        tree2 = Tree(stump, stump)
+        tree3 = Tree(tree1, leaf)
+        tree4 = Tree(tree1, stump)
+        tree5 = Tree(tree2, leaf)
+
+        assert leaf.depth == 0
+        assert stump.depth == 1
+        assert tree1.depth == 2
+        assert tree2.depth == 2
+        assert tree3.depth == 3
+        assert tree4.depth == 3
+        assert tree5.depth == 3
+
+    def test_repr(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree1 = Tree(stump, leaf)
+        tree2 = Tree(stump, stump)
+        tree3 = Tree(tree1, leaf)
+        tree4 = Tree(tree1, stump)
+        tree5 = Tree(tree2, leaf)
+
+        assert repr(leaf) == 'Tree()'
+        assert repr(stump) == 'Tree(Tree(), Tree())'
+        assert repr(tree1) == 'Tree of depth 2'
+        assert repr(tree2) == 'Tree of depth 2'
+        assert repr(tree3) == 'Tree of depth 3'
+        assert repr(tree4) == 'Tree of depth 3'
+        assert repr(tree5) == 'Tree of depth 3'
+        
