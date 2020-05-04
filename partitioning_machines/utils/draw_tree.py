@@ -10,68 +10,109 @@ class Node:
         
 
 def _compute_position_of_nodes(tree):
-    layered_tree = _build_layered_tree(tree, layered_tree)
+    vectorized_tree = _vectorize_tree(tree)
     _deoverlap_tree(tree)
+    return tree
 
-def depth(tree):
-    if tree.is_leaf():
-        return 1
-    else:
-        return max(depth(tree.left_subtree), depth(tree.right_subtree)) + 1
-
-def _build_layered_tree(tree):    
-    node_id = 0
-    position = 0
-    parent = None
+def _vectorize_tree(tree):
+    left_subtrees, right_subtrees, layers, orders, positions = [[0]*(2*tree.n_leaves-1) for i in range(5)]
     layer = 0
-    layered_tree = [[Node(position, tree, parent, node_id)]]
-    while layer < depth(tree):
-        layered_tree.append([])
-        for node in layered_tree[layer]:
-            if not node.tree.is_leaf():
-                position = node.position - 1
-                node_id += 1
-                layered_tree[layer+1].append(Node(position, node.tree.left_subtree, node.tree, node_id))
+    node_id = 0
+    subtrees_in_layer = [(node_id, tree)]
+    child_node_id = 1
+    for layer in range(tree.depth+1):
+        subtrees_in_next_layer = []
+        for order, (node_id, subtree) in enumerate(subtrees_in_layer):
+            layers[node_id] = layer
+            orders[node_id] = order
+            
+            if subtree.is_leaf():
+                left_subtrees[node_id] = -1
+                right_subtrees[node_id] = -1
+            else:
+                left_subtrees[node_id] = child_node_id
+                positions[child_node_id] = positions[node_id] - 1
+                subtrees_in_next_layer.append((child_node_id, subtree.left_subtree))
+                child_node_id += 1
                 
-                position = node.position + 1
-                node_id += 1
-                layered_tree[layer+1].append(Node(position, node.tree.right_subtree, node.tree, node_id))
-        layer += 1
+                right_subtrees[node_id] = child_node_id
+                positions[child_node_id] = positions[node_id] + 1
+                subtrees_in_next_layer.append((child_node_id, subtree.right_subtree))
+                child_node_id += 1
+                
+        subtrees_in_layer = subtrees_in_next_layer
     
-    del layered_tree[-1] # Remove empty list
+    vectorized_tree = {'left_subtrees':left_subtrees,
+                       'right_subtrees':right_subtrees,
+                       'layers':layers,
+                       'orders':orders,
+                       'positions':positions}
     
-    return layered_tree
+    return vectorized_tree
 
-def _deoverlap_tree(tree):
-    if tree.is_leaf():
+def _deoverlap_tree(tree, node=0):
+    if node_is_leaf(tree, node):
         return
     else:
-        _deoverlap_tree(tree.left_subtree)
-        overlap = _subtrees_overlap(tree.left_subtree, tree.right_subtree)
+        left_node = tree['left_subtrees'][node]
+        right_node = tree['right_subtrees'][node]
+        _deoverlap_tree(tree, left_node)
+        _deoverlap_tree(tree, right_node)
+        overlap = _find_largest_overlap(tree, left_node, right_node)
         if overlap >= 0:
-            _shift_tree(tree.left_subtree, overlap/2-1)
+            _shift_tree(tree, left_node, -overlap/2 - 1)
+            _shift_tree(tree, right_node, overlap/2 + 1)
+
+def node_is_leaf(tree, node):
+    return tree['left_subtrees'][node] == -1 and tree['right_subtrees'][node] == -1
+
+def _find_largest_overlap(tree, left_node, right_node):
+    rightest_positions = _find_rightest_positions_by_layer(tree, left_node)
+    leftest_positions = _find_leftest_positions_by_layer(tree, right_node)
+    overlaps = [l - r for l, r in zip(leftest_positions, rightest_positions)]
+    return max(overlaps)
+
+def _find_rightest_positions_by_layer(tree, node):
+    rightest_positions_by_layer = []
+    nodes_in_layer = [node]
+    while nodes_in_layer:
+        nodes_in_next_layer = []
+        max_pos = tree['positions'][nodes_in_layer[0]]
+        for node in nodes_in_layer:
+            if tree['positions'][node] > max_pos:
+                max_pos = tree['positions'][node]
             
-        _deoverlap_tree(tree.right_subtree, overlap)
+            if not node_is_leaf(node):
+                nodes_in_next_layer.append(tree['left_subtrees'][node])
+                nodes_in_next_layer.append(tree['right_subtrees'][node])
+        rightest_positions_by_layer.append(max_pos)
+        nodes_in_layer = nodes_in_next_layer
+    
+    return rightest_positions_by_layer
 
-def _subtrees_overlap(left_subtree, right_subtree):
-    return _rightest_position(left_subtree) - _leftest_position(right_subtree)
+def _find_leftest_positions_by_layer(tree, node):
+    leftest_positions_by_layer = []
+    nodes_in_layer = [node]
+    while nodes_in_layer:
+        nodes_in_next_layer = []
+        min_pos = tree['positions'][nodes_in_layer[0]]
+        for node in nodes_in_layer:
+            if tree['positions'][node] < min_pos:
+                min_pos = tree['positions'][node]
+            
+            if not node_is_leaf(node):
+                nodes_in_next_layer.append(tree['left_subtrees'][node])
+                nodes_in_next_layer.append(tree['right_subtrees'][node])
+        leftest_positions_by_layer.append(min_pos)
+        nodes_in_layer = nodes_in_next_layer
+    
+    return leftest_positions_by_layer
 
-def _rightest_position(tree):
-    if tree.is_leaf():
-        return tree.position
+def _shift_tree(tree, node, shift):
+    tree['positions'][node] + shift
+    if node_is_leaf(node):
+        return
     else:
-        return max(_rightest_position(tree.left_subtree), _rightest_position(tree.right_subtree))
-
-def _leftest_position(tree):
-    if tree.is_leaf():
-        return tree.position
-    else:
-        return min(_leftest_position(tree.left_subtree), _leftest_position(tree.right_subtree))
-
-def _shift_tree(tree, shift):
-    if tree.is_leaf():
-        tree.position += shift
-    else:
-        _shift_tree(tree.left_subtree, shift)
-        _shift_tree(tree.right_subtree, shift)
+        _shift_tree(tree, tree['left_subtrees'][node], shift)
+        _shift_tree(tree, tree['right_subtrees'][node], shift)
         
