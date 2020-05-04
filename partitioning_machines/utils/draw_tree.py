@@ -1,5 +1,8 @@
 from partitioning_machines.tree import Tree
-
+try:
+    import python2latex as p2l
+except ImportError:
+    raise ImportError("The drawing of trees rely on the package python2latex.")
 
 class VectorTree:
     def __init__(self, recursive_tree):
