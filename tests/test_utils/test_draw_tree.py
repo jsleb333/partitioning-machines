@@ -31,18 +31,18 @@ def trees():
 
 class TestVectorTree:
     def test_vectorize_tree(self, trees):
-        vec_tree = VectorTree(trees[2])
+        vectorized_tree = VectorTree(trees[2])
 
-        assert vec_tree.left_subtrees == [1,3,-1,-1,-1]
-        assert vec_tree.right_subtrees == [2,4,-1,-1,-1]
-        assert vec_tree.layers == [0,1,1,2,2]
-        assert vec_tree.positions == [0,-1,1,-2,0]
+        assert vectorized_tree.left_subtrees == [1,3,-1,-1,-1]
+        assert vectorized_tree.right_subtrees == [2,4,-1,-1,-1]
+        assert vectorized_tree.layers == [0,1,1,2,2]
+        assert vectorized_tree.positions == [0,-1,1,-2,0]
 
     def test_node_is_leaf(self, trees):
-        vec_tree = VectorTree(trees[2])
-        assert vec_tree.node_is_leaf(2)
-        assert vec_tree.node_is_leaf(3)
-        assert vec_tree.node_is_leaf(4)
+        vectorized_tree = VectorTree(trees[2])
+        assert vectorized_tree.node_is_leaf(2)
+        assert vectorized_tree.node_is_leaf(3)
+        assert vectorized_tree.node_is_leaf(4)
 
     def test_find_rightest_positions_by_layer(self, trees):
         vectorized_tree = VectorTree(trees[3])

@@ -11,6 +11,7 @@ class VectorTree:
         self.positions = [0]*(2*recursive_tree.n_leaves-1)
 
         self._vectorize_tree()
+        self._deoverlap_tree()
 
     def _vectorize_tree(self):
         layer = 0
@@ -106,4 +107,3 @@ class VectorTree:
 
 def draw_tree(tree):
     vectorized_tree = VectorTree(tree)
-    _deoverlap_tree(vectorized_tree)
