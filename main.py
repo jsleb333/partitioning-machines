@@ -37,12 +37,3 @@ n_features = 10
 
 for tree in trees:
     print(vcdim_upper_bound(tree, n_features))
-
-from python2latex import Document
-
-doc = Document('test', doc_type='standalone')
-doc.add_package('tikz')
-del doc.packages['geometry']
-doc.add_to_preamble('\\usetikzlibrary{shapes}')
-doc += draw_tree(tree10)
-doc.build()
