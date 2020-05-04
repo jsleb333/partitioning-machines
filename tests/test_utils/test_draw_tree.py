@@ -1,6 +1,5 @@
 from partitioning_machines import Tree
-from partitioning_machines.utils.draw_tree import _vectorize_tree, \
-    node_is_leaf, _find_rightest_positions_by_layer, _find_leftest_positions_by_layer
+from partitioning_machines.utils.draw_tree import VectorTree
 from pytest import fixture
 
 @fixture
@@ -16,7 +15,7 @@ def trees():
     tree9 = Tree(tree4, stump)
     tree10 = Tree(tree4, tree3)
     tree11 = Tree(tree4, tree4)
-    
+
     return [leaf,
             stump,
             tree3,
@@ -29,26 +28,47 @@ def trees():
             tree10,
             tree11]
 
-def test_vectorize_tree(trees):
-    left_subtrees, right_subtrees, layers, positions = _vectorize_tree(trees[2]).values()
-    
-    assert left_subtrees == [1,3,-1,-1,-1]
-    assert right_subtrees == [2,4,-1,-1,-1]
-    assert layers == [0,1,1,2,2]
-    assert positions == [0,-1,1,-2,0]
 
-def test_node_is_leaf(trees):
-    vectorized_tree = _vectorize_tree(trees[2])
-    assert node_is_leaf(vectorized_tree, 2)
-    assert node_is_leaf(vectorized_tree, 3)
-    assert node_is_leaf(vectorized_tree, 4)
+class TestVectorTree:
+    def test_vectorize_tree(self, trees):
+        vec_tree = VectorTree(trees[2])
 
-def test_find_rightest_positions_by_layer(trees):
-    vectorized_tree = _vectorize_tree(trees[3])
-    assert _find_rightest_positions_by_layer(vectorized_tree, 0) == [0, 1, 2]
-    assert _find_rightest_positions_by_layer(vectorized_tree, 1) == [-1, 0]
-    
-def test_find_leftest_positions_by_layer(trees):
-    vectorized_tree = _vectorize_tree(trees[3])
-    assert _find_leftest_positions_by_layer(vectorized_tree, 0) == [0, -1, -2]
-    assert _find_leftest_positions_by_layer(vectorized_tree, 1) == [1, 0]
+        assert vec_tree.left_subtrees == [1,3,-1,-1,-1]
+        assert vec_tree.right_subtrees == [2,4,-1,-1,-1]
+        assert vec_tree.layers == [0,1,1,2,2]
+        assert vec_tree.positions == [0,-1,1,-2,0]
+
+    def test_node_is_leaf(self, trees):
+        vec_tree = VectorTree(trees[2])
+        assert vec_tree.node_is_leaf(2)
+        assert vec_tree.node_is_leaf(3)
+        assert vec_tree.node_is_leaf(4)
+
+    def test_find_rightest_positions_by_layer(self, trees):
+        vectorized_tree = VectorTree(trees[3])
+        assert vectorized_tree._find_rightest_positions_by_layer(0) == [0, 1, 2]
+        assert vectorized_tree._find_rightest_positions_by_layer(1) == [-1, 0]
+
+    def test_find_leftest_positions_by_layer(self, trees):
+        vectorized_tree = VectorTree(trees[3])
+        assert vectorized_tree._find_leftest_positions_by_layer(0) == [0, -1, -2]
+        assert vectorized_tree._find_leftest_positions_by_layer(2) == [1, 0]
+
+    def test_find_largest_overlap(self, trees):
+        vectorized_tree = VectorTree(trees[3])
+        assert vectorized_tree._find_largest_overlap(1, 2) == 0
+        assert vectorized_tree._find_largest_overlap(3, 4) == -2
+
+    def test_shift_tree(self, trees):
+        vectorized_tree = VectorTree(trees[3])
+        vectorized_tree._shift_tree(1, -1)
+        assert vectorized_tree.positions == [0,-2,1,-3,-1,0,2]
+
+    def test_deoverlap_tree(self, trees):
+        vectorized_tree = VectorTree(trees[3])
+        vectorized_tree._deoverlap_tree()
+        assert vectorized_tree.positions == [0,-2,2,-3,-1,1,3]
+
+        vectorized_tree = VectorTree(trees[7])
+        vectorized_tree._deoverlap_tree()
+        assert vectorized_tree.positions == [0,-2,2,-3,-1,1,3,-4,-2,0,2]
