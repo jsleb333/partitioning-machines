@@ -1,7 +1,7 @@
 """
 In this script, we compute the VCdim upper bound for the first 11 non-equivalent binary trees.
 """
-from partitioning_machines import Tree, vcdim_upper_bound, draw_tree
+from partitioning_machines import Tree, vcdim_upper_bound
 
 
 leaf = Tree() # tree 1
@@ -29,9 +29,6 @@ trees = [
     tree10,
     tree11
 ]
-
-for tree in trees:
-    tree.n_leaves
 
 n_features = 10
 
