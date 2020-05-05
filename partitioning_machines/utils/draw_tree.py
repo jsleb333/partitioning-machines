@@ -119,7 +119,7 @@ def tree_to_tikz(tree, min_node_distance=1.3, layer_distance=1.6, node_size=.6):
 
     for node in range(tree.n_nodes):
         style = 'leaf' if tree.node_is_leaf(node) else 'internal'
-        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]/2:.2f}, {-layer_distance*tree.layers[node]}) {{}};'
+        pic += f'\\node[{style}](node{node}) at ({min_node_distance*tree.positions[node]/2:.3f}, {-layer_distance*tree.layers[node]:.3f}) {{}};'
 
     for node in range(tree.n_nodes):
         if not tree.node_is_leaf(node):
