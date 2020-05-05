@@ -4,70 +4,41 @@ from scipy.special import binom
 from sympy.functions.combinatorial.numbers import stirling
 
 
-class Tree:
+class _TreeView:
     """
-    This Tree class implements a binary tree object in a recursive manner, i.e. its 'left_subtree' and 'right_subtree' attributes are other Tree objects.
-
-    The class implements the '__eq__' operator to be able to compare other trees. It returns true if both trees are non-equivalent, i.e. it does not matter which subtree is the left and the right (they can be swapped).
-
-    The class handles the number of leaves of the whole tree in the property 'n_leaves', which computes it once the first time it is accessed and then stores it in the '_n_leaves' attributes (and for every subtrees of the tree as well). The number of leaves is computed via the method 'update_tree'.
-
-    The class also implements a hash so that Tree objects can be used as key in a dictionary. The chosen hashing function here is the sum of the hash value of the two subtrees and of the total number of leaves of the tree. The hash is computed once when the function 'update_tree' is called and is then stored in the '_hash_value' property.
+    Implements a view of a tree maintaining the current node inspected on a tree. Allows to navigate a tree easily in a recursive manner.
     """
-    def __init__(self, left_subtree=None, right_subtree=None):
-        """
-        Args:
-            left_subtree (Tree object): Other Tree object acting as the left subtree. If None, it means the present tree is a leaf.*
-            right_subtree (Tree object): Other Tree object acting as the right subtree. If None, it means the present tree is a leaf.*
-
-        *To be a valid tree, both left_subtree and right_subtree must be Tree objects or both must be None.
-        """
-        if left_subtree is None and right_subtree is not None or left_subtree is not None and right_subtree is None:
-            raise ValueError('Both subtrees must be either None or other valid trees.')
-
-        self.left_subtree = left_subtree
-        self.right_subtree = right_subtree
-        self._n_leaves = None
-        self._hash_value = None
+    def __init__(self, tree, current_node=0):
+        self.current_node = current_node
+        self.tree = tree
+    
+    @property
+    def left_child(self):
+        return self.tree._left_children[self.current_node]
 
     @property
-    def n_leaves(self):
-        if self._n_leaves is None:
-            self.update_tree()
-        return self._n_leaves
+    def left_subtree(self):
+        return _TreeView(self.tree, self.left_child)
 
-    def update_tree(self):
-        """
-        Updated the number of leaves and the hash value of the tree and all its subtrees. Is called the first time 'n_leaves' or 'hash_value' is accessed.
+    @property
+    def right_child(self):
+        return self.tree._right_children[self.current_node]
 
-        If at some point one of the subtrees is modified by the user, this method should be called to count the new number of leaves and the new hash value of the tree.
-        """
-        if self.is_leaf():
-            self._n_leaves = 1
-            self._hash_value = 0
+    @property
+    def right_subtree(self):
+        return _TreeView(self.tree, self.right_child)
+
+    def __getattr__(self, name):
+        if name in ['layer', 'position', 'n_leaves', 'n_nodes', 'depth', 'hash_value']:
+            return getattr(self.tree, '_' + name)[self.current_node]
         else:
-            self._n_leaves = self.left_subtree.update_tree() + self.right_subtree.update_tree()
-            self._hash_value = self.n_leaves + self.left_subtree.hash_value + self.right_subtree.hash_value
-        return self._n_leaves
-
-    @property
-    def hash_value(self):
-        if self._hash_value is None:
-            self.update_tree()
-        return self._hash_value
-
-    @property
-    def depth(self):
-        if self.is_leaf():
-            return 0
-        else:
-            return 1 + max(self.left_subtree.depth, self.right_subtree.depth)
+            return getattr(self.tree, name)
 
     def is_leaf(self):
         """
         A leaf is a tree with no subtrees.
         """
-        return self.left_subtree is None and self.right_subtree is None
+        return self.left_child == -1 and self.right_child == -1
 
     def is_stump(self):
         """
@@ -89,8 +60,8 @@ class Tree:
         """
         Check if both trees share the same structure, up to equivalencies.
         """
-        if other is None:
-            return False
+        if not isinstance(other, _TreeView):
+            raise ValueError('Cannot compare objects.')
         if self.is_leaf() and other.is_leaf():
             return True
         if self.is_stump() and other.is_stump():
@@ -103,4 +74,96 @@ class Tree:
 
     def __hash__(self):
         # The hash is the sum of the depths d_i of each leaf i.
-        return self.hash_value
+        return self.hash_value.item()
+
+
+class Tree:
+    """
+    This Tree class implements a binary tree object with a set of arrays handling attributes of every nodes. This type of implementation has various advantages, but is less easy to manipulate. To overcome this, a recursive implementation is simulated with the use of an internal flag 'current_node' which situates the selected node and thus the respective subtrees. The whole tree is considered when 'current_node' is equal to 0. All attributes relevant to the current node are accessible via non-underscored names, while global attributes contained in arrays are stored in variables beginning with an underscore.
+
+    The class implements the '__eq__' operator to be able to compare other trees. It returns true if both trees are non-equivalent, i.e. it does not matter which subtree is the left and the right (they can be swapped).
+
+    The class handles the number of leaves of the whole tree in the property 'n_leaves', which computes it once the first time it is accessed and then stores it in the '_n_leaves' attributes (and for every subtrees of the tree as well). The number of leaves is computed via the method 'update_tree'.
+
+    The class also implements a hash so that Tree objects can be used as key in a dictionary. The chosen hashing function here is the sum of the hash value of the two subtrees and of the total number of leaves of the tree. The hash is computed once when the function 'update_tree' is called and is then stored in the '_hash_value' property.
+    """
+    def __new__(cls, *args, **kwargs):
+        tree = super().__new__(cls)
+        tree.__init__(*args, **kwargs)
+        return _TreeView(tree)
+    
+    def __init__(self, left_subtree=None, right_subtree=None):
+        """
+        Args:
+            left_subtree (Tree object): Other Tree object acting as the left subtree. If None, it means the present tree is a leaf.*
+            right_subtree (Tree object): Other Tree object acting as the right subtree. If None, it means the present tree is a leaf.*
+
+        *To be a valid tree, both left_subtree and right_subtree must be Tree objects or both must be None.
+        """
+        if left_subtree is None and right_subtree is not None or left_subtree is not None and right_subtree is None:
+            raise ValueError('Both subtrees must be either None or other valid trees.')
+        
+        if left_subtree is None and right_subtree is None: # Tree is a leaf
+            self._left_children = np.array([-1], dtype=int)
+            self._right_children = np.array([-1], dtype=int)
+            self._layer = np.array([0], dtype=int)
+            self._position = np.array([0])
+            self._n_leaves = np.array([1], dtype=int)
+            self._n_nodes = np.array([0], dtype=int)
+            self._depth = np.array([0], dtype=int)
+            self._hash_value = np.array([0], dtype=int)
+        else:
+            n_nodes = 1 + left_subtree.n_nodes + right_subtree.n_nodes
+            arr_size = 2 * n_nodes + 1
+            self._left_children = np.zeros(arr_size, dtype=int)
+            self._right_children = np.zeros(arr_size, dtype=int)
+            self._layer = np.zeros(arr_size, dtype=int)
+            self._position = np.zeros(arr_size)
+            self._n_leaves = np.zeros(arr_size, dtype=int)
+            self._n_nodes = np.ones(arr_size, dtype=int)*arr_size
+            self._depth = np.zeros(arr_size, dtype=int)
+            self._hash_value = np.zeros(arr_size, dtype=int)
+            
+            self._build_tree_from_subtrees(left_subtree, right_subtree)
+    
+    def _build_tree_from_subtrees(self, left_subtree, right_subtree):
+        self._left_children[0] = 1
+        self._right_children[0] = 2
+        self._position[1], self._position[2] = -1, 1
+        self._layer[1], self._layer[2] = 1, 1
+        self._n_leaves[0] = left_subtree.n_leaves + right_subtree.n_leaves
+        self._n_leaves[1], self._n_leaves[2] = left_subtree.n_leaves, right_subtree.n_leaves
+        self._n_nodes[0] = 1 + left_subtree.n_nodes + right_subtree.n_nodes
+        self._n_nodes[1], self._n_nodes[2] = left_subtree.n_nodes, right_subtree.n_nodes
+        self._depth[0] = int(1 + max(left_subtree.depth, right_subtree.depth))
+        self._depth[1], self._depth[2] = left_subtree.depth, right_subtree.depth
+        self._hash_value[0] = left_subtree.n_leaves + left_subtree.hash_value + right_subtree.n_leaves + right_subtree.hash_value
+
+        subtrees_in_layer = [(1, left_subtree), (2, right_subtree)]
+        child_node_id = 3
+        for layer in range(self._depth[0] + 1):
+            subtrees_in_next_layer = []
+            for node_id, subtree in subtrees_in_layer:
+                self._layer[node_id] = layer + 1
+                self._hash_value[node_id] = subtree.hash_value
+                self._n_leaves[node_id] = subtree.n_leaves
+                self._n_nodes[node_id] = subtree.n_nodes
+                self._depth[node_id] = subtree.depth
+
+                if subtree.is_leaf():
+                    self._left_children[node_id] = -1
+                    self._right_children[node_id] = -1
+                    self._n_leaves[node_id] = 1
+                    self._hash_value[node_id] = 0
+                else:
+                    self._left_children[node_id] = child_node_id
+                    self._position[child_node_id] = self._position[node_id] - 1
+                    subtrees_in_next_layer.append((child_node_id, subtree.left_subtree))
+                    child_node_id += 1
+
+                    self._right_children[node_id] = child_node_id
+                    self._position[child_node_id] = self._position[node_id] + 1
+                    subtrees_in_next_layer.append((child_node_id, subtree.right_subtree))
+                    child_node_id += 1
+
+            subtrees_in_layer = subtrees_in_next_layer

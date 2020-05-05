@@ -1,76 +1,83 @@
+from pytest import fixture, raises
+
 from partitioning_machines import Tree
 
 
+@fixture
+def trees():
+    trees = [Tree()]
+    trees.append(Tree(trees[0], trees[0]))
+    trees.append(Tree(trees[1], trees[0]))
+    trees.append(Tree(trees[1], trees[1]))
+    trees.append(Tree(trees[2], trees[0]))
+    trees.append(Tree(trees[2], trees[1]))
+    trees.append(Tree(trees[3], trees[0]))
+    return trees
+
+
 class TestTree:
-    def test_is_leaf(self):
-        leaf = Tree()
-        assert leaf.is_leaf()
+    def test_children(self, trees):
+        assert trees[0].left_child == -1
+        assert trees[0].right_child == -1
+    
+    def test_subtrees(self, trees):
+        assert trees[3].left_subtree.current_node == 1
+        assert trees[3].right_subtree.current_node == 2
+        assert trees[3].left_subtree.left_subtree.current_node == 3
+        
+    def test_is_leaf(self, trees):
+        assert trees[0].is_leaf()
+        assert trees[1].left_subtree.is_leaf()
+        assert trees[1].right_subtree.is_leaf()
 
-    def test_is_stump(self):
-        stump = Tree(Tree(), Tree())
-        assert stump.is_stump()
+    def test_is_stump(self, trees):
+        assert trees[1].is_stump()
+        assert trees[2].left_subtree.is_stump()
 
-    def test_n_leaves(self):
-        leaf = Tree()
-        tree = Tree(Tree(leaf, leaf), leaf)
-        assert tree.n_leaves == 3
+    def test_n_leaves(self, trees):
+        assert trees[2].n_leaves == 3
+        assert trees[2].left_subtree.n_leaves == 2
+    
+    def test_n_nodes(self, trees):
+        assert trees[0].n_nodes == 0
+        assert trees[2].n_nodes == 2
+        assert trees[2].left_subtree.n_nodes == 1
 
-    def test___eq__(self):
+    def test___eq__(self, trees):
         leaf = Tree()
         assert leaf == Tree()
 
-        tree1 = Tree(Tree(leaf, leaf), leaf)
-        tree2 = Tree(leaf, Tree(leaf, leaf))
-        assert tree1 == tree2
-
-    def test_hash(self):
-        leaf = Tree()
-        stump = Tree(leaf, leaf)
-        tree1 = Tree(stump, leaf)
-        tree2 = Tree(stump, stump)
-        tree3 = Tree(tree1, leaf)
-        tree4 = Tree(tree1, stump)
-        tree5 = Tree(tree2, leaf)
-
-        assert hash(leaf) == 0
-        assert hash(stump) == 2
-        assert hash(tree1) == 5
-        assert hash(tree2) == 8
-        assert hash(tree3) == 9
-        assert hash(tree4) == 12
-        assert hash(tree5) == 13
-
-    def test_repr(self):
-        leaf = Tree()
-        stump = Tree(leaf, leaf)
-        tree1 = Tree(stump, leaf)
-        tree2 = Tree(stump, stump)
-        tree3 = Tree(tree1, leaf)
-        tree4 = Tree(tree1, stump)
-        tree5 = Tree(tree2, leaf)
-
-        assert leaf.depth == 0
-        assert stump.depth == 1
-        assert tree1.depth == 2
-        assert tree2.depth == 2
-        assert tree3.depth == 3
-        assert tree4.depth == 3
-        assert tree5.depth == 3
-
-    def test_repr(self):
-        leaf = Tree()
-        stump = Tree(leaf, leaf)
-        tree1 = Tree(stump, leaf)
-        tree2 = Tree(stump, stump)
-        tree3 = Tree(tree1, leaf)
-        tree4 = Tree(tree1, stump)
-        tree5 = Tree(tree2, leaf)
-
-        assert repr(leaf) == 'Tree()'
-        assert repr(stump) == 'Tree(Tree(), Tree())'
-        assert repr(tree1) == 'Tree of depth 2'
-        assert repr(tree2) == 'Tree of depth 2'
-        assert repr(tree3) == 'Tree of depth 3'
-        assert repr(tree4) == 'Tree of depth 3'
-        assert repr(tree5) == 'Tree of depth 3'
+        tree2 = Tree(Tree(leaf, leaf), leaf)
+        tree2_mirror = Tree(leaf, Tree(leaf, leaf))
+        assert tree2 == tree2_mirror
         
+        assert trees[1] == trees[2].left_subtree
+    
+    def test___eq__wrong_type(self, trees):
+        with raises(ValueError):
+            trees[0] == 1
+
+    def test_hash(self, trees):
+        assert [hash(tree) for tree in trees] == [0,2,5,8,9,12,13]
+
+    def test_depth(self, trees):
+        assert [tree.depth for tree in trees] == [0,1,2,2,3,3,3]
+
+    def test_repr(self, trees):
+        assert [repr(tree) for tree in trees] == ['Tree()',
+                                                  'Tree(Tree(), Tree())',
+                                                  'Tree of depth 2',
+                                                  'Tree of depth 2',
+                                                  'Tree of depth 3',
+                                                  'Tree of depth 3',
+                                                  'Tree of depth 3']
+    
+    def test_layer(self, trees):
+        assert trees[5].layer == 0
+        assert trees[5].left_subtree.layer == 1
+        assert trees[5].left_subtree.left_subtree.layer == 2
+    
+    def test_position(self, trees):
+        assert trees[1].position == 0
+        assert trees[1].left_subtree.position == -1
+        assert trees[1].right_subtree.position == 1
