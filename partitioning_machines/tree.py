@@ -74,7 +74,7 @@ class _TreeView:
 
     def __hash__(self):
         # The hash is the sum of the depths d_i of each leaf i.
-        return self.hash_value.item()
+        return self.hash_value
 
 
 class Tree:
@@ -104,25 +104,25 @@ class Tree:
             raise ValueError('Both subtrees must be either None or other valid trees.')
         
         if left_subtree is None and right_subtree is None: # Tree is a leaf
-            self._left_children = np.array([-1], dtype=int)
-            self._right_children = np.array([-1], dtype=int)
-            self._layer = np.array([0], dtype=int)
-            self._position = np.array([0])
-            self._n_leaves = np.array([1], dtype=int)
-            self._n_nodes = np.array([0], dtype=int)
-            self._depth = np.array([0], dtype=int)
-            self._hash_value = np.array([0], dtype=int)
+            self._left_children = [-1]
+            self._right_children = [-1]
+            self._layer = [0]
+            self._position = [0]
+            self._n_leaves = [1]
+            self._n_nodes = [0]
+            self._depth = [0]
+            self._hash_value = [0]
         else:
             n_nodes = 1 + left_subtree.n_nodes + right_subtree.n_nodes
-            arr_size = 2 * n_nodes + 1
-            self._left_children = np.zeros(arr_size, dtype=int)
-            self._right_children = np.zeros(arr_size, dtype=int)
-            self._layer = np.zeros(arr_size, dtype=int)
-            self._position = np.zeros(arr_size)
-            self._n_leaves = np.zeros(arr_size, dtype=int)
-            self._n_nodes = np.ones(arr_size, dtype=int)*arr_size
-            self._depth = np.zeros(arr_size, dtype=int)
-            self._hash_value = np.zeros(arr_size, dtype=int)
+            tree_size = 2 * n_nodes + 1
+            self._left_children = [0]*tree_size
+            self._right_children = [0]*tree_size
+            self._layer = [0]*tree_size
+            self._position = [0]*tree_size
+            self._n_leaves = [0]*tree_size
+            self._n_nodes = [tree_size]*tree_size
+            self._depth = [0]*tree_size
+            self._hash_value = [0]*tree_size
             
             self._build_tree_from_subtrees(left_subtree, right_subtree)
     
@@ -135,7 +135,7 @@ class Tree:
         self._n_leaves[1], self._n_leaves[2] = left_subtree.n_leaves, right_subtree.n_leaves
         self._n_nodes[0] = 1 + left_subtree.n_nodes + right_subtree.n_nodes
         self._n_nodes[1], self._n_nodes[2] = left_subtree.n_nodes, right_subtree.n_nodes
-        self._depth[0] = int(1 + max(left_subtree.depth, right_subtree.depth))
+        self._depth[0] = 1 + max(left_subtree.depth, right_subtree.depth)
         self._depth[1], self._depth[2] = left_subtree.depth, right_subtree.depth
         self._hash_value[0] = left_subtree.n_leaves + left_subtree.hash_value + right_subtree.n_leaves + right_subtree.hash_value
 
