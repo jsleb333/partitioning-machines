@@ -62,15 +62,19 @@ class _TreeView:
         """
         if not isinstance(other, _TreeView):
             raise ValueError('Cannot compare objects.')
-        if self.is_leaf() and other.is_leaf():
-            return True
-        if self.is_stump() and other.is_stump():
-            return True
+        
+        if self.is_leaf():
+            if other.is_leaf():
+                return True
+            else:
+                return False
+            
+        if other.is_leaf():
+            return False
+        
         if (self.left_subtree == other.left_subtree and self.right_subtree == other.right_subtree) \
             or (self.left_subtree == other.right_subtree and self.right_subtree == other.left_subtree):
             return True
-        else:
-            return False
 
     def __hash__(self):
         # The hash is the sum of the depths d_i of each leaf i.

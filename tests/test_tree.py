@@ -59,6 +59,8 @@ class TestTree:
 
     def test_hash(self, trees):
         assert [hash(tree) for tree in trees] == [0,2,5,8,9,12,13]
+        assert hash(trees[1].left_subtree) == 0
+        assert hash(trees[2].left_subtree) == 2
 
     def test_depth(self, trees):
         assert [tree.depth for tree in trees] == [0,1,2,2,3,3,3]
@@ -88,3 +90,12 @@ class TestTree:
     def test_children_list(self, trees):
         assert trees[3]._left_children == [1,2,-1,-1,5,-1,-1]
         assert trees[3]._right_children == [4,3,-1,-1,6,-1,-1]
+    
+    def test_is(self, trees):
+        assert trees[1] is trees[1]
+        assert trees[1] is not trees[1].left_subtree
+    
+    def test_in(self, trees):
+        list_of_subtrees = [trees[2]]
+        # assert trees[2] in list_of_subtrees
+        assert trees[2].left_subtree not in list_of_subtrees
