@@ -76,6 +76,9 @@ class _TreeView:
         # The hash is the sum of the depths d_i of each leaf i.
         return self.hash_value
 
+    def __len__(self):
+        return self.n_leaves + self.n_nodes
+
 
 class Tree:
     """
@@ -113,57 +116,32 @@ class Tree:
             self._depth = [0]
             self._hash_value = [0]
         else:
-            n_nodes = 1 + left_subtree.n_nodes + right_subtree.n_nodes
-            tree_size = 2 * n_nodes + 1
-            self._left_children = [0]*tree_size
-            self._right_children = [0]*tree_size
-            self._layer = [0]*tree_size
-            self._position = [0]*tree_size
-            self._n_leaves = [0]*tree_size
-            self._n_nodes = [tree_size]*tree_size
-            self._depth = [0]*tree_size
-            self._hash_value = [0]*tree_size
             
             self._build_tree_from_subtrees(left_subtree, right_subtree)
     
     def _build_tree_from_subtrees(self, left_subtree, right_subtree):
-        self._left_children[0] = 1
-        self._right_children[0] = 2
-        self._position[1], self._position[2] = -1, 1
-        self._layer[1], self._layer[2] = 1, 1
-        self._n_leaves[0] = left_subtree.n_leaves + right_subtree.n_leaves
-        self._n_leaves[1], self._n_leaves[2] = left_subtree.n_leaves, right_subtree.n_leaves
-        self._n_nodes[0] = 1 + left_subtree.n_nodes + right_subtree.n_nodes
-        self._n_nodes[1], self._n_nodes[2] = left_subtree.n_nodes, right_subtree.n_nodes
-        self._depth[0] = 1 + max(left_subtree.depth, right_subtree.depth)
-        self._depth[1], self._depth[2] = left_subtree.depth, right_subtree.depth
-        self._hash_value[0] = left_subtree.n_leaves + left_subtree.hash_value + right_subtree.n_leaves + right_subtree.hash_value
+        self._left_children = [1] \
+            + [1+child if child != - 1 else -1 for child in left_subtree._left_children] \
+            + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._left_children]
+        
+        self._right_children = [1+len(left_subtree)] \
+            + [1+child if child != - 1 else -1 for child in left_subtree._right_children] \
+            + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._right_children]
+        
+        self._position = [0] + [-1 + pos for pos in left_subtree._position] \
+                             + [1 + pos for pos in right_subtree._position]
+        
+        self._layer = [0] + [1 + layer for layer in left_subtree._layer] \
+                          + [1 + layer for layer in right_subtree._layer]
 
-        subtrees_in_layer = [(1, left_subtree), (2, right_subtree)]
-        child_node_id = 3
-        for layer in range(self._depth[0] + 1):
-            subtrees_in_next_layer = []
-            for node_id, subtree in subtrees_in_layer:
-                self._layer[node_id] = layer + 1
-                self._hash_value[node_id] = subtree.hash_value
-                self._n_leaves[node_id] = subtree.n_leaves
-                self._n_nodes[node_id] = subtree.n_nodes
-                self._depth[node_id] = subtree.depth
+        self._n_leaves = [left_subtree.n_leaves + right_subtree.n_leaves] \
+                         + left_subtree._n_leaves + right_subtree._n_leaves
 
-                if subtree.is_leaf():
-                    self._left_children[node_id] = -1
-                    self._right_children[node_id] = -1
-                    self._n_leaves[node_id] = 1
-                    self._hash_value[node_id] = 0
-                else:
-                    self._left_children[node_id] = child_node_id
-                    self._position[child_node_id] = self._position[node_id] - 1
-                    subtrees_in_next_layer.append((child_node_id, subtree.left_subtree))
-                    child_node_id += 1
+        self._n_nodes = [1 + left_subtree.n_nodes + right_subtree.n_nodes] \
+                        + left_subtree._n_nodes + right_subtree._n_nodes
 
-                    self._right_children[node_id] = child_node_id
-                    self._position[child_node_id] = self._position[node_id] + 1
-                    subtrees_in_next_layer.append((child_node_id, subtree.right_subtree))
-                    child_node_id += 1
-
-            subtrees_in_layer = subtrees_in_next_layer
+        self._depth = [1 + max(left_subtree.depth, right_subtree.depth)] \
+                      + left_subtree._depth + right_subtree._depth
+        
+        self._hash_value = [self._n_leaves[0] + left_subtree.hash_value + right_subtree.hash_value]\
+                           + left_subtree._hash_value + right_subtree._hash_value

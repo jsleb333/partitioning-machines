@@ -22,8 +22,8 @@ class TestTree:
     
     def test_subtrees(self, trees):
         assert trees[3].left_subtree.current_node == 1
-        assert trees[3].right_subtree.current_node == 2
-        assert trees[3].left_subtree.left_subtree.current_node == 3
+        assert trees[3].right_subtree.current_node == 4
+        assert trees[3].left_subtree.left_subtree.current_node == 2
         
     def test_is_leaf(self, trees):
         assert trees[0].is_leaf()
@@ -81,3 +81,10 @@ class TestTree:
         assert trees[1].position == 0
         assert trees[1].left_subtree.position == -1
         assert trees[1].right_subtree.position == 1
+    
+    def test__len__(self, trees):
+        assert [len(tree) for tree in trees] == [1, 3, 5, 7, 7, 9, 9]
+    
+    def test_children_list(self, trees):
+        assert trees[3]._left_children == [1,2,-1,-1,5,-1,-1]
+        assert trees[3]._right_children == [4,3,-1,-1,6,-1,-1]
