@@ -139,7 +139,7 @@ def tree_to_tikz(tree, min_node_distance=1.3, layer_distance=1.6, node_size=.6):
     return pic
 
 def draw_tree(tree):
-    doc = p2l.Document('test', options=('varwidth',), doc_type='standalone')
+    doc = p2l.Document(str(tree).replace(' ', '_'), options=('varwidth',), doc_type='standalone', border='1cm')
     doc.add_package('tikz')
     del doc.packages['geometry']
     doc.add_to_preamble('\\usetikzlibrary{shapes}')
