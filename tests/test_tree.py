@@ -107,3 +107,30 @@ class TestTree:
 
         assert [subtree.current_node for subtree in trees[1]] == [0,1,2]
         assert [subtree.current_node for subtree in trees[2]] == [0,1,2,3,4]
+
+    def test_replace_leaf_by_stump(self, trees):
+        tree = Tree(Tree(), Tree())
+        tree.left_subtree.replace_subtree(tree)
+        assert tree == trees[2]
+        assert tree._depth == [2, 1, 0, 0, 0]
+        assert tree._layer == [0, 1, 1, 2, 2]
+        assert tree._position == [0, -1, 1, -2, 0]
+
+    def test_replace_stump_by_leaf(self, trees):
+        tree = Tree(Tree(), Tree())
+        tree.replace_subtree(Tree())
+        assert tree.is_leaf()
+
+    def test_replace_leaf_by_leaf(self, trees):
+        tree = Tree(Tree(), Tree())
+        tree.left_subtree.replace_subtree(Tree())
+        assert tree == trees[1]
+
+    def test_split_leaf(self, trees):
+        tree = Tree()
+        tree.split_leaf()
+        assert tree == trees[1]
+
+    def test_remove_subtree(self, trees):
+        trees[2].left_subtree.remove_subtree()
+        assert trees[2] == trees[1]

@@ -1,7 +1,4 @@
 """Implementation of a binary tree"""
-import numpy as np
-from scipy.special import binom
-from sympy.functions.combinatorial.numbers import stirling
 
 
 class _TreeView:
@@ -10,35 +7,35 @@ class _TreeView:
     """
     def __init__(self, tree, current_node=0):
         self.current_node = current_node
-        self.tree = tree
+        self._tree = tree
 
     @property
     def left_child(self):
-        return self.tree._left_children[self.current_node]
+        return self._tree._left_children[self.current_node]
 
     @property
     def left_subtree(self):
-        return _TreeView(self.tree, self.left_child)
+        return _TreeView(self._tree, self.left_child)
 
     @property
     def right_child(self):
-        return self.tree._right_children[self.current_node]
+        return self._tree._right_children[self.current_node]
 
     @property
     def right_subtree(self):
-        return _TreeView(self.tree, self.right_child)
+        return _TreeView(self._tree, self.right_child)
 
     def __getattr__(self, name):
         if name in ['layer', 'position', 'n_leaves', 'n_nodes', 'depth', 'hash_value']:
-            return getattr(self.tree, '_' + name)[self.current_node]
+            return getattr(self._tree, '_' + name)[self.current_node]
         else:
-            return getattr(self.tree, name)
+            return getattr(self._tree, name)
 
     def is_leaf(self):
         """
         A leaf is a tree with no subtrees.
         """
-        return self.tree.node_is_leaf(self.current_node)
+        return self._tree.node_is_leaf(self.current_node)
 
     def is_stump(self):
         """
@@ -92,6 +89,33 @@ class _TreeView:
             yield from self.left_subtree
             yield from self.right_subtree
 
+    def replace_subtree(self, tree):
+        """
+        Replaces current subtree with given tree instead.
+
+        Returns self.
+        """
+        self._tree.replace_subtree(self.current_node, tree._tree)
+        return self
+
+    def split_leaf(self):
+        """
+        Makes a leaf into a node with two leaves as children.
+
+        Returns self.
+        """
+        if not self.is_leaf():
+            raise RuntimeError('Cannot split internal node.')
+        return self.replace_subtree(Tree(Tree(), Tree()))
+
+    def remove_subtree(self):
+        """
+        Transforms the subtree into a leaf.
+
+        Returns self.
+        """
+        return self.replace_subtree(Tree())
+
 
 class Tree:
     """
@@ -143,6 +167,15 @@ class Tree:
         self.update_tree()
 
     def update_tree(self):
+        for attr in [self._depth,
+                     self._layer,
+                     self._n_leaves,
+                     self._n_nodes,
+                     self._hash_value,
+                     self._position]:
+            if len(attr) != len(self._left_children):
+                attr += [0]*(len(self._left_children)-len(attr))
+
         self._update_depth()
         self._update_layer()
         self._update_n_leaves()
@@ -202,3 +235,20 @@ class Tree:
             left_child, right_child = self._left_children[node], self._right_children[node]
             self._update_position(left_child, position-1)
             self._update_position(right_child, position+1)
+
+    def replace_subtree(self, node, tree):
+        """
+        Removes the subtree situated at 'node' and inserts the tree 'tree' in its place.
+        """
+        if tree.node_is_leaf(0):
+            self._left_children[node] = -1
+            self._right_children[node] = -1
+        else:
+            shift = len(self._left_children)-1
+            self._left_children += [shift+child if child != - 1 else -1 for child in tree._left_children[1:]]
+            self._left_children[node] = shift+1
+
+            self._right_children += [shift+child if child != - 1 else -1 for child in tree._right_children[1:]]
+            self._right_children[node] = shift+2
+
+        self.update_tree()
