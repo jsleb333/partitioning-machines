@@ -83,6 +83,15 @@ class _TreeView:
     def __len__(self):
         return self.n_leaves + self.n_nodes
 
+    def __iter__(self):
+        """
+        Iterates on every subtrees of the tree in a pre-order fashion.
+        """
+        yield self
+        if not self.is_leaf():
+            yield from self.left_subtree
+            yield from self.right_subtree
+
 
 class Tree:
     """
