@@ -1,4 +1,5 @@
 """Implementation of a binary tree"""
+from copy import copy
 
 
 class _TreeView:
@@ -117,6 +118,29 @@ class _TreeView:
         return self.replace_subtree(Tree())
 
 
+class Node:
+    def __init__(self,
+                 left_child=None,
+                 right_child=None,
+                 depth=0,
+                 layer=0,
+                 n_leaves=1,
+                 n_nodes=0,
+                 hash_value=0,
+                 position=0):
+        self.left_child = left_child
+        self.right_child = right_child
+        self.depth = depth
+        self.layer = layer
+        self.n_leaves = n_leaves
+        self.n_nodes = n_nodes
+        self.hash_value = hash_value
+        self.position = position
+
+    def is_leaf(self):
+        return self.left_child is None and self.right_child is None
+
+
 class Tree:
     """
     This Tree class implements a binary tree object with a set of arrays handling attributes of every nodes. This type of implementation has various advantages, but is less easy to manipulate. To overcome this, a recursive implementation is simulated in the _TreeView API class. Such an object is returned when Tree() is instanciated.
@@ -148,108 +172,105 @@ class Tree:
             raise ValueError('Both subtrees must be either None or other valid trees.')
 
         if left_subtree is None and right_subtree is None: # Tree is a leaf
-            self._left_children = [-1]
-            self._right_children = [-1]
-            tree_size = 1
+            self.root = Node()
         else:
-            self._left_children = [1] \
-                + [1+child if child != - 1 else -1 for child in left_subtree._left_children] \
-                + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._left_children]
+            self.root = Node(left_subtree.root, right_subtree.root)#] \
+                        # + [copy(node) for node in left_subtree._nodes] \
+                        # + [copy(node) for node in right_subtree._nodes]
 
-            self._right_children = [1+len(left_subtree)] \
-                + [1+child if child != - 1 else -1 for child in left_subtree._right_children] \
-                + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._right_children]
-            tree_size = len(self._left_children)
-
-        self._depth = [0]*tree_size
-        self._layer = [0]*tree_size
-        self._n_leaves = [0]*tree_size
-        self._n_nodes = [0]*tree_size
-        self._hash_value = [0]*tree_size
-        self._position = [0]*tree_size
+        self._nodes = []
 
         self.update_tree()
 
-    def update_tree(self):
-        for attr in [self._depth,
-                     self._layer,
-                     self._n_leaves,
-                     self._n_nodes,
-                     self._hash_value,
-                     self._position]:
-            if len(attr) < len(self._left_children):
-                attr += [0]*(len(self._left_children)-len(attr))
-
-        self._update_depth()
-        self._update_layer()
-        self._update_n_leaves()
-        self._update_n_nodes()
-        self._update_hash_value()
-        self._update_position()
-
-    def node_is_leaf(self, node):
-        return self._left_children[node] == -1 and self._right_children[node] == -1
-
-    def _update_depth(self, node=0):
-        if self.node_is_leaf(node):
-            self._depth[node] = 0
+    def __copy__(self):
+        if self.root.is_leaf():
+            copied_tree = Tree()
+            copied_tree.root = copy(self.root)
+            return copied_tree
         else:
-            left_child, right_child = self._left_children[node], self._right_children[node]
+            copy_of_left_child = copy(self.root.left_child)
+            copy_of_right_child = copy(self.root.right_child)
+            copied_tree.root = copy(self.root)
+            copied_tree = Tree()
+            copied_tree.root.
+            return Tree()
+
+    def update_tree(self):
+
+        self.preorder(self.root)
+
+        self._update_depth(self.root)
+        self._update_layer(self.root)
+        self._update_n_leaves(self.root)
+        self._update_n_nodes(self.root)
+        self._update_hash_value(self.root)
+        self._update_position(self.root)
+
+    def preorder(self, node):
+        self._nodes.append(node)
+        if not node.is_leaf():
+            self.preorder(node.left_child)
+            self.preorder(node.right_child)
+
+    def _update_depth(self, node):
+        if node.is_leaf():
+            node.depth = 0
+        else:
+            left_child, right_child = node.left_child, node.right_child
             self._update_depth(left_child)
             self._update_depth(right_child)
-            self._depth[node] = 1 + max(self._depth[left_child], self._depth[right_child])
+            node.depth = 1 + max(left_child.depth, right_child.depth)
 
-    def _update_layer(self, node=0, layer=0):
-        self._layer[node] = layer
-        if not self.node_is_leaf(node):
-            left_child, right_child = self._left_children[node], self._right_children[node]
+    def _update_layer(self, node, layer=0):
+        node.layer = layer
+        if not node.is_leaf():
+            left_child, right_child = node.left_child, node.right_child
             self._update_layer(left_child, layer+1)
             self._update_layer(right_child, layer+1)
 
-    def _update_n_leaves(self, node=0):
-        if self.node_is_leaf(node):
-            self._n_leaves[node] = 1
+    def _update_n_leaves(self, node):
+        if node.is_leaf():
+            node.n_leaves = 1
         else:
-            left_child, right_child = self._left_children[node], self._right_children[node]
+            left_child, right_child = node.left_child, node.right_child
             self._update_n_leaves(left_child)
             self._update_n_leaves(right_child)
-            self._n_leaves[node] = self._n_leaves[left_child] + self._n_leaves[right_child]
+            node.n_leaves = left_child.n_leaves + right_child.n_leaves
 
-    def _update_n_nodes(self, node=0):
-        if self.node_is_leaf(node):
-            self._n_nodes[node] = 0
+    def _update_n_nodes(self, node):
+        if node.is_leaf():
+            node.n_nodes = 1
         else:
-            left_child, right_child = self._left_children[node], self._right_children[node]
+            left_child, right_child = node.left_child, node.right_child
             self._update_n_nodes(left_child)
             self._update_n_nodes(right_child)
-            self._n_nodes[node] = 1 + self._n_nodes[left_child] + self._n_nodes[right_child]
+            node.n_nodes = 1 + left_child.n_nodes + right_child.n_nodes
 
-    def _update_hash_value(self, node=0):
-        if self.node_is_leaf(node):
-            self._hash_value[node] = 0
+    def _update_hash_value(self, node):
+        if node.is_leaf():
+            node.hash_value = 0
         else:
-            left_child, right_child = self._left_children[node], self._right_children[node]
+            left_child, right_child = node.left_child, node.right_child
             self._update_hash_value(left_child)
             self._update_hash_value(right_child)
-            self._hash_value[node] = self._n_leaves[node] + self._hash_value[left_child] + self._hash_value[right_child]
+            node.hash_value = node.n_leaves + left_child.hash_value + right_child.hash_value
 
-    def _update_position(self):
-        self._init_position()
-        self._deoverlap_position()
+    def _update_position(self, node):
+        self._init_position(node)
+        self._deoverlap_position(node)
 
-    def _init_position(self, node=0, position=0):
-        self._position[node] = position
-        if not self.node_is_leaf(node):
-            left_child, right_child = self._left_children[node], self._right_children[node]
+    def _init_position(self, node, position=0):
+        node.position = position
+        if not node.is_leaf():
+            left_child, right_child = node.left_child, node.right_child
             self._init_position(left_child, position-1)
             self._init_position(right_child, position+1)
 
-    def _deoverlap_position(self, node=0):
-        if self.node_is_leaf(node):
+    def _deoverlap_position(self, node):
+        if node.is_leaf():
             return
         else:
-            left_child = self._left_children[node]
-            right_child = self._right_children[node]
+            left_child, right_child = node.left_child, node.right_child
             self._deoverlap_position(left_child)
             self._deoverlap_position(right_child)
             overlap = self._find_largest_overlap(left_child, right_child)
@@ -268,14 +289,14 @@ class Tree:
         nodes_in_layer = [node]
         while nodes_in_layer:
             nodes_in_next_layer = []
-            max_pos = self._position[nodes_in_layer[0]]
+            max_pos = nodes_in_layer[0].position
             for node in nodes_in_layer:
-                if self._position[node] > max_pos:
-                    max_pos = self._position[node]
+                if node.position > max_pos:
+                    max_pos = node.position
 
-                if not self.node_is_leaf(node):
-                    nodes_in_next_layer.append(self._left_children[node])
-                    nodes_in_next_layer.append(self._right_children[node])
+                if not node.is_leaf():
+                    nodes_in_next_layer.append(node.left_child)
+                    nodes_in_next_layer.append(node.right_child)
             rightest_position_by_layer.append(max_pos)
             nodes_in_layer = nodes_in_next_layer
 
@@ -286,40 +307,38 @@ class Tree:
         nodes_in_layer = [node]
         while nodes_in_layer:
             nodes_in_next_layer = []
-            min_pos = self._position[nodes_in_layer[0]]
+            min_pos = nodes_in_layer[0].position
             for node in nodes_in_layer:
-                if self._position[node] < min_pos:
-                    min_pos = self._position[node]
+                if node.position < min_pos:
+                    min_pos = node.position
 
-                if not self.node_is_leaf(node):
-                    nodes_in_next_layer.append(self._left_children[node])
-                    nodes_in_next_layer.append(self._right_children[node])
+                if not node.is_leaf():
+                    nodes_in_next_layer.append(node.left_child)
+                    nodes_in_next_layer.append(node.right_child)
             leftest_position_by_layer.append(min_pos)
             nodes_in_layer = nodes_in_next_layer
 
         return leftest_position_by_layer
 
     def _shift_tree(self, node, shift):
-        self._position[node] += shift
-        if self.node_is_leaf(node):
-            return
-        else:
-            self._shift_tree(self._left_children[node], shift)
-            self._shift_tree(self._right_children[node], shift)
+        node.position += shift
+        if not node.is_leaf():
+            self._shift_tree(node.left_child, shift)
+            self._shift_tree(node.right_child, shift)
 
     def _replace_subtree(self, node, tree):
         """
         Removes the subtree situated at 'node' and inserts the tree 'tree' in its place.
         """
         if tree.node_is_leaf(0):
-            self._left_children[node] = -1
-            self._right_children[node] = -1
+            node.left_child = None
+            node.right_child = None
         else:
             shift = len(self._left_children)-1
             self._left_children += [shift+child if child != - 1 else -1 for child in tree._left_children[1:]]
-            self._left_children[node] = shift+1
+            node.left_child = shift+1
 
             self._right_children += [shift+child if child != - 1 else -1 for child in tree._right_children[1:]]
-            self._right_children[node] = shift+2
+            node.right_child = shift+2
 
         self.update_tree()
