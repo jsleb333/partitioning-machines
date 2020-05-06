@@ -3,7 +3,7 @@
 
 class _TreeView:
     """
-    Implements a view of a tree maintaining the current node inspected on a tree. Allows to navigate a tree easily in a recursive manner.
+    Implements a view of a tree maintaining the current node inspected on a tree. Acts as an API and allows to navigate a tree easily in a recursive manner. See the Tree class documentation.
     """
     def __init__(self, tree, current_node=0):
         self.current_node = current_node
@@ -95,7 +95,7 @@ class _TreeView:
 
         Returns self.
         """
-        self._tree.replace_subtree(self.current_node, tree._tree)
+        self._tree._replace_subtree(self.current_node, tree._tree)
         return self
 
     def split_leaf(self):
@@ -119,13 +119,17 @@ class _TreeView:
 
 class Tree:
     """
-    This Tree class implements a binary tree object with a set of arrays handling attributes of every nodes. This type of implementation has various advantages, but is less easy to manipulate. To overcome this, a recursive implementation is simulated with the use of an internal flag 'current_node' which situates the selected node and thus the respective subtrees. The whole tree is considered when 'current_node' is equal to 0. All attributes relevant to the current node are accessible via non-underscored names, while global attributes contained in arrays are stored in variables beginning with an underscore.
+    This Tree class implements a binary tree object with a set of arrays handling attributes of every nodes. This type of implementation has various advantages, but is less easy to manipulate. To overcome this, a recursive implementation is simulated in the _TreeView API class. Such an object is returned when Tree() is instanciated.
 
-    The class implements the '__eq__' operator to be able to compare other trees. It returns true if both trees are non-equivalent, i.e. it does not matter which subtree is the left and the right (they can be swapped).
+    This API contains a reference to the actual tree and an internal flag 'current_node' pointing to a particular node, allowing to handle the associated subtree. The root is always at 0, thus the whole tree is considered when 'current_node' is equal to 0. All attributes relevant to the current node are accessible via non-underscored names, while global attributes contained in arrays are stored in variables beginning with an underscore.
 
-    The class handles the number of leaves of the whole tree in the property 'n_leaves', which computes it once the first time it is accessed and then stores it in the '_n_leaves' attributes (and for every subtrees of the tree as well). The number of leaves is computed via the method 'update_tree'.
+    Attributes maintained by the class are the number of leaves and of internal nodes of the subtrees, the depth of the subtrees, the layer of the current node (relative to the whole tree), the position of the current node (relative to the whole tree) to be able to draw the tree, and a hash value to be able to hash a subtree in a dictionnary. The tree class computes automatically all these quantities at the initialization and whenever the tree is modified via the provided methods to do so.
 
-    The class also implements a hash so that Tree objects can be used as key in a dictionary. The chosen hashing function here is the sum of the hash value of the two subtrees and of the total number of leaves of the tree. The hash is computed once when the function 'update_tree' is called and is then stored in the '_hash_value' property.
+    The API also provides utilitary methods to handle the tree, such as 'left_subtree' and 'right_subtree' properties to get a _TreeView of the subtrees and methods 'is_leaf' and 'is_stump'. Moreover, the tree can be modified using the 'replace_subtree', 'split_leaf' and 'remove_subtree' methods.
+
+    It also implements the '__eq__' operator to be able to compare other trees. It returns true if both trees are non-equivalent, i.e. it does not matter which subtree is the left and the right (they can be swapped).
+    The '__len__' operator returns the total number of nodes in the subtree.
+    The '__iter__' operator iterates in pre-order on the subtrees of the subtree.
     """
     def __new__(cls, *args, **kwargs):
         tree = super().__new__(cls)
@@ -173,7 +177,7 @@ class Tree:
                      self._n_nodes,
                      self._hash_value,
                      self._position]:
-            if len(attr) != len(self._left_children):
+            if len(attr) < len(self._left_children):
                 attr += [0]*(len(self._left_children)-len(attr))
 
         self._update_depth()
@@ -236,7 +240,7 @@ class Tree:
             self._update_position(left_child, position-1)
             self._update_position(right_child, position+1)
 
-    def replace_subtree(self, node, tree):
+    def _replace_subtree(self, node, tree):
         """
         Removes the subtree situated at 'node' and inserts the tree 'tree' in its place.
         """
