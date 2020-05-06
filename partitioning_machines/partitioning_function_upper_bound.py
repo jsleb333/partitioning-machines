@@ -8,13 +8,14 @@ class PartitioningFunctionUpperBound:
 
     It implements an optimized version of the algorithm 1 of Appendix E by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
-    def __init__(self, tree, n_features):
+    def __init__(self, tree, n_features, pre_computed_tables=None):
         """
         At initialization, a list of all subtrees is computed and then a dict is created with subtrees as keys. This dict is used as a look-up table to store upper bound values already computed for each subtrees to avoid computing the same thing multiple times.
 
         Args:
             tree (Tree object): Tree structure for which to compute the bound.
-            n_features (int): Number of real-valued features.. Corresponds to the variable '\ell' in the paper.
+            n_features (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+            pre_computed_tables (Union[dict, None]): If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. If None, a table will be created from scratch.
         """
         self.tree = tree
         self.n_features = n_features
@@ -23,6 +24,8 @@ class PartitioningFunctionUpperBound:
         self._compute_list_of_distinct_subtrees(tree)
 
         self.pfub_table = {subtree:{} for subtree in self.subtrees}
+        if pre_computed_tables is not None:
+            self.pfub_table.update(pre_computed_tables)
 
     def _compute_list_of_distinct_subtrees(self, tree):
         """

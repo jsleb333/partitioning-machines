@@ -35,3 +35,15 @@ class TestPatitioninFunctionUpperBound:
         assert pfub(m,2) == 2**(m-1)-1
         m = 17
         assert pfub(m,2) < 2**(m-1)-1
+
+    def test_compute_bound_with_precomputed_tables(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree = Tree(stump, leaf)
+        pfub = PartitioningFunctionUpperBound(tree, 10)
+        pfub(16, 2)
+
+        other_tree = Tree(tree, tree)
+        pfub = PartitioningFunctionUpperBound(other_tree, 10, pfub.pfub_table)
+        assert pfub.pfub_table[tree][2, 16, 10] == 2**(16-1)-1
+        pfub(17, 2)
