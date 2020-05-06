@@ -11,7 +11,7 @@ class _TreeView:
     def __init__(self, tree, current_node=0):
         self.current_node = current_node
         self.tree = tree
-    
+
     @property
     def left_child(self):
         return self.tree._left_children[self.current_node]
@@ -38,7 +38,7 @@ class _TreeView:
         """
         A leaf is a tree with no subtrees.
         """
-        return self.left_child == -1 and self.right_child == -1
+        return self.tree.node_is_leaf(self.current_node)
 
     def is_stump(self):
         """
@@ -62,16 +62,16 @@ class _TreeView:
         """
         if not isinstance(other, _TreeView):
             raise ValueError('Cannot compare objects.')
-        
+
         if self.is_leaf():
             if other.is_leaf():
                 return True
             else:
                 return False
-            
+
         if other.is_leaf():
             return False
-        
+
         if (self.left_subtree == other.left_subtree and self.right_subtree == other.right_subtree) \
             or (self.left_subtree == other.right_subtree and self.right_subtree == other.left_subtree):
             return True
@@ -98,7 +98,7 @@ class Tree:
         tree = super().__new__(cls)
         tree.__init__(*args, **kwargs)
         return _TreeView(tree)
-    
+
     def __init__(self, left_subtree=None, right_subtree=None):
         """
         Args:
@@ -109,43 +109,87 @@ class Tree:
         """
         if left_subtree is None and right_subtree is not None or left_subtree is not None and right_subtree is None:
             raise ValueError('Both subtrees must be either None or other valid trees.')
-        
+
         if left_subtree is None and right_subtree is None: # Tree is a leaf
             self._left_children = [-1]
             self._right_children = [-1]
-            self._layer = [0]
-            self._position = [0]
-            self._n_leaves = [1]
-            self._n_nodes = [0]
-            self._depth = [0]
-            self._hash_value = [0]
+            tree_size = 1
         else:
-            
-            self._build_tree_from_subtrees(left_subtree, right_subtree)
-    
-    def _build_tree_from_subtrees(self, left_subtree, right_subtree):
-        self._left_children = [1] \
-            + [1+child if child != - 1 else -1 for child in left_subtree._left_children] \
-            + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._left_children]
-        
-        self._right_children = [1+len(left_subtree)] \
-            + [1+child if child != - 1 else -1 for child in left_subtree._right_children] \
-            + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._right_children]
-        
-        self._position = [0] + [-1 + pos for pos in left_subtree._position] \
-                             + [1 + pos for pos in right_subtree._position]
-        
-        self._layer = [0] + [1 + layer for layer in left_subtree._layer] \
-                          + [1 + layer for layer in right_subtree._layer]
+            self._left_children = [1] \
+                + [1+child if child != - 1 else -1 for child in left_subtree._left_children] \
+                + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._left_children]
 
-        self._n_leaves = [left_subtree.n_leaves + right_subtree.n_leaves] \
-                         + left_subtree._n_leaves + right_subtree._n_leaves
+            self._right_children = [1+len(left_subtree)] \
+                + [1+child if child != - 1 else -1 for child in left_subtree._right_children] \
+                + [1+len(left_subtree)+child if child != - 1 else -1 for child in right_subtree._right_children]
+            tree_size = len(self._left_children)
 
-        self._n_nodes = [1 + left_subtree.n_nodes + right_subtree.n_nodes] \
-                        + left_subtree._n_nodes + right_subtree._n_nodes
+        self._depth = [0]*tree_size
+        self._layer = [0]*tree_size
+        self._n_leaves = [0]*tree_size
+        self._n_nodes = [0]*tree_size
+        self._hash_value = [0]*tree_size
+        self._position = [0]*tree_size
 
-        self._depth = [1 + max(left_subtree.depth, right_subtree.depth)] \
-                      + left_subtree._depth + right_subtree._depth
-        
-        self._hash_value = [self._n_leaves[0] + left_subtree.hash_value + right_subtree.hash_value]\
-                           + left_subtree._hash_value + right_subtree._hash_value
+        self.update_tree()
+
+    def update_tree(self):
+        self._update_depth()
+        self._update_layer()
+        self._update_n_leaves()
+        self._update_n_nodes()
+        self._update_hash_value()
+        self._update_position()
+
+    def node_is_leaf(self, node):
+        return self._left_children[node] == -1 and self._right_children[node] == -1
+
+    def _update_depth(self, node=0):
+        if self.node_is_leaf(node):
+            self._depth[node] = 0
+        else:
+            left_child, right_child = self._left_children[node], self._right_children[node]
+            self._update_depth(left_child)
+            self._update_depth(right_child)
+            self._depth[node] = 1 + max(self._depth[left_child], self._depth[right_child])
+
+    def _update_layer(self, node=0, layer=0):
+        self._layer[node] = layer
+        if not self.node_is_leaf(node):
+            left_child, right_child = self._left_children[node], self._right_children[node]
+            self._update_layer(left_child, layer+1)
+            self._update_layer(right_child, layer+1)
+
+    def _update_n_leaves(self, node=0):
+        if self.node_is_leaf(node):
+            self._n_leaves[node] = 1
+        else:
+            left_child, right_child = self._left_children[node], self._right_children[node]
+            self._update_n_leaves(left_child)
+            self._update_n_leaves(right_child)
+            self._n_leaves[node] = self._n_leaves[left_child] + self._n_leaves[right_child]
+
+    def _update_n_nodes(self, node=0):
+        if self.node_is_leaf(node):
+            self._n_nodes[node] = 0
+        else:
+            left_child, right_child = self._left_children[node], self._right_children[node]
+            self._update_n_nodes(left_child)
+            self._update_n_nodes(right_child)
+            self._n_nodes[node] = 1 + self._n_nodes[left_child] + self._n_nodes[right_child]
+
+    def _update_hash_value(self, node=0):
+        if self.node_is_leaf(node):
+            self._hash_value[node] = 0
+        else:
+            left_child, right_child = self._left_children[node], self._right_children[node]
+            self._update_hash_value(left_child)
+            self._update_hash_value(right_child)
+            self._hash_value[node] = self._n_leaves[node] + self._hash_value[left_child] + self._hash_value[right_child]
+
+    def _update_position(self, node=0, position=0):
+        self._position[node] = position
+        if not self.node_is_leaf(node):
+            left_child, right_child = self._left_children[node], self._right_children[node]
+            self._update_position(left_child, position-1)
+            self._update_position(right_child, position+1)
