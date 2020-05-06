@@ -233,12 +233,79 @@ class Tree:
             self._update_hash_value(right_child)
             self._hash_value[node] = self._n_leaves[node] + self._hash_value[left_child] + self._hash_value[right_child]
 
-    def _update_position(self, node=0, position=0):
+    def _update_position(self):
+        self._init_position()
+        self._deoverlap_position()
+
+    def _init_position(self, node=0, position=0):
         self._position[node] = position
         if not self.node_is_leaf(node):
             left_child, right_child = self._left_children[node], self._right_children[node]
-            self._update_position(left_child, position-1)
-            self._update_position(right_child, position+1)
+            self._init_position(left_child, position-1)
+            self._init_position(right_child, position+1)
+
+    def _deoverlap_position(self, node=0):
+        if self.node_is_leaf(node):
+            return
+        else:
+            left_child = self._left_children[node]
+            right_child = self._right_children[node]
+            self._deoverlap_position(left_child)
+            self._deoverlap_position(right_child)
+            overlap = self._find_largest_overlap(left_child, right_child)
+            if overlap >= -1:
+                self._shift_tree(left_child, -overlap/2 - 1)
+                self._shift_tree(right_child, overlap/2 + 1)
+
+    def _find_largest_overlap(self, left_child, right_child):
+        rightest_position = self._find_rightest_position_by_layer(left_child)
+        leftest_position = self._find_leftest_position_by_layer(right_child)
+        overlaps = [r - l for l, r in zip(leftest_position, rightest_position)]
+        return max(overlaps)
+
+    def _find_rightest_position_by_layer(self, node):
+        rightest_position_by_layer = []
+        nodes_in_layer = [node]
+        while nodes_in_layer:
+            nodes_in_next_layer = []
+            max_pos = self._position[nodes_in_layer[0]]
+            for node in nodes_in_layer:
+                if self._position[node] > max_pos:
+                    max_pos = self._position[node]
+
+                if not self.node_is_leaf(node):
+                    nodes_in_next_layer.append(self._left_children[node])
+                    nodes_in_next_layer.append(self._right_children[node])
+            rightest_position_by_layer.append(max_pos)
+            nodes_in_layer = nodes_in_next_layer
+
+        return rightest_position_by_layer
+
+    def _find_leftest_position_by_layer(self, node):
+        leftest_position_by_layer = []
+        nodes_in_layer = [node]
+        while nodes_in_layer:
+            nodes_in_next_layer = []
+            min_pos = self._position[nodes_in_layer[0]]
+            for node in nodes_in_layer:
+                if self._position[node] < min_pos:
+                    min_pos = self._position[node]
+
+                if not self.node_is_leaf(node):
+                    nodes_in_next_layer.append(self._left_children[node])
+                    nodes_in_next_layer.append(self._right_children[node])
+            leftest_position_by_layer.append(min_pos)
+            nodes_in_layer = nodes_in_next_layer
+
+        return leftest_position_by_layer
+
+    def _shift_tree(self, node, shift):
+        self._position[node] += shift
+        if self.node_is_leaf(node):
+            return
+        else:
+            self._shift_tree(self._left_children[node], shift)
+            self._shift_tree(self._right_children[node], shift)
 
     def _replace_subtree(self, node, tree):
         """
