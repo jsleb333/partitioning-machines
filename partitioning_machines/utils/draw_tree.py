@@ -5,7 +5,7 @@ except ImportError:
     raise ImportError("The drawing of trees rely on the package python2latex. Please install it with 'pip install python2latex'.")
 
 
-def tree_to_tikz(tree, min_node_distance=1.3, layer_distance=1.6, node_size=.6):
+def tree_to_tikz(tree, min_node_distance=1.3, depth_distance=1.6, node_size=.6):
 
     pic = p2l.TexEnvironment('tikzpicture')
     pic.options += f"""leaf/.style={{draw, diamond, minimum width={node_size}cm, minimum height={2*node_size}cm, inner sep=0pt}}""",
@@ -13,7 +13,7 @@ def tree_to_tikz(tree, min_node_distance=1.3, layer_distance=1.6, node_size=.6):
 
     for node, subtree in enumerate(tree):
         style = 'leaf' if subtree.is_leaf() else 'internal'
-        pic += f'\\node[{style}](node{node}) at ({min_node_distance*subtree.position/2:.3f}, {-layer_distance*subtree.layer:.3f}) {{}};'
+        pic += f'\\node[{style}](node{node}) at ({min_node_distance*subtree.position/2:.3f}, {-depth_distance*subtree.depth:.3f}) {{}};'
         subtree.node_id = node
 
     for subtree in tree:

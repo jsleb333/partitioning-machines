@@ -27,7 +27,7 @@ def test_tree_to_tikz(trees):
 
 def test_draw_tree(trees):
     draw_tree(trees[9], show_pdf=False)
-    os.remove('./Tree_of_depth_3.log')
-    os.remove('./Tree_of_depth_3.tex')
-    os.remove('./Tree_of_depth_3.aux')
-    os.remove('./Tree_of_depth_3.pdf')
+    os.remove('./Tree_of_height_3.log')
+    os.remove('./Tree_of_height_3.tex')
+    os.remove('./Tree_of_height_3.aux')
+    os.remove('./Tree_of_height_3.pdf')

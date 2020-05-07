@@ -6,7 +6,7 @@ class Tree:
     """
     This Tree class implements a binary tree object in a recursive fashion. The left and right subtrees are thus Tree objects too.
 
-    Attributes maintained by the class are the number of leaves and of internal nodes of the tree, the depth of the tree, the layer of the tree (relative to its parent tree), the position of the current node (relative to its parent tree) to be able to draw the tree, and a hash value to be able to hash a tree in a dictionnary. The tree class computes automatically all these quantities at the initialization and whenever the tree is modified via the provided methods to do so.
+    Attributes maintained by the class are the number of leaves and of internal nodes of the tree, the height of the tree, the depth of the tree (relative to its parent tree), the position of the current node (relative to its parent tree) to be able to draw the tree, and a hash value to be able to hash a tree in a dictionnary. The tree class computes automatically all these quantities at the initialization and whenever the tree is modified via the provided methods to do so.
 
     The API also provides utilitary methods to handle the tree, such as 'is_leaf', 'is_stump', 'replace_subtree', 'split_leaf' and 'remove_subtree'.
 
@@ -16,8 +16,8 @@ class Tree:
                  left_subtree=None,
                  right_subtree=None,
                  parent=None,
+                 height=0,
                  depth=0,
-                 layer=0,
                  n_leaves=1,
                  n_nodes=0,
                  hash_value=0,
@@ -41,8 +41,8 @@ class Tree:
         
         self.parent = parent
         
+        self.height = height
         self.depth = depth
-        self.layer = layer
         self.n_leaves = n_leaves
         self.n_nodes = n_nodes
         self.hash_value = hash_value
@@ -58,8 +58,8 @@ class Tree:
             return self.parent.tree_root
 
     def update_tree(self):
+        self.tree_root._update_height()
         self.tree_root._update_depth()
-        self.tree_root._update_layer()
         self.tree_root._update_n_leaves()
         self.tree_root._update_n_nodes()
         self.tree_root._update_hash_value()
@@ -76,19 +76,19 @@ class Tree:
             return False
         return self.left_subtree.is_leaf() and self.right_subtree.is_leaf()
     
-    def _update_depth(self):
+    def _update_height(self):
         if self.is_leaf():
-            self.depth = 0
+            self.height = 0
         else:
-            self.left_subtree._update_depth()
-            self.right_subtree._update_depth()
-            self.depth = 1 + max(self.left_subtree.depth, self.right_subtree.depth)
+            self.left_subtree._update_height()
+            self.right_subtree._update_height()
+            self.height = 1 + max(self.left_subtree.height, self.right_subtree.height)
 
-    def _update_layer(self, layer=0):
-        self.layer = layer
+    def _update_depth(self, depth=0):
+        self.depth = depth
         if not self.is_leaf():
-            self.left_subtree._update_layer(layer+1)
-            self.right_subtree._update_layer(layer+1)
+            self.left_subtree._update_depth(depth+1)
+            self.right_subtree._update_depth(depth+1)
 
     def _update_n_leaves(self):
         if self.is_leaf():
@@ -136,18 +136,18 @@ class Tree:
                 self.right_subtree._shift_tree(overlap/2 + 1)
 
     def _find_largest_overlap(self):
-        rightest_position = self.left_subtree._find_extremal_position_by_layer('max')
-        leftest_position = self.right_subtree._find_extremal_position_by_layer('min')
+        rightest_position = self.left_subtree._find_extremal_position_by_depth('max')
+        leftest_position = self.right_subtree._find_extremal_position_by_depth('min')
         overlaps = [r - l for l, r in zip(leftest_position, rightest_position)]
         return max(overlaps)
 
-    def _find_extremal_position_by_layer(self, mode):
-        extremal_position_by_layer = []
-        subtrees_in_layer = [self]
-        while subtrees_in_layer:
-            subtrees_in_next_layer = []
-            extremal_pos = subtrees_in_layer[0].position
-            for subtree in subtrees_in_layer:
+    def _find_extremal_position_by_depth(self, mode):
+        extremal_position_by_depth = []
+        subtrees_in_depth = [self]
+        while subtrees_in_depth:
+            subtrees_in_next_depth = []
+            extremal_pos = subtrees_in_depth[0].position
+            for subtree in subtrees_in_depth:
                 if mode == 'max':
                     if subtree.position > extremal_pos:
                         extremal_pos = subtree.position
@@ -155,12 +155,12 @@ class Tree:
                     if subtree.position < extremal_pos:
                         extremal_pos = subtree.position
                 if not subtree.is_leaf():
-                    subtrees_in_next_layer.append(subtree.left_subtree)
-                    subtrees_in_next_layer.append(subtree.right_subtree)
-            extremal_position_by_layer.append(extremal_pos)
-            subtrees_in_layer = subtrees_in_next_layer
+                    subtrees_in_next_depth.append(subtree.left_subtree)
+                    subtrees_in_next_depth.append(subtree.right_subtree)
+            extremal_position_by_depth.append(extremal_pos)
+            subtrees_in_depth = subtrees_in_next_depth
 
-        return extremal_position_by_layer
+        return extremal_position_by_depth
 
     def _shift_tree(self, shift):
         self.position += shift
@@ -174,7 +174,7 @@ class Tree:
         elif self.is_stump():
             return 'Tree(Tree(), Tree())'
         else:
-            return f'Tree of depth {self.depth}'
+            return f'Tree of height {self.height}'
 
     def __eq__(self, other):
         """
@@ -197,7 +197,7 @@ class Tree:
             return True
 
     def __hash__(self):
-        # The hash is the sum of the depths d_i of each leaf i.
+        # The hash is the sum of the heights d_i of each leaf i.
         return self.hash_value
 
     def __len__(self):

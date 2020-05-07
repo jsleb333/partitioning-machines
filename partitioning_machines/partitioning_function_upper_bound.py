@@ -29,7 +29,7 @@ class PartitioningFunctionUpperBound:
 
     def _compute_list_of_distinct_subtrees(self, tree):
         """
-        Depth-first search of all subtrees of the tree 'tree'.
+        height-first search of all subtrees of the tree 'tree'.
         """
         if not tree.is_leaf():
             self._compute_list_of_distinct_subtrees(tree.left_subtree)

@@ -65,22 +65,22 @@ class TestTree:
         assert hash(trees[1].left_subtree) == 0
         assert hash(trees[2].left_subtree) == 2
 
-    def test_depth(self, trees):
-        assert [tree.depth for tree in trees[:7]] == [0,1,2,2,3,3,3]
+    def test_height(self, trees):
+        assert [tree.height for tree in trees[:7]] == [0,1,2,2,3,3,3]
 
     def test_repr(self, trees):
         assert [repr(tree) for tree in trees[:7]] == ['Tree()',
                                                   'Tree(Tree(), Tree())',
-                                                  'Tree of depth 2',
-                                                  'Tree of depth 2',
-                                                  'Tree of depth 3',
-                                                  'Tree of depth 3',
-                                                  'Tree of depth 3']
+                                                  'Tree of height 2',
+                                                  'Tree of height 2',
+                                                  'Tree of height 3',
+                                                  'Tree of height 3',
+                                                  'Tree of height 3']
 
-    def test_layer(self, trees):
-        assert trees[5].layer == 0
-        assert trees[5].left_subtree.layer == 1
-        assert trees[5].left_subtree.left_subtree.layer == 2
+    def test_depth(self, trees):
+        assert trees[5].depth == 0
+        assert trees[5].left_subtree.depth == 1
+        assert trees[5].left_subtree.left_subtree.depth == 2
 
     def test_position(self, trees):
         assert trees[1].position == 0
@@ -110,8 +110,8 @@ class TestTree:
         tree = Tree(Tree(), Tree())
         tree.left_subtree.replace_subtree(deepcopy(tree))
         assert tree == trees[2]
-        assert [t.depth for t in tree] == [2, 1, 0, 0, 0]
-        assert [t.layer for t in tree] == [0, 1, 2, 2, 1]
+        assert [t.height for t in tree] == [2, 1, 0, 0, 0]
+        assert [t.depth for t in tree] == [0, 1, 2, 2, 1]
         assert [t.position for t in tree] == [0, -1, -2, 0, 1]
 
     def test_replace_stump_by_leaf(self, trees):
@@ -133,28 +133,28 @@ class TestTree:
         trees[2].left_subtree.remove_subtree()
         assert trees[2] == trees[1]
 
-    def test_find_extremal_position_by_layer_max_mode(self, overlapping_trees):
+    def test_find_extremal_position_by_depth_max_mode(self, overlapping_trees):
         tree = overlapping_trees[2]
-        assert tree._find_extremal_position_by_layer('max') == [0, 1, 0]
-        assert tree.left_subtree._find_extremal_position_by_layer('max') == [-1, 0]
-        assert tree.left_subtree.left_subtree._find_extremal_position_by_layer('max') == [-2]
-        assert tree.left_subtree.right_subtree._find_extremal_position_by_layer('max') == [0]
-        assert tree.right_subtree._find_extremal_position_by_layer('max') == [1]
+        assert tree._find_extremal_position_by_depth('max') == [0, 1, 0]
+        assert tree.left_subtree._find_extremal_position_by_depth('max') == [-1, 0]
+        assert tree.left_subtree.left_subtree._find_extremal_position_by_depth('max') == [-2]
+        assert tree.left_subtree.right_subtree._find_extremal_position_by_depth('max') == [0]
+        assert tree.right_subtree._find_extremal_position_by_depth('max') == [1]
 
         tree = overlapping_trees[10]
-        print(tree.depth)
-        assert tree._find_extremal_position_by_layer('max') == [0, 1, 2, 3]
-        assert tree.left_subtree._find_extremal_position_by_layer('max') == [-1, 0, 1]
-        assert tree.left_subtree.left_subtree._find_extremal_position_by_layer('max') == [-2, -1]
-        assert tree.left_subtree.left_subtree.left_subtree._find_extremal_position_by_layer('max') == [-3]
+        print(tree.height)
+        assert tree._find_extremal_position_by_depth('max') == [0, 1, 2, 3]
+        assert tree.left_subtree._find_extremal_position_by_depth('max') == [-1, 0, 1]
+        assert tree.left_subtree.left_subtree._find_extremal_position_by_depth('max') == [-2, -1]
+        assert tree.left_subtree.left_subtree.left_subtree._find_extremal_position_by_depth('max') == [-3]
 
-    def test_find_extremal_position_by_layer_min_mode(self, overlapping_trees):
+    def test_find_extremal_position_by_depth_min_mode(self, overlapping_trees):
         tree = overlapping_trees[2]
-        assert tree._find_extremal_position_by_layer('min') == [0, -1, -2]
-        assert tree.left_subtree._find_extremal_position_by_layer('min') == [-1, -2]
-        assert tree.left_subtree.left_subtree._find_extremal_position_by_layer('min') == [-2]
-        assert tree.left_subtree.right_subtree._find_extremal_position_by_layer('min') == [0]
-        assert tree.right_subtree._find_extremal_position_by_layer('min') == [1]
+        assert tree._find_extremal_position_by_depth('min') == [0, -1, -2]
+        assert tree.left_subtree._find_extremal_position_by_depth('min') == [-1, -2]
+        assert tree.left_subtree.left_subtree._find_extremal_position_by_depth('min') == [-2]
+        assert tree.left_subtree.right_subtree._find_extremal_position_by_depth('min') == [0]
+        assert tree.right_subtree._find_extremal_position_by_depth('min') == [1]
 
     def test_find_largest_overlap(self, overlapping_trees):
         tree = overlapping_trees[3]
