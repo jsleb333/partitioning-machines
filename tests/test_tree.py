@@ -189,3 +189,9 @@ class TestTree:
         tree = overlapping_trees[10]
         tree._deoverlap_position()
         assert [t.position for t in tree] == [0, -4, -6, -7, -5, -2, -3, -1, 4, 2, 1, 3, 6, 5, 7]
+
+    def test_deepcopy(self, trees):
+        copy_of_tree3 = deepcopy(trees[3])
+        assert copy_of_tree3 is not trees[3]
+        assert copy_of_tree3 == trees[3]
+        assert all(copy_of_subtree is not subtree for copy_of_subtree, subtree in zip(copy_of_tree3, trees[3]))
