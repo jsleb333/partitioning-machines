@@ -4,17 +4,13 @@ from copy import copy
 
 class Tree:
     """
-    This Tree class implements a binary tree object with a set of arrays handling attributes of every nodes. This type of implementation has various advantages, but is less easy to manipulate. To overcome this, a recursive implementation is simulated in the _TreeView API class. Such an object is returned when Tree() is instanciated.
+    This Tree class implements a binary tree object in a recursive fashion. The left and right subtrees are thus Tree objects too.
 
-    This API contains a reference to the actual tree and an internal flag 'current_node' pointing to a particular node, allowing to handle the associated subtree. The root is always at 0, thus the whole tree is considered when 'current_node' is equal to 0. All attributes relevant to the current node are accessible via non-underscored names, while global attributes contained in arrays are stored in variables beginning with an underscore.
+    Attributes maintained by the class are the number of leaves and of internal nodes of the tree, the depth of the tree, the layer of the tree (relative to its parent tree), the position of the current node (relative to its parent tree) to be able to draw the tree, and a hash value to be able to hash a tree in a dictionnary. The tree class computes automatically all these quantities at the initialization and whenever the tree is modified via the provided methods to do so.
 
-    Attributes maintained by the class are the number of leaves and of internal nodes of the subtrees, the depth of the subtrees, the layer of the current node (relative to the whole tree), the position of the current node (relative to the whole tree) to be able to draw the tree, and a hash value to be able to hash a subtree in a dictionnary. The tree class computes automatically all these quantities at the initialization and whenever the tree is modified via the provided methods to do so.
+    The API also provides utilitary methods to handle the tree, such as 'is_leaf', 'is_stump', 'replace_subtree', 'split_leaf' and 'remove_subtree'.
 
-    The API also provides utilitary methods to handle the tree, such as 'left_subtree' and 'right_subtree' properties to get a _TreeView of the subtrees and methods 'is_leaf' and 'is_stump'. Moreover, the tree can be modified using the 'replace_subtree', 'split_leaf' and 'remove_subtree' methods.
-
-    It also implements the '__eq__' operator to be able to compare other trees. It returns true if both trees are non-equivalent, i.e. it does not matter which subtree is the left and the right (they can be swapped).
-    The '__len__' operator returns the total number of nodes in the subtree.
-    The '__iter__' operator iterates in pre-order on the subtrees of the subtree.
+    It also implements the '__eq__' operator to be able to compare other trees. It returns True if both tree *structures* are equivalent, i.e. it does not matter which subtree is the left and the right (they can be swapped), and neither the content of the nodes does. The '__len__' operator returns the total number of nodes in the tree. The '__iter__' operator iterates in pre-order on the subtrees of the tree.
     """
     def __init__(self,
                  left_subtree=None,
