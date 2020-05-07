@@ -1,6 +1,6 @@
 import numpy as np
 
-from partitioning_machines import Tree
+from partitioning_machines import Tree, OneHotEncoder
 
 
 class DecisionTreeClassifier:
@@ -18,12 +18,9 @@ class DecisionTreeClassifier:
         
     def fit(self, X, y, X_idx_sorted=None):
         n_examples, n_features = X.shape
-        
-        self.label_decoding = list(sorted(set(y_i for y_i in y)))
-        self.label_encoding = {y_i:i for i, y_i in enumerate(self.label_decoding)}
-        self.n_classes = len(self.label_decoding)
-        encoded_y = np.array([self.label_encoding[y_i] for y_i in y])
-        
+        self.label_encoder = OneHotEncoder(y)
+        encoded_y = self.label_encoder.encode_labels(y)
+
         if self.max_n_leaves is None:
             self.max_n_leaves = n_examples
         
@@ -64,7 +61,7 @@ class Split:
         self.n_examples, self.n_features = X.shape
     
     def _find_best_split(self):
-        proportion_of_observations = np.array([])
+        proportion_of_observations_left = np.sum(self.y[1:], axis=0)/(self.n_examples-1)
     
     @property
     def stump(self):
@@ -79,4 +76,13 @@ class Split:
 
     def split_right_leaf(self):
         pass
-    
+
+
+def gini_impurity_criterion(proportion_of_observations):
+    return np.sum(proportion_of_observations * (1 - proportion_of_observations))
+
+def entropy_impurity_criterion(proportion_of_observations):
+    return -np.sum(proportion_of_observations * np.log(proportion_of_observations))
+
+def margin_impurity_criterion(proportion_of_observations):
+    return 1 - np.max(proportion_of_observations)
