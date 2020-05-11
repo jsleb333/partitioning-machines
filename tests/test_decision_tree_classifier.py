@@ -38,3 +38,13 @@ def test_margin_criterion():
 def test_margin_criterion_vectorized_features():
     frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features).T
     assert margin_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
+    
+    
+class TestDecisionTreeClassifier:
+    def test_(self):
+        pass
+    
+
+class TestSplitter:
+    def test_(self):
+        pass

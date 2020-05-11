@@ -1,10 +1,10 @@
 import numpy as np
 
-from partitioning_machines import Tree as _Tree
+from partitioning_machines import Tree
 from partitioning_machines import OneHotEncoder
 
 
-class Tree(_Tree):
+class _DecisionTree(Tree):
     def __init__(self,
                  impurity_score,
                  n_examples_by_label,
@@ -76,7 +76,7 @@ class DecisionTreeClassifier:
         
     def _init_tree(self, encoded_y, n_examples):
         n_examples_by_label = np.sum(encoded_y, axis=0)
-        self.tree = Tree(self.impurity_criterion(n_examples_by_label/n_examples),
+        self.tree = _DecisionTree(self.impurity_criterion(n_examples_by_label/n_examples),
                          n_examples_by_label)
         
     def predict(self, X):
@@ -155,9 +155,9 @@ class Splitter:
             
     def apply_split(self):
         impurity_left = self.impurity_criterion(self.n_examples_by_label_left/self.n_examples_left)
-        left_leaf = Tree(impurity_left, self.n_examples_by_label_left)
+        left_leaf = _DecisionTree(impurity_left, self.n_examples_by_label_left)
         impurity_right = self.impurity_criterion(self.n_examples_by_label_right/self.n_examples_right)
-        right_leaf = Tree(impurity_right, self.n_examples_by_label_right)
+        right_leaf = _DecisionTree(impurity_right, self.n_examples_by_label_right)
         self.leaf.left_subtree = left_leaf
         self.leaf.right_subtree = right_leaf
         self.leaf.update_tree()
