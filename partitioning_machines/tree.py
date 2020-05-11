@@ -15,13 +15,7 @@ class Tree:
     def __init__(self,
                  left_subtree=None,
                  right_subtree=None,
-                 parent=None,
-                 height=0,
-                 depth=0,
-                 n_leaves=1,
-                 n_nodes=0,
-                 hash_value=0,
-                 position=0):
+                 parent=None):
         """
         Args:
             left_subtree (Tree object): Other Tree object acting as the left subtree. If None, it means the present tree is a leaf.*
@@ -41,12 +35,12 @@ class Tree:
         
         self.parent = parent
         
-        self.height = height
-        self.depth = depth
-        self.n_leaves = n_leaves
-        self.n_nodes = n_nodes
-        self.hash_value = hash_value
-        self.position = position
+        self.height = 0
+        self.depth = 0
+        self.n_leaves = 1
+        self.n_nodes = 0
+        self.hash_value = 0
+        self.position = 0
 
         self.update_tree()
     
