@@ -54,6 +54,9 @@ class DecisionTreeClassifier:
         if self.max_n_leaves is None:
             self.max_n_leaves = n_examples
         
+        if X_idx_sorted is None:
+            X_idx_sorted = np.argsort(X, 0)
+        
         possible_splits = [Splitter(self.tree, X, encoded_y, X_idx_sorted)] # List of splits that can be produced.
         
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
@@ -96,15 +99,16 @@ class Splitter:
         self.n_examples, self.n_features = X.shape
         self.impurity_criterion = impurity_criterion
         self.optimization_mode = optimization_mode
+        
+        self._find_best_split()
     
     def _find_best_split(self):
         n_examples_by_label = self.leaf.n_examples_by_label
         n_examples_left = 1
         n_examples_right = self.n_examples - n_examples_left
         
-        n_examples_by_label_left = self.y[self.X_idx_sorted[0]] # Shape: (n_classes, n_features)
+        n_examples_by_label_left = self.y[self.X_idx_sorted[0]] # Shape: (n_features, n_classes)
         n_examples_by_label_right = n_examples_by_label - n_examples_by_label_left
-        
 
         self.rule_feature, self.impurity_score = self.argext(self._split_impurity_criterion(n_examples_by_label_left, n_examples_by_label_right, n_examples_left, n_examples_right))
         self.rule_threshold_idx = self.X_idx_sorted[0, self.rule_feature]
@@ -129,7 +133,7 @@ class Splitter:
                     self.n_examples_by_label_left = n_examples_by_label_left[:,self.rule_feature].copy()
                     self.n_examples_by_label_right = n_examples_by_label_right[:,self.rule_feature].copy()
         
-        self.rule_threshold = (self.X[self.best_threshold_idx, self.rule_feature] + self.X[self.best_threshold_idx+1, self.rule_feature])/2
+        self.rule_threshold = (self.X[self.rule_threshold_idx, self.rule_feature] + self.X[self.rule_threshold_idx+1, self.rule_feature])/2
 
     def argext(self, arr):
         if self.optimization_mode == 'min':
@@ -137,11 +141,11 @@ class Splitter:
         elif self.optimization_mode == 'max':
             extremum = np.argmax
         extremum_idx = extremum(arr)
-        return extremum_idx, arr(extremum_idx)
+        return extremum_idx, arr[extremum_idx]
 
     def _split_impurity_criterion(self, n_examples_by_label_left, n_examples_by_label_right, n_examples_left, n_examples_right):
         return (self._weighted_impurity_criterion(n_examples_by_label_left, n_examples_left) + 
-                self._weighted_impurity_criterion(n_examples_by_label_left, n_examples_left)) / \
+                self._weighted_impurity_criterion(n_examples_by_label_right, n_examples_right)) / \
                 (n_examples_left + n_examples_right)
     
     def _weighted_impurity_criterion(self, n_examples_by_label, n_examples):
