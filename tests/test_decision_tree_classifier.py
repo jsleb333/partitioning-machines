@@ -42,14 +42,6 @@ def test_margin_criterion_vectorized_features():
     frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features)
     assert margin_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
     
-    
-class TestDecisionTreeClassifier:
-    def test_init_tree(self):
-        dtc = DecisionTreeClassifier(gini_impurity_criterion)
-        dtc._init_tree(encoded_y, n_examples)
-        assert dtc.tree.impurity_score == gini_impurity_criterion(frac_examples_by_label)
-        assert all(dtc.tree.n_examples_by_label == n_examples_by_label)
-    
 
 class TestSplitter:
     def test_find_best_split_at_init(self):
@@ -143,4 +135,54 @@ class TestSplitter:
         split.apply_split()
         splits = split.leaves_splitters()
         assert tree.left_subtree is splits[0].leaf
-        assert tree.right_subtree is splits[1].leaf
+    
+    def test_n_examples_left_right(self):
+        tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
+        split = Splitter(tree, X, encoded_y, np.argsort(X, 0), gini_impurity_criterion, 'min')
+        assert split.n_examples_left == 3
+        assert split.n_examples_right == 2
+
+    
+class TestDecisionTreeClassifier:
+    def test_init_tree(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc._init_tree(encoded_y, n_examples)
+        assert dtc.tree.impurity_score == gini_impurity_criterion(frac_examples_by_label)
+        assert all(dtc.tree.n_examples_by_label == n_examples_by_label)
+    
+    def test_fit_max_2_leaves(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion, max_n_leaves=2)
+        dtc.fit(X, y)
+        assert dtc.tree.height == 1
+        assert dtc.tree.n_leaves == 2
+        assert np.isclose(dtc.tree.left_subtree.impurity_score, 4/9)
+        assert (dtc.tree.left_subtree.label == np.array([1,0,0])).all()
+        assert dtc.tree.right_subtree.impurity_score == 0
+        assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
+    
+    def test_fit_no_max_leaves(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert dtc.tree.n_leaves == 3
+        assert all(leaf.is_pure() for leaf in dtc.tree if leaf.is_leaf())
+
+    def test_fit_max_depth(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion, max_depth=1)
+        dtc.fit(X, y)
+        assert dtc.tree.height == 1
+        assert dtc.tree.n_leaves == 2
+        assert np.isclose(dtc.tree.left_subtree.impurity_score, 4/9)
+        assert (dtc.tree.left_subtree.label == np.array([1,0,0])).all()
+        assert dtc.tree.right_subtree.impurity_score == 0
+        assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
+    
+    def test_fit_min_2_examples_per_leaf(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion, min_examples_per_leaf=2)
+        dtc.fit(X, y)
+        assert dtc.tree.height == 1
+        assert dtc.tree.n_leaves == 2
+        assert np.isclose(dtc.tree.left_subtree.impurity_score, 4/9)
+        assert (dtc.tree.left_subtree.label == np.array([1,0,0])).all()
+        assert dtc.tree.right_subtree.impurity_score == 0
+        assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
+    

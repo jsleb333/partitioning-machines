@@ -31,6 +31,9 @@ class _DecisionTree(Tree):
                 return self.left_subtree.predict(x)
             else:
                 return self.right_subtree.predict(x)
+    
+    def is_pure(self):
+        return (self.n_examples_by_label == self.n_examples_by_label.sum()).any()
 
 
 class DecisionTreeClassifier:
@@ -42,24 +45,25 @@ class DecisionTreeClassifier:
                  min_examples_per_leaf=1):
         self.impurity_criterion = impurity_criterion
         self.optimization_mode = optimization_mode
-        self.max_n_leaves = max_n_leaves
-        self.max_depth = max_depth
+        self.max_n_leaves = max_n_leaves if max_n_leaves is not None else np.infty
+        self.max_depth = max_depth if max_depth is not None else np.infty
+        self.min_examples_per_leaf = min_examples_per_leaf
         self.tree = None
         
     def fit(self, X, y, X_idx_sorted=None):
         n_examples, n_features = X.shape
         self.label_encoder = OneHotEncoder(y)
-        encoded_y = self.label_encoder.encode_labels(y)
+        encoded_y, _ = self.label_encoder.encode_labels(y)
 
-        if self.max_n_leaves is None:
-            self.max_n_leaves = n_examples
-        
         if X_idx_sorted is None:
             X_idx_sorted = np.argsort(X, 0)
         
-        possible_splits = [Splitter(self.tree, X, encoded_y, X_idx_sorted)] # List of splits that can be produced.
+        self._init_tree(encoded_y, n_examples)
         
+        possible_splits = [Splitter(self.tree, X, encoded_y, X_idx_sorted, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)] # List of splits that can be produced.
+        c=0
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
+            c+=1
             best_split = possible_splits[0]
             for split in possible_splits:
                 if self.optimization_mode == 'min':
@@ -69,13 +73,15 @@ class DecisionTreeClassifier:
                     if best_split.impurity_score < split.impurity_score:
                         best_split = split
 
-            best_split.leaf.replace_subtree(best_split.stump)
+            best_split.apply_split()
             
-            if self.tree.n_leaves < self.max_n_leaves and self.tree.depth < self.max_depth:
+            if self.tree.n_leaves < self.max_n_leaves and self.tree.height < self.max_depth:
                 if best_split.split_makes_gain():
                     possible_splits.extend(best_split.leaves_splitters())
-            
+                    
             possible_splits.remove(best_split)
+        
+        return self
         
     def _init_tree(self, encoded_y, n_examples):
         n_examples_by_label = np.sum(encoded_y, axis=0)
@@ -91,7 +97,7 @@ class DecisionTreeClassifier:
 
 
 class Splitter:
-    def __init__(self, leaf, X, y, X_idx_sorted, impurity_criterion, optimization_mode):
+    def __init__(self, leaf, X, y, X_idx_sorted, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
         self.leaf = leaf
         self.X = X
         self.y = y
@@ -99,25 +105,32 @@ class Splitter:
         self.n_examples, self.n_features = X.shape
         self.impurity_criterion = impurity_criterion
         self.optimization_mode = optimization_mode
+        self.min_examples_per_leaf = min_examples_per_leaf
         
         self._find_best_split()
     
     def _find_best_split(self):
         n_examples_by_label = self.leaf.n_examples_by_label
-        n_examples_left = 1
+        if self.leaf.is_pure():
+            return
+        
+        if self.n_examples < 2*self.min_examples_per_leaf:
+            return
+        
+        n_examples_left = self.min_examples_per_leaf
         n_examples_right = self.n_examples - n_examples_left
         
-        n_examples_by_label_left = self.y[self.X_idx_sorted[0]] # Shape: (n_features, n_classes)
+        n_examples_by_label_left = sum(self.y[self.X_idx_sorted[i]] for i in range(n_examples_left)) # Shape: (n_features, n_classes)
         n_examples_by_label_right = n_examples_by_label - n_examples_by_label_left
 
         self.rule_feature, self.impurity_score = self.argext(self._split_impurity_criterion(n_examples_by_label_left, n_examples_by_label_right, n_examples_left, n_examples_right))
-        rule_threshold_idx_left = self.X_idx_sorted[0, self.rule_feature]
-        rule_threshold_idx_right = self.X_idx_sorted[1, self.rule_feature]
+        rule_threshold_idx_left = self.X_idx_sorted[n_examples_left-1, self.rule_feature]
+        rule_threshold_idx_right = self.X_idx_sorted[n_examples_left, self.rule_feature]
         
         self.n_examples_by_label_left = n_examples_by_label_left[self.rule_feature].copy()
         self.n_examples_by_label_right = n_examples_by_label_right[self.rule_feature].copy()
 
-        for row, x_idx in enumerate(self.X_idx_sorted[1:-1]):
+        for row, x_idx in enumerate(self.X_idx_sorted[self.min_examples_per_leaf:-self.min_examples_per_leaf]):
             n_examples_left += 1
             n_examples_right -= 1
             transfered_labels = self.y[x_idx]
@@ -130,12 +143,18 @@ class Splitter:
                     self.rule_feature = tmp_feature
                     rule_threshold_idx_left = x_idx[self.rule_feature]
                     rule_threshold_idx_right = self.X_idx_sorted[row+2, self.rule_feature]
-                    self.n_examples_left = n_examples_left
-                    self.n_examples_right = n_examples_right
                     self.n_examples_by_label_left = n_examples_by_label_left[self.rule_feature].copy()
                     self.n_examples_by_label_right = n_examples_by_label_right[self.rule_feature].copy()
         
         self.rule_threshold = (self.X[rule_threshold_idx_left, self.rule_feature] + self.X[rule_threshold_idx_right, self.rule_feature])/2
+    
+    @property
+    def n_examples_left(self):
+        return self.n_examples_by_label_left.sum(dtype=int)
+    
+    @property
+    def n_examples_right(self):
+        return self.n_examples_by_label_right.sum(dtype=int)
 
     def argext(self, arr):
         if self.optimization_mode == 'min':
@@ -161,20 +180,31 @@ class Splitter:
             
     def apply_split(self):
         impurity_left = self.impurity_criterion(self.n_examples_by_label_left/self.n_examples_left)
-        left_leaf = _DecisionTree(impurity_left, self.n_examples_by_label_left)
+        left_leaf = _DecisionTree(impurity_left, self.n_examples_by_label_left, parent=self.leaf)
+        
         impurity_right = self.impurity_criterion(self.n_examples_by_label_right/self.n_examples_right)
-        right_leaf = _DecisionTree(impurity_right, self.n_examples_by_label_right)
+        right_leaf = _DecisionTree(impurity_right, self.n_examples_by_label_right, parent=self.leaf)
         self.leaf.left_subtree = left_leaf
         self.leaf.right_subtree = right_leaf
         self.leaf.rule_threshold = self.rule_threshold
         self.leaf.rule_feature = self.rule_feature
         self.leaf.update_tree()
     
-    def leaves_splitters(self):
+    def leaves_splitters(self, left=True, right=True):
         X_idx_sorted_left, X_idx_sorted_right = self._compute_split_X_idx_sorted()
-        left_splitter = type(self)(self.leaf.left_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
-        right_splitter = type(self)(self.leaf.right_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
-        return [left_splitter, right_splitter]
+        splitters = []
+        
+        if left:
+            left_splitter = type(self)(self.leaf.left_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
+            if not left_splitter.leaf.is_pure():
+                splitters.append(left_splitter)
+        
+        if right:
+            right_splitter = type(self)(self.leaf.right_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
+            if not right_splitter.leaf.is_pure():
+                splitters.append(right_splitter)
+
+        return splitters
         
     def _compute_split_X_idx_sorted(self):
         X_idx_sorted_left = np.zeros((self.n_examples_left, self.n_features), dtype=int)
