@@ -52,12 +52,13 @@ class Tree:
             return self.parent.tree_root
 
     def update_tree(self):
-        self.tree_root._update_height()
-        self.tree_root._update_depth()
-        self.tree_root._update_n_leaves()
-        self.tree_root._update_n_nodes()
-        self.tree_root._update_hash_value()
-        self.tree_root._update_position()
+        root = self.tree_root
+        root._update_height()
+        root._update_depth()
+        root._update_n_leaves()
+        root._update_n_nodes()
+        root._update_hash_value()
+        root._update_position()
     
     def is_leaf(self):
         return self.left_subtree is None and self.right_subtree is None
