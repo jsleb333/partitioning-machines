@@ -10,9 +10,9 @@ class Tree(_Tree):
                  n_examples_by_label,
                  rule_threshold=None,
                  rule_feature=None,
-                 left_subtree=left_subtree,
-                 right_subtree=right_subtree,
-                 parent=parent):
+                 left_subtree=None,
+                 right_subtree=None,
+                 parent=None):
         super().__init__(left_subtree=left_subtree,
                          right_subtree=right_subtree,
                          parent=parent)
@@ -54,10 +54,6 @@ class DecisionTreeClassifier:
         if self.max_n_leaves is None:
             self.max_n_leaves = n_examples
         
-        n_examples_by_label = np.sum(encoded_y, axis=0)
-        self.tree = Tree(self.impurity_criterion(n_examples_by_label/n_examples),
-                         n_examples_by_label)
-        
         possible_splits = [Splitter(self.tree, X, encoded_y, X_idx_sorted)] # List of splits that can be produced.
         
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
@@ -77,7 +73,12 @@ class DecisionTreeClassifier:
                     possible_splits.extend(best_split.leaves_splitters())
             
             possible_splits.remove(best_split)
-
+        
+    def _init_tree(self, encoded_y, n_examples):
+        n_examples_by_label = np.sum(encoded_y, axis=0)
+        self.tree = Tree(self.impurity_criterion(n_examples_by_label/n_examples),
+                         n_examples_by_label)
+        
     def predict(self, X):
         return self.label_encoder.decode_labels(np.array([self.tree.predict(x) for x in X]))
 
@@ -184,10 +185,10 @@ class Splitter:
     
 
 def gini_impurity_criterion(frac_examples_by_label):
-    return np.sum(frac_examples_by_label * (1 - frac_examples_by_label))
+    return np.sum(frac_examples_by_label * (1 - frac_examples_by_label), axis=0)
 
 def entropy_impurity_criterion(frac_examples_by_label):
-    return -np.sum(frac_examples_by_label * np.log(frac_examples_by_label))
+    return -np.sum(frac_examples_by_label * np.log(frac_examples_by_label), axis=0)
 
 def margin_impurity_criterion(frac_examples_by_label):
-    return 1 - np.max(frac_examples_by_label)
+    return 1 - np.max(frac_examples_by_label, axis=0)
