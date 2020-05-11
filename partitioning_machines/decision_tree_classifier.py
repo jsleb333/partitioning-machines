@@ -19,7 +19,7 @@ class _DecisionTree(Tree):
 
         self.impurity_score = impurity_score
         self.n_examples_by_label = n_examples_by_label
-        self.label = np.eye(n_examples_by_label.shape[0], k=np.argmax(self.n_examples_by_label))
+        self.label = np.eye(1, n_examples_by_label.shape[0], k=np.argmax(self.n_examples_by_label))
         self.rule_threshold = rule_threshold
         self.rule_feature = rule_feature
     
@@ -111,12 +111,13 @@ class Splitter:
         n_examples_by_label_right = n_examples_by_label - n_examples_by_label_left
 
         self.rule_feature, self.impurity_score = self.argext(self._split_impurity_criterion(n_examples_by_label_left, n_examples_by_label_right, n_examples_left, n_examples_right))
-        self.rule_threshold_idx = self.X_idx_sorted[0, self.rule_feature]
+        rule_threshold_idx_left = self.X_idx_sorted[0, self.rule_feature]
+        rule_threshold_idx_right = self.X_idx_sorted[1, self.rule_feature]
         
-        self.n_examples_by_label_left = n_examples_by_label_left[:,self.rule_feature].copy()
-        self.n_examples_by_label_right = n_examples_by_label_right[:,self.rule_feature].copy()
+        self.n_examples_by_label_left = n_examples_by_label_left[self.rule_feature].copy()
+        self.n_examples_by_label_right = n_examples_by_label_right[self.rule_feature].copy()
 
-        for x_idx in self.X_idx_sorted[1:-1]:
+        for row, x_idx in enumerate(self.X_idx_sorted[1:-1]):
             n_examples_left += 1
             n_examples_right -= 1
             transfered_labels = self.y[x_idx]
@@ -127,13 +128,14 @@ class Splitter:
                 or (self.optimization_mode == 'max' and tmp_impurity_score > self.impurity_score):
                     self.impurity_score = tmp_impurity_score
                     self.rule_feature = tmp_feature
-                    self.rule_threshold_idx = x_idx[self.rule_feature]
+                    rule_threshold_idx_left = x_idx[self.rule_feature]
+                    rule_threshold_idx_right = self.X_idx_sorted[row+2, self.rule_feature]
                     self.n_examples_left = n_examples_left
                     self.n_examples_right = n_examples_right
-                    self.n_examples_by_label_left = n_examples_by_label_left[:,self.rule_feature].copy()
-                    self.n_examples_by_label_right = n_examples_by_label_right[:,self.rule_feature].copy()
+                    self.n_examples_by_label_left = n_examples_by_label_left[self.rule_feature].copy()
+                    self.n_examples_by_label_right = n_examples_by_label_right[self.rule_feature].copy()
         
-        self.rule_threshold = (self.X[self.rule_threshold_idx, self.rule_feature] + self.X[self.rule_threshold_idx+1, self.rule_feature])/2
+        self.rule_threshold = (self.X[rule_threshold_idx_left, self.rule_feature] + self.X[rule_threshold_idx_right, self.rule_feature])/2
 
     def argext(self, arr):
         if self.optimization_mode == 'min':
@@ -164,35 +166,43 @@ class Splitter:
         right_leaf = _DecisionTree(impurity_right, self.n_examples_by_label_right)
         self.leaf.left_subtree = left_leaf
         self.leaf.right_subtree = right_leaf
+        self.leaf.rule_threshold = self.rule_threshold
+        self.leaf.rule_feature = self.rule_feature
         self.leaf.update_tree()
     
     def leaves_splitters(self):
-        self._compute_split_X_idx_sorted()
-        left_splitter = type(self)(self.leaf.left_subtree, self.X, self.y, self.X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
-        right_splitter = type(self)(self.leaf.right_subtree, self.X, self.y, self.X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
+        X_idx_sorted_left, X_idx_sorted_right = self._compute_split_X_idx_sorted()
+        left_splitter = type(self)(self.leaf.left_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
+        right_splitter = type(self)(self.leaf.right_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode)
         return [left_splitter, right_splitter]
         
     def _compute_split_X_idx_sorted(self):
-        self.X_idx_sorted_left = np.zeros((self.n_examples_left, self.n_features))
-        self.X_idx_sorted_right = np.zeros((self.n_examples_right, self.n_features))
+        X_idx_sorted_left = np.zeros((self.n_examples_left, self.n_features), dtype=int)
+        X_idx_sorted_right = np.zeros((self.n_examples_right, self.n_features), dtype=int)
 
-        left_x_pos = 0
-        right_x_pos = 0
+        left_x_pos = np.zeros(self.n_features, dtype=int)
+        right_x_pos = np.zeros(self.n_features, dtype=int)
         for x_idx in self.X_idx_sorted:
             for feat, idx in enumerate(x_idx):
-                if idx in self.X_idx_sorted[:self.rule_threshold_idx, self.rule_feature]:
-                    self.X_idx_sorted_left[left_x_pos, feat] = idx
-                    left_x_pos += 1
+                
+                if self.X[idx, self.rule_feature] < self.rule_threshold:
+                    X_idx_sorted_left[left_x_pos[feat], feat] = idx
+                    left_x_pos[feat] += 1
                 else:
-                    self.X_idx_sorted_right[right_x_pos, feat] = idx
-                    right_x_pos += 1
+                    X_idx_sorted_right[right_x_pos[feat], feat] = idx
+                    right_x_pos[feat] += 1
+        
+        return X_idx_sorted_left, X_idx_sorted_right
     
 
 def gini_impurity_criterion(frac_examples_by_label):
-    return np.sum(frac_examples_by_label * (1 - frac_examples_by_label), axis=0)
+    axis = 1 if len(frac_examples_by_label.shape) > 1 else 0
+    return np.sum(frac_examples_by_label * (1 - frac_examples_by_label), axis=axis)
 
 def entropy_impurity_criterion(frac_examples_by_label):
-    return -np.sum(frac_examples_by_label * np.log(frac_examples_by_label), axis=0)
+    axis = 1 if len(frac_examples_by_label.shape) > 1 else 0
+    return -np.sum(frac_examples_by_label * np.log(frac_examples_by_label), axis=axis)
 
 def margin_impurity_criterion(frac_examples_by_label):
-    return 1 - np.max(frac_examples_by_label, axis=0)
+    axis = 1 if len(frac_examples_by_label.shape) > 1 else 0
+    return 1 - np.max(frac_examples_by_label, axis=axis)

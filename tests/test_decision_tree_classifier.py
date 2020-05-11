@@ -27,19 +27,19 @@ def test_gini_criterion_standard():
     expected_impurity_score = 4/5*(1-2/5) + (1-1/5)/5
     assert gini_impurity_criterion(frac_examples_by_label) == expected_impurity_score
 def test_gini_criterion_vectorized_features():
-    frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features).T
+    frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features)
     assert gini_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
 
 def test_entropy_criterion():
     assert entropy_impurity_criterion(frac_examples_by_label) == np.log(5) - 4/5 * np.log(2)    
 def test_entropy_criterion_vectorized_features():
-    frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features).T
+    frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features)
     assert entropy_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
 
 def test_margin_criterion():
     assert margin_impurity_criterion(frac_examples_by_label) == 3/5    
 def test_margin_criterion_vectorized_features():
-    frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features).T
+    frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features)
     assert margin_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
     
     
@@ -74,7 +74,11 @@ class TestSplitter:
                                                                               ])).all()
         
         split = Splitter(tree, X, encoded_y, X_idx_sorted, gini_impurity_criterion, 'min')
-        print(split.rule_feature, split.rule_threshold_idx, split.rule_threshold, split.impurity_score)
+        assert split.rule_feature == 3
+        assert split.rule_threshold == 4.5
+        assert np.isclose(4/9 * 3/5, split.impurity_score)
+        assert (split.n_examples_by_label_left == np.array([2,1,0])).all()
+        assert (split.n_examples_by_label_right == np.array([0,0,2])).all()
     
     def test_argext_min(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
@@ -99,4 +103,44 @@ class TestSplitter:
         n_examples_by_label_right = n_examples_by_label - n_examples_by_label_left
         
         split_impurity = split._split_impurity_criterion(n_examples_by_label_left, n_examples_by_label_right, 1, 4)
-        assert np.isclose(split_impurity, 4/5*np.array(gini_impurity_criterion(n_examples_by_label_right/4))).all()
+        expected_split_impurity = 4/5*np.array(gini_impurity_criterion(n_examples_by_label_right/4))
+        assert np.isclose(split_impurity, expected_split_impurity).all()
+    
+    def test_split_makes_gain(self):
+        tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
+        split = Splitter(tree, X, encoded_y, np.argsort(X, 0), gini_impurity_criterion, 'min')
+        assert split.split_makes_gain()
+        split.impurity_score = 1
+        assert not split.split_makes_gain()
+    
+    def test_compute_split_X_idx_sorted(self):
+        tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
+        split = Splitter(tree, X, encoded_y, np.argsort(X, 0), gini_impurity_criterion, 'min')
+        X_idx_sorted_left, X_idx_sorted_right = split._compute_split_X_idx_sorted()
+        assert (X_idx_sorted_left == np.array([[0,0,0,2],
+                                               [1,1,2,1],
+                                               [2,2,1,0]])).all()
+        assert (X_idx_sorted_right == np.array([[3,4,3,4],
+                                                [4,3,4,3]])).all()
+    
+    def test_apply_split(self):
+        tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
+        split = Splitter(tree, X, encoded_y, np.argsort(X, 0), gini_impurity_criterion, 'min')
+        split.apply_split()
+        assert tree.left_subtree is not None
+        assert tree.right_subtree is not None
+        assert tree.rule_feature == 3
+        assert tree.rule_threshold == 4.5
+        
+        assert np.isclose(tree.left_subtree.impurity_score, 4/9)
+        assert (tree.left_subtree.label == np.array([1,0,0])).all()
+        assert tree.right_subtree.impurity_score == 0
+        assert (tree.right_subtree.label == np.array([0,0,1])).all()
+        
+    def test_leaves_splitter(self):
+        tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
+        split = Splitter(tree, X, encoded_y, np.argsort(X, 0), gini_impurity_criterion, 'min')
+        split.apply_split()
+        splits = split.leaves_splitters()
+        assert tree.left_subtree is splits[0].leaf
+        assert tree.right_subtree is splits[1].leaf
