@@ -326,7 +326,12 @@ def margin_impurity_criterion(frac_examples_by_label):
     return 1 - np.max(frac_examples_by_label, axis=axis)
 
 def breiman_alpha_pruning_objective(tree):
-    print(tree.n_examples_by_label)
     node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
-    print('node err', node_n_errors, 'subtree err', tree.n_errors, 'subtree n leaves', tree.n_leaves, 'n ex', tree.n_examples)
     return (node_n_errors - tree.n_errors) / ( tree.n_examples * (tree.n_leaves - 1) )
+
+def leboeuf_alpha_pruning_objective_factory(n_features):
+    def leboeuf_alpha_pruning_objective(tree):
+        node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
+        denominator = tree.n_leaves * np.log(tree.n_leaves * n_features) - np.log(n_features)
+        return (node_n_errors - tree.n_errors) / (tree.n_examples * denominator)
+    return leboeuf_alpha_pruning_objective
