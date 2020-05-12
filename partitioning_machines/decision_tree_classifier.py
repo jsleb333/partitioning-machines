@@ -60,7 +60,7 @@ class DecisionTreeClassifier:
 
         self._init_tree(encoded_y, n_examples)
 
-        splitter = Splitter(X, encoded_y, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
+        splitter = Splitter(X, encoded_y, X_idx_sorted, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
 
         possible_splits = [splitter.split(self.tree, X_idx_sorted)] # List of splits that can be produced.
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
@@ -103,12 +103,23 @@ class DecisionTreeClassifier:
         pass
 
 class Splitter:
-    def __init__(self, X, y, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
+    def __init__(self, X, y, X_idx_sorted, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
         self.X = X
         self.y = y
+        self.n_features = X.shape[1]
         self.impurity_criterion = impurity_criterion
         self.optimization_mode = optimization_mode
         self.min_examples_per_leaf = min_examples_per_leaf
+        self.forbidden_rules = self._compute_forbidden_rules(X_idx_sorted)
+
+    def _compute_forbidden_rules(self, X_idx_sorted):
+        forbidden_rules = np.zeros((self.X.shape[0]-1, self.X.shape[1]), dtype=bool)
+
+        for row, (idx_1, idx_2) in enumerate(zip(X_idx_sorted[:-1], X_idx_sorted[1:])):
+            for feat, (i_1, i_2) in enumerate(zip(idx_1, idx_2)):
+                forbidden_rules[row, feat] = np.isclose(self.X[i_1, feat] - self.X[i_2, feat], 0)
+
+        return forbidden_rules
 
     def split(self, leaf, X_idx_sorted):
         return Split(leaf, X_idx_sorted, self)

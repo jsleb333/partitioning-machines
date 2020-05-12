@@ -47,8 +47,20 @@ def test_margin_criterion_vectorized_features():
     frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features)
     assert margin_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
 
-
 class TestSplitter:
+    def test_compute_forbidden_rules(self):
+        new_X = X.copy()
+        new_X[0:3,0] = 1
+        new_X[2:4,2] = 6
+        splitter = Splitter(X=new_X, y=encoded_y, X_idx_sorted=np.argsort(new_X, 0), impurity_criterion=gini_impurity_criterion, optimization_mode='min')
+        assert (splitter.forbidden_rules == np.array([[1,0,0,0],
+                                                      [1,0,1,0],
+                                                      [0,0,1,0],
+                                                      [0,0,0,0],
+                                                      ], dtype=bool)).all()
+
+
+class TestSplit:
     def test_find_best_split_at_init(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
 
@@ -64,7 +76,7 @@ class TestSplitter:
                                                                               [1,1,2]
                                                                               ])).all()
 
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
         assert split.rule_feature == 3
         assert split.rule_threshold == 4.5
@@ -74,7 +86,7 @@ class TestSplitter:
 
     def test_argext_min(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
         idx, opt = split.argext(np.array([4,2,3,4]))
         assert idx == 1
@@ -82,7 +94,7 @@ class TestSplitter:
 
     def test_argext_max(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'max')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='max')
         split = splitter.split(tree, X_idx_sorted)
         idx, opt = split.argext(np.array([4,2,3,4]))
         assert idx == 0
@@ -91,7 +103,7 @@ class TestSplitter:
     def test_split_impurity_criterion(self):
         X_idx_sorted = np.argsort(X, 0)
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
 
         n_examples_by_label_left = encoded_y[X_idx_sorted[0]] # Shape: (n_features, n_classes)
@@ -103,7 +115,7 @@ class TestSplitter:
 
     def test_split_makes_gain(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
         assert split.split_makes_gain()
         split.impurity_score = 1
@@ -111,7 +123,7 @@ class TestSplitter:
 
     def test_compute_split_X_idx_sorted(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
         X_idx_sorted_left, X_idx_sorted_right = split.compute_split_X_idx_sorted()
         assert (X_idx_sorted_left == np.array([[0,0,0,2],
@@ -122,7 +134,7 @@ class TestSplitter:
 
     def test_apply_split(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
         split.apply_split()
         assert tree.left_subtree is not None
@@ -137,7 +149,7 @@ class TestSplitter:
 
     def test_n_examples_left_right(self):
         tree = _DecisionTree(gini_impurity_criterion(frac_examples_by_label), n_examples_by_label)
-        splitter = Splitter(X, encoded_y, gini_impurity_criterion, 'min')
+        splitter = Splitter(X=X, y=encoded_y, X_idx_sorted=X_idx_sorted, impurity_criterion=gini_impurity_criterion, optimization_mode='min')
         split = splitter.split(tree, X_idx_sorted)
         assert split.n_examples_left == 3
         assert split.n_examples_right == 2
