@@ -94,10 +94,15 @@ class TestTree:
         assert trees[1] is trees[1]
         assert trees[1] is not trees[1].left_subtree
 
-    def test_in(self, trees):
+    def test_in_list(self, trees):
         list_of_subtrees = [trees[2]]
         # assert trees[2] in list_of_subtrees
         assert trees[2].left_subtree not in list_of_subtrees
+
+    def test__contains__(self, trees):
+        assert trees[2].right_subtree in trees[2]
+        assert trees[3].left_subtree in trees[3]
+        assert not trees[3] in trees[3].right_subtree
 
     def test_iter(self, trees):
         for subtree in trees[0]:

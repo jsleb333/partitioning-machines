@@ -32,9 +32,9 @@ class Tree:
             self.left_subtree.parent = self
         if right_subtree is not None:
             self.right_subtree.parent = self
-        
+
         self.parent = parent
-        
+
         self.height = 0
         self.depth = 0
         self.n_leaves = 1
@@ -43,7 +43,7 @@ class Tree:
         self.position = 0
 
         self.update_tree()
-    
+
     @property
     def tree_root(self):
         if self.parent is None:
@@ -59,7 +59,7 @@ class Tree:
         root._update_n_nodes()
         root._update_hash_value()
         root._update_position()
-    
+
     def is_leaf(self):
         return self.left_subtree is None and self.right_subtree is None
 
@@ -70,7 +70,7 @@ class Tree:
         if self.is_leaf():
             return False
         return self.left_subtree.is_leaf() and self.right_subtree.is_leaf()
-    
+
     def _update_height(self):
         if self.is_leaf():
             self.height = 0
@@ -206,15 +206,23 @@ class Tree:
         if not self.is_leaf():
             yield from self.left_subtree
             yield from self.right_subtree
-        
+
+    def __contains__(self, obj):
+        if obj is self:
+            return True
+        if not self.is_leaf():
+            return obj in self.left_subtree or obj in self.right_subtree
+        else:
+            return False
+
     def __deepcopy__(self, memo):
         shallow_copy_of_tree = copy(self)
-        
+
         # Get rid of critical attributes without affecting the original tree
         del shallow_copy_of_tree.left_subtree
         del shallow_copy_of_tree.right_subtree
         del shallow_copy_of_tree.parent
-        
+
         # Create the deepcopy
         deepcopy_of_tree = type(self)(left_subtree=deepcopy(self.left_subtree),
                                       right_subtree=deepcopy(self.right_subtree))
