@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.datasets import load_iris
 
 from partitioning_machines.decision_tree_classifier import *
 from partitioning_machines.decision_tree_classifier import _DecisionTree
@@ -194,3 +195,14 @@ class TestDecisionTreeClassifier:
         assert (dtc.tree.left_subtree.label == np.array([1,0,0])).all()
         assert dtc.tree.right_subtree.impurity_score == 0
         assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
+
+    def test_predict(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert (dtc.predict(X) == y).all()
+
+    def test_on_real_dataset(self):
+        iris_X, iris_y = load_iris(return_X_y=True)
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(iris_X, iris_y)
+        dtc.predict(iris_X)
