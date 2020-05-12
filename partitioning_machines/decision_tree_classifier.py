@@ -113,6 +113,51 @@ class DecisionTreeClassifier:
     def predict_proba(self, X):
         return np.array([self.tree.predict_proba(x) for x in X])
 
+    def compute_pruning_coefficients(self, prune_objective):
+        """
+        Computes and assigns a pruning coefficient to every internal node of the tree. The sorted list of coefficients is returned.
+
+        Args:
+            prune_objective (callable): Receives a Tree object and outputs a coefficient based on the performance of the tree. Will not be called with a leaf.
+
+        Returns the list of pruning coefficients in increasing order.
+        """
+        pruning_coefs = []
+        for subtree in self.tree:
+            if not subtree.is_leaf():
+                subtree.pruning_coef = prune_objective(subtree)
+                pruning_coefs.append(subtree.pruning_coef)
+        pruning_coefs.sort()
+
+        return pruning_coefs
+
+    def prune_tree(self, pruning_coef_threshold, pruning_objective=None):
+        """
+        Prunes the tree by replacing each subtree that have a pruning coefficient less than or equal to 'pruning_coef_threshold' by a leaf. Returns the number of internal nodes pruned.
+
+        Args:
+            pruning_coef_threshold (float): Threshold the pruning coefficient must satisfy.
+            pruning_objective (callable): Will be used to compute the pruning coefficients if provided. Used by the 'compute_pruning_coefficients' method. If None, it assumes the 'compute_pruning_coefficients' method has already been called and subtrees possesses the 'pruning_coef' attributes.
+
+        Returns: (int) the number of internal nodes pruned.
+        """
+        if pruning_objective is not None:
+            self.compute_pruning_coefficients(pruning_objective)
+
+        subtrees_to_remove = []
+        n_nodes_before = self.tree.n_nodes
+
+        for subtree in self.tree:
+            if subtree.pruning_coef <= pruning_coef_threshold:
+                self._prune_subtree(subtree)
+
+        return n_nodes_before - self.tree.n_nodes
+
+    def _prune_subtree(self, subtree):
+        subtree.left_subtree = None
+        subtree.right_subtree = None
+        self.tree.update_tree()
+
 
 class Splitter:
     def __init__(self, X, y, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
