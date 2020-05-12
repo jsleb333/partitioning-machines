@@ -206,3 +206,8 @@ class TestDecisionTreeClassifier:
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(iris_X, iris_y)
         dtc.predict(iris_X)
+
+    def test_predict_proba(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert dtc.predict_proba(X).shape == (5, 3)

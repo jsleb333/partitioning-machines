@@ -33,6 +33,15 @@ class _DecisionTree(Tree):
             else:
                 return self.right_subtree.predict(x)
 
+    def predict_proba(self, x):
+        if self.is_leaf():
+            return self.n_examples_by_label / self.n_examples_by_label.sum()
+        else:
+            if x[self.rule_feature] < self.rule_threshold:
+                return self.left_subtree.predict_proba(x)
+            else:
+                return self.right_subtree.predict_proba(x)
+
     def is_pure(self):
         return (self.n_examples_by_label == self.n_examples_by_label.sum()).any()
 
@@ -105,7 +114,8 @@ class DecisionTreeClassifier:
         return self.label_encoder.decode_labels(encoded_prediction)
 
     def predict_proba(self, X):
-        pass
+        return np.array([self.tree.predict_proba(x) for x in X])
+
 
 class Splitter:
     def __init__(self, X, y, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
