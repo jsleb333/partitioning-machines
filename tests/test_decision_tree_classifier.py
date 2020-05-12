@@ -48,6 +48,12 @@ def test_margin_criterion_vectorized_features():
     frac_examples_by_label_vec = np.array([frac_examples_by_label]*n_features)
     assert margin_impurity_criterion(frac_examples_by_label_vec).shape == (n_features,)
 
+def test_breiman_alpha_pruning_objective():
+    dtc = DecisionTreeClassifier(gini_impurity_criterion)
+    dtc.fit(X, y)
+    assert breiman_alpha_pruning_objective(dtc.tree) == 3/10
+    assert breiman_alpha_pruning_objective(dtc.tree.left_subtree) == 1/3
+
 
 class TestSplit:
     def test_find_best_split_at_init(self):
@@ -160,6 +166,12 @@ class TestDecisionTreeClassifier:
         assert dtc.tree.impurity_score == gini_impurity_criterion(frac_examples_by_label)
         assert all(dtc.tree.n_examples_by_label == n_examples_by_label)
 
+    def test_fit_no_constraint(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert dtc.tree.n_leaves == 3
+        assert all(leaf.is_pure() for leaf in dtc.tree if leaf.is_leaf())
+
     def test_fit_max_2_leaves(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion, max_n_leaves=2)
         dtc.fit(X, y)
@@ -170,11 +182,10 @@ class TestDecisionTreeClassifier:
         assert dtc.tree.right_subtree.impurity_score == 0
         assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
 
-    def test_fit_no_max_leaves(self):
-        dtc = DecisionTreeClassifier(gini_impurity_criterion)
-        dtc.fit(X, y)
-        assert dtc.tree.n_leaves == 3
-        assert all(leaf.is_pure() for leaf in dtc.tree if leaf.is_leaf())
+        assert dtc.tree.rule_feature == 3
+        assert dtc.tree.rule_threshold == 4.5
+        assert (dtc.tree.left_subtree.n_examples_by_label == np.array([2,1,0])).all()
+        assert (dtc.tree.right_subtree.n_examples_by_label == np.array([0,0,2])).all()
 
     def test_fit_max_depth(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion, max_depth=1)
@@ -211,3 +222,13 @@ class TestDecisionTreeClassifier:
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(X, y)
         assert dtc.predict_proba(X).shape == (5, 3)
+
+    def test_prune_subtree(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert dtc.tree.n_leaves == 3
+        dtc._prune_subtree(dtc.tree.left_subtree) == 1
+        assert dtc.tree.n_leaves == 2
+
+    def test_compute_pruning_coefficients(self):
+        pass

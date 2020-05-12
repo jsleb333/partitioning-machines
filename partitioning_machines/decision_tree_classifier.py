@@ -24,6 +24,20 @@ class _DecisionTree(Tree):
         self.rule_threshold = rule_threshold
         self.rule_feature = rule_feature
 
+    @property
+    def n_examples(self):
+        return self.n_examples_by_label.sum()
+
+    @property
+    def n_errors(self):
+        """
+        Returns the number of errors made by the subtree on the training dataset.
+        """
+        if self.is_leaf():
+            return self.n_examples - np.max(self.n_examples_by_label)
+        else:
+            return self.left_subtree.n_errors + self.right_subtree.n_errors
+
     def predict(self, x):
         if self.is_leaf():
             return self.label
@@ -35,7 +49,7 @@ class _DecisionTree(Tree):
 
     def predict_proba(self, x):
         if self.is_leaf():
-            return self.n_examples_by_label / self.n_examples_by_label.sum()
+            return self.n_examples_by_label / self.n_examples
         else:
             if x[self.rule_feature] < self.rule_threshold:
                 return self.left_subtree.predict_proba(x)
@@ -43,7 +57,7 @@ class _DecisionTree(Tree):
                 return self.right_subtree.predict_proba(x)
 
     def is_pure(self):
-        return (self.n_examples_by_label == self.n_examples_by_label.sum()).any()
+        return (self.n_examples_by_label == self.n_examples).any()
 
 
 class DecisionTreeClassifier:
@@ -266,10 +280,14 @@ class Split:
 
     def apply_split(self):
         impurity_left = self.impurity_criterion(self.n_examples_by_label_left/self.n_examples_left)
-        left_leaf = _DecisionTree(impurity_left, self.n_examples_by_label_left, parent=self.leaf)
+        left_leaf = _DecisionTree(impurity_left,
+                                  self.n_examples_by_label_left.copy(),
+                                  parent=self.leaf)
 
         impurity_right = self.impurity_criterion(self.n_examples_by_label_right/self.n_examples_right)
-        right_leaf = _DecisionTree(impurity_right, self.n_examples_by_label_right, parent=self.leaf)
+        right_leaf = _DecisionTree(impurity_right,
+                                  self.n_examples_by_label_right.copy(),
+                                  parent=self.leaf)
         self.leaf.left_subtree = left_leaf
         self.leaf.right_subtree = right_leaf
         self.leaf.rule_threshold = self.rule_threshold
@@ -306,3 +324,9 @@ def entropy_impurity_criterion(frac_examples_by_label):
 def margin_impurity_criterion(frac_examples_by_label):
     axis = 1 if len(frac_examples_by_label.shape) > 1 else 0
     return 1 - np.max(frac_examples_by_label, axis=axis)
+
+def breiman_alpha_pruning_objective(tree):
+    print(tree.n_examples_by_label)
+    node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
+    print('node err', node_n_errors, 'subtree err', tree.n_errors, 'subtree n leaves', tree.n_leaves, 'n ex', tree.n_examples)
+    return (node_n_errors - tree.n_errors) / ( tree.n_examples * (tree.n_leaves - 1) )
