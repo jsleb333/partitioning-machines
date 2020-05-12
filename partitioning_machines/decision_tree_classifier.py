@@ -60,7 +60,9 @@ class DecisionTreeClassifier:
 
         self._init_tree(encoded_y, n_examples)
 
-        possible_splits = [Splitter(self.tree, X, encoded_y, X_idx_sorted, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)] # List of splits that can be produced.
+        splitter = Splitter(X, encoded_y, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
+
+        possible_splits = [splitter.split(self.tree, X_idx_sorted)] # List of splits that can be produced.
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
             best_split = possible_splits[0]
             for split in possible_splits:
@@ -75,7 +77,15 @@ class DecisionTreeClassifier:
 
             if self.tree.n_leaves < self.max_n_leaves and self.tree.height < self.max_depth:
                 if best_split.split_makes_gain():
-                    possible_splits.extend(best_split.leaves_splitters())
+                    X_idx_sorted_left, X_idx_sorted_right = best_split.compute_split_X_idx_sorted()
+
+                    left_split = splitter.split(best_split.leaf.left_subtree, X_idx_sorted_left)
+                    if left_split:
+                        possible_splits.append(left_split)
+
+                    right_split = splitter.split(best_split.leaf.right_subtree, X_idx_sorted_right)
+                    if right_split:
+                        possible_splits.append(right_split)
 
             possible_splits.remove(best_split)
 
@@ -92,19 +102,31 @@ class DecisionTreeClassifier:
     def predict_proba(self, X):
         pass
 
-
-
 class Splitter:
-    def __init__(self, leaf, X, y, X_idx_sorted, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
-        self.leaf = leaf
+    def __init__(self, X, y, impurity_criterion, optimization_mode, min_examples_per_leaf=1):
         self.X = X
         self.y = y
-        self.X_idx_sorted = X_idx_sorted
-        self.n_examples, self.n_features = X_idx_sorted.shape
         self.impurity_criterion = impurity_criterion
         self.optimization_mode = optimization_mode
         self.min_examples_per_leaf = min_examples_per_leaf
-        self.sucessful_split = self._find_best_split()
+
+    def split(self, leaf, X_idx_sorted):
+        return Split(leaf, X_idx_sorted, self)
+
+class Split:
+    def __init__(self, leaf, X_idx_sorted, splitter):
+        self.leaf = leaf
+        self.X_idx_sorted = X_idx_sorted
+        self.splitter = splitter
+        self.n_examples, self.n_features = X_idx_sorted.shape
+
+        self.X = splitter.X
+        self.y = splitter.y
+        self.impurity_criterion = splitter.impurity_criterion
+        self.optimization_mode = splitter.optimization_mode
+        self.min_examples_per_leaf = splitter.min_examples_per_leaf
+
+        self.validity = self._find_best_split()
 
     def _find_best_split(self):
         n_examples_by_label = self.leaf.n_examples_by_label
@@ -148,6 +170,9 @@ class Splitter:
 
         return True
 
+    def __bool__(self):
+        return self.validity
+
     @property
     def n_examples_left(self):
         return self.n_examples_by_label_left.sum(dtype=int)
@@ -190,23 +215,7 @@ class Splitter:
         self.leaf.rule_feature = self.rule_feature
         self.leaf.update_tree()
 
-    def leaves_splitters(self, left=True, right=True):
-        X_idx_sorted_left, X_idx_sorted_right = self._compute_split_X_idx_sorted()
-        splitters = []
-
-        if left:
-            left_splitter = type(self)(self.leaf.left_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
-            if left_splitter.sucessful_split:
-                splitters.append(left_splitter)
-
-        if right:
-            right_splitter = type(self)(self.leaf.right_subtree, self.X, self.y, X_idx_sorted_left, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
-            if right_splitter.sucessful_split:
-                splitters.append(right_splitter)
-
-        return splitters
-
-    def _compute_split_X_idx_sorted(self):
+    def compute_split_X_idx_sorted(self):
         X_idx_sorted_left = np.zeros((self.n_examples_left, self.n_features), dtype=int)
         X_idx_sorted_right = np.zeros((self.n_examples_right, self.n_features), dtype=int)
 
