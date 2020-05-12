@@ -162,8 +162,9 @@ class DecisionTreeClassifier:
         n_nodes_before = self.tree.n_nodes
 
         for subtree in self.tree:
-            if subtree.pruning_coef <= pruning_coef_threshold:
-                self._prune_subtree(subtree)
+            if not subtree.is_leaf():
+                if subtree.pruning_coef <= pruning_coef_threshold:
+                    self._prune_subtree(subtree)
 
         return n_nodes_before - self.tree.n_nodes
 

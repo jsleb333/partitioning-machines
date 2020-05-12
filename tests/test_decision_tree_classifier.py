@@ -54,6 +54,12 @@ def test_breiman_alpha_pruning_objective():
     assert breiman_alpha_pruning_objective(dtc.tree) == 3/10
     assert breiman_alpha_pruning_objective(dtc.tree.left_subtree) == 1/3
 
+def test_breiman_alpha_pruning_objective():
+    dtc = DecisionTreeClassifier(gini_impurity_criterion)
+    dtc.fit(X, y)
+    pruning_objective = leboeuf_alpha_pruning_objective_factory(n_features)
+    assert pruning_objective(dtc.tree) < pruning_objective(dtc.tree.left_subtree)
+
 
 class TestSplit:
     def test_find_best_split_at_init(self):
@@ -231,4 +237,14 @@ class TestDecisionTreeClassifier:
         assert dtc.tree.n_leaves == 2
 
     def test_compute_pruning_coefficients(self):
-        pass
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert dtc.compute_pruning_coefficients(breiman_alpha_pruning_objective) == [3/10, 1/3]
+
+    def test_prune_tree(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y)
+        assert dtc.prune_tree(0, breiman_alpha_pruning_objective) == 0
+        assert dtc.prune_tree(1/3, breiman_alpha_pruning_objective) == 2
+        assert dtc.tree.is_leaf()
+        assert (dtc.tree.label == np.array([1,0,0])).all()
