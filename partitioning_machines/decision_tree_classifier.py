@@ -73,10 +73,7 @@ class DecisionTreeClassifier:
         splitter = Splitter(X, encoded_y, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
 
         possible_splits = [splitter.split(self.tree, X_idx_sorted)] # List of splits that can be produced.
-        i = 0
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
-            print('it', i)
-            i+=1
             best_split = possible_splits[0]
             for split in possible_splits:
                 if self.optimization_mode == 'min':
