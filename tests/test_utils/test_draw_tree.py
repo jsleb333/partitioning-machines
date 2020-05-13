@@ -1,5 +1,5 @@
 from partitioning_machines import Tree
-from partitioning_machines.utils.draw_tree import draw_tree, tree_to_tikz
+from partitioning_machines.utils.draw_tree import draw_tree, tree_struct_to_tikz
 from pytest import fixture
 
 import os, sys
@@ -21,8 +21,8 @@ def trees():
     return trees
 
 
-def test_tree_to_tikz(trees):
-    pic = tree_to_tikz(trees[9])
+def test_tree_struct_to_tikz(trees):
+    pic = tree_struct_to_tikz(trees[9])
     print(pic.build())
 
 def test_draw_tree(trees):

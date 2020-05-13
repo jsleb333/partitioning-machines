@@ -1,7 +1,7 @@
 """
 In this script, we show a minimal working example on how to draw a tree in tex with python2latex.
 """
-from partitioning_machines import Tree, tree_to_tikz, draw_tree, tree_from_sklearn_decision_tree
+from partitioning_machines import Tree, tree_struct_to_tikz, draw_tree, tree_from_sklearn_decision_tree
 import python2latex as p2l
 
 from sklearn.tree import DecisionTreeClassifier
@@ -15,7 +15,7 @@ sklearn_tree = sklearn_tree.fit(X, y)
 tree = tree_from_sklearn_decision_tree(sklearn_tree)
 
 
-tikzpicture_object = tree_to_tikz(tree)
+tikzpicture_object = tree_struct_to_tikz(tree)
 
 print(tikzpicture_object.build()) # Converts object to string usable in tex file
 
