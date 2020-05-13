@@ -1,23 +1,23 @@
 """
 In this script, we show a minimal working example on how to draw a tree in tex with python2latex.
 """
-from partitioning_machines import Tree, tree_struct_to_tikz, draw_tree_structure, tree_from_sklearn_decision_tree
-import python2latex as p2l
-
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.datasets import load_iris
 import numpy as np
 
-X, y = load_iris(return_X_y=True)
-sklearn_tree = DecisionTreeClassifier()
-sklearn_tree = sklearn_tree.fit(X, y)
+from partitioning_machines import Tree, draw_decision_tree, decision_tree_to_tikz, gini_impurity_criterion
+from partitioning_machines import DecisionTreeClassifier
 
-tree = tree_from_sklearn_decision_tree(sklearn_tree)
+import python2latex as p2l
 
+dataset = load_iris()
+X = dataset.data
+y = [dataset.target_names[i] for i in dataset.target]
+dtc = DecisionTreeClassifier(gini_impurity_criterion)
+dtc.fit(X, y)
 
-tikzpicture_object = tree_struct_to_tikz(tree)
+tikzpicture_object = decision_tree_to_tikz(dtc)
 
 print(tikzpicture_object.build()) # Converts object to string usable in tex file
 
 # Draw tree in LaTeX if pdflatex is available
-draw_tree_structure(tree)
+draw_decision_tree(dtc)
