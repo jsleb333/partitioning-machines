@@ -254,20 +254,6 @@ class Tree:
         deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
 
         return deepcopy_of_tree
-        
-        # shallow_copy_of_tree = copy(self)
-
-        # # Get rid of critical attributes without affecting the original tree
-        # del shallow_copy_of_tree.left_subtree
-        # del shallow_copy_of_tree.right_subtree
-        # del shallow_copy_of_tree.parent
-
-        # # Create the deepcopy
-        # deepcopy_of_tree = type(self)(left_subtree=deepcopy(self.left_subtree),
-        #                               right_subtree=deepcopy(self.right_subtree))
-        # # Deepcopy of other non critical attributes
-        # deepcopy_of_tree.__dict__.update(deepcopy(shallow_copy_of_tree.__dict__))
-        # return deepcopy_of_tree
 
     def replace_subtree(self, tree):
         """
