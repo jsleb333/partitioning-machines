@@ -1,4 +1,4 @@
-from partitioning_machines import Tree, PartitioningFunctionUpperBound
+from partitioning_machines import Tree, PartitioningFunctionUpperBound, growth_function_upper_bound
 
 
 class TestPatitioninFunctionUpperBound:
@@ -47,3 +47,9 @@ class TestPatitioninFunctionUpperBound:
         pfub = PartitioningFunctionUpperBound(other_tree, 10, pfub.pfub_table)
         assert pfub.pfub_table[tree][2, 16, 10] == 2**(16-1)-1
         pfub(17, 2)
+
+
+def test_growth_function_upper_bound():
+    upper_bound = growth_function_upper_bound(Tree(Tree(), Tree()), n_features=10, n_classes=3)
+    assert upper_bound(1) == 3
+    assert upper_bound(2) == 3 + 6

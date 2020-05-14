@@ -1,5 +1,6 @@
 from scipy.special import binom, factorial
 from sympy.functions.combinatorial.numbers import stirling
+from sympy.functions.combinatorial.factorials import ff
 
 
 class PartitioningFunctionUpperBound:
@@ -106,3 +107,11 @@ def partitioning_function_upper_bound(tree, n_parts, n_examples, n_features):
     """
     pfub = PartitioningFunctionUpperBound(tree, n_features)
     return pfub(n_examples, n_parts)
+
+
+def growth_function_upper_bound(tree, n_features, n_classes=2, pre_computed_tables=None):
+    pfub = PartitioningFunctionUpperBound(tree, n_features, pre_computed_tables)
+    def upper_bound(n_examples):
+        max_range = min(n_classes, tree.n_leaves, n_examples)
+        return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))
+    return upper_bound
