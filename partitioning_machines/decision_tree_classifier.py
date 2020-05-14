@@ -100,7 +100,7 @@ class DecisionTreeClassifier:
             if best_split.split_makes_gain():
                 best_split.apply_split()
 
-            if self.tree.n_leaves < self.max_n_leaves and self.tree.height < self.max_depth:
+                if self.tree.n_leaves < self.max_n_leaves and self.tree.height < self.max_depth:
                     X_idx_sorted_left, X_idx_sorted_right = best_split.compute_split_X_idx_sorted()
 
                     left_split = splitter.split(best_split.leaf.left_subtree, X_idx_sorted_left)
