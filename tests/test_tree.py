@@ -1,5 +1,5 @@
 from pytest import fixture, raises
-from copy import deepcopy
+from copy import deepcopy, copy
 
 from partitioning_machines import Tree
 
@@ -195,8 +195,22 @@ class TestTree:
         tree._deoverlap_position()
         assert [t.position for t in tree] == [0, -4, -6, -7, -5, -2, -3, -1, 4, 2, 1, 3, 6, 5, 7]
 
+    def test_copy(self, trees):
+        object_passed_by_reference_by_default = {'a':1}
+        for subtree in trees[3]:
+            subtree.some_reference = object_passed_by_reference_by_default
+        shallow_copy_of_tree3 = copy(trees[3])
+        assert shallow_copy_of_tree3 is not trees[3]
+        assert shallow_copy_of_tree3 == trees[3]
+        assert all(copy_of_subtree is not subtree for copy_of_subtree, subtree in zip(shallow_copy_of_tree3, trees[3]))
+        assert all(copy_of_subtree.some_reference is subtree.some_reference for copy_of_subtree, subtree in zip(shallow_copy_of_tree3, trees[3]))
+
     def test_deepcopy(self, trees):
-        copy_of_tree3 = deepcopy(trees[3])
-        assert copy_of_tree3 is not trees[3]
-        assert copy_of_tree3 == trees[3]
-        assert all(copy_of_subtree is not subtree for copy_of_subtree, subtree in zip(copy_of_tree3, trees[3]))
+        object_passed_by_reference_by_default = {'a':1}
+        for subtree in trees[3]:
+            subtree.some_reference = object_passed_by_reference_by_default
+        deepcopy_of_tree3 = deepcopy(trees[3])
+        assert deepcopy_of_tree3 is not trees[3]
+        assert deepcopy_of_tree3 == trees[3]
+        assert all(deepcopy_of_subtree is not subtree for deepcopy_of_subtree, subtree in zip(deepcopy_of_tree3, trees[3]))
+        assert all(deepcopy_of_subtree.some_reference is not subtree.some_reference for deepcopy_of_subtree, subtree in zip(deepcopy_of_tree3, trees[3]))
