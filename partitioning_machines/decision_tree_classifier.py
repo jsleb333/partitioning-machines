@@ -328,7 +328,7 @@ def margin_impurity_criterion(frac_examples_by_label):
 
 def breiman_alpha_pruning_objective(tree):
     """
-    Taken from Breiman (1980). We want to solve for α in the following equality:
+    From Breiman (1980) Chapter 3. We want to solve for α in the following equality:
         R(t) + α = R(T_t) + α * n_leaves(T_t),
     where:
         t is the root node of the subtree 'tree'.
