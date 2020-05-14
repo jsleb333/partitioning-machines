@@ -215,20 +215,59 @@ class Tree:
         else:
             return False
 
+    def __copy__(self):
+        # Delete critical references
+        copy_of_dict = copy(self.__dict__)
+        del copy_of_dict['parent']
+        del copy_of_dict['left_subtree']
+        del copy_of_dict['right_subtree']
+        
+        # Creating new instances
+        if self.is_leaf():
+            copy_of_tree = type(self)()
+        else:
+            copy_of_tree = type(self)(left_subtree=copy(self.left_subtree),
+                                      right_subtree=copy(self.right_subtree))
+        
+        copy_of_tree.__dict__.update(copy_of_dict)
+        return copy_of_tree
+
     def __deepcopy__(self, memo):
-        shallow_copy_of_tree = copy(self)
+        # Shallow copy to have access to references
+        copy_of_dict = copy(self.__dict__)
+        
+        # Delete critical references
+        del copy_of_dict['parent']
+        del copy_of_dict['left_subtree']
+        del copy_of_dict['right_subtree']
+        
+        # Deepcopy of other references
+        deepcopy_of_dict = deepcopy(copy_of_dict, memo)
+        
+        # Creating new instances
+        if self.is_leaf():
+            deepcopy_of_tree = type(self)()
+        else:
+            deepcopy_of_tree = type(self)(left_subtree=deepcopy(self.left_subtree, memo),
+                                      right_subtree=deepcopy(self.right_subtree, memo))
+        
+        deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
 
-        # Get rid of critical attributes without affecting the original tree
-        del shallow_copy_of_tree.left_subtree
-        del shallow_copy_of_tree.right_subtree
-        del shallow_copy_of_tree.parent
-
-        # Create the deepcopy
-        deepcopy_of_tree = type(self)(left_subtree=deepcopy(self.left_subtree),
-                                      right_subtree=deepcopy(self.right_subtree))
-        # Deepcopy of other non critical attributes
-        deepcopy_of_tree.__dict__.update(deepcopy(shallow_copy_of_tree.__dict__))
         return deepcopy_of_tree
+        
+        # shallow_copy_of_tree = copy(self)
+
+        # # Get rid of critical attributes without affecting the original tree
+        # del shallow_copy_of_tree.left_subtree
+        # del shallow_copy_of_tree.right_subtree
+        # del shallow_copy_of_tree.parent
+
+        # # Create the deepcopy
+        # deepcopy_of_tree = type(self)(left_subtree=deepcopy(self.left_subtree),
+        #                               right_subtree=deepcopy(self.right_subtree))
+        # # Deepcopy of other non critical attributes
+        # deepcopy_of_tree.__dict__.update(deepcopy(shallow_copy_of_tree.__dict__))
+        # return deepcopy_of_tree
 
     def replace_subtree(self, tree):
         """
