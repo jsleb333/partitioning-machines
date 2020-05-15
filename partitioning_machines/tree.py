@@ -255,7 +255,7 @@ class Tree:
 
         return deepcopy_of_tree
 
-    def replace_subtree(self, tree):
+    def replace_subtree(self, tree, update_tree=True):
         """
         Replaces current subtree with given tree instead.
 
@@ -268,10 +268,11 @@ class Tree:
                 self.parent.left_subtree = tree
             else:
                 self.parent.right_subtree = tree
-            self.update_tree()
+            if update_tree:
+                self.update_tree()
         return self
 
-    def split_leaf(self):
+    def split_leaf(self, update_tree=True):
         """
         Makes a leaf into a node with two leaves as children.
 
@@ -279,12 +280,12 @@ class Tree:
         """
         if not self.is_leaf():
             raise RuntimeError('Cannot split internal node.')
-        return self.replace_subtree(Tree(Tree(), Tree()))
+        return self.replace_subtree(Tree(Tree(), Tree()), update_tree=update_tree)
 
-    def remove_subtree(self):
+    def remove_subtree(self, update_tree=True):
         """
         Transforms the subtree into a leaf.
 
         Returns self.
         """
-        return self.replace_subtree(Tree())
+        return self.replace_subtree(Tree(), update_tree=update_tree)
