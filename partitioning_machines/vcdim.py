@@ -1,4 +1,4 @@
-from partitioning_machines.partitioning_function_upper_bound import PartitioningFunctionUpperBound
+from partitioning_machines import PartitioningFunctionUpperBound
 
 
 def vcdim_upper_bound(tree, n_features):
