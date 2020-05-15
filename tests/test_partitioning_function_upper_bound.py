@@ -41,6 +41,5 @@ class TestPatitioninFunctionUpperBound:
 
 
 def test_growth_function_upper_bound():
-    upper_bound = growth_function_upper_bound(Tree(Tree(), Tree()), n_features=10, n_classes=3)
-    assert upper_bound(1) == 3
-    assert upper_bound(2) == 3 + 6
+    assert growth_function_upper_bound(Tree(Tree(), Tree()), 1, n_features=10, n_classes=3) == 3
+    assert growth_function_upper_bound(Tree(Tree(), Tree()), 2, n_features=10, n_classes=3) == 3 + 6
