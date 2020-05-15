@@ -98,7 +98,10 @@ def decision_tree_to_tikz(decision_tree,
                           min_node_distance=1.45,
                           level_distance=1.6,
                           label_color_palette=None,
-                          node_size=.6):
+                          node_size=.6,
+                          show_rule=True,
+                          show_impurity=False,
+                          show_n_examples_by_label=False):
     pic = p2l.TexEnvironment('tikzpicture')
     pic.options += f"""leaf/.style={{draw, diamond, minimum width={node_size}cm, minimum height={2*node_size}cm, inner sep=0pt}}""",
     pic.options += f"""internal/.style={{draw, rectangle, minimum width={node_size}cm, inner sep=4pt}}""",
@@ -121,12 +124,20 @@ def decision_tree_to_tikz(decision_tree,
             leaf_label = np.argmax(subtree.label)
             if colors:
                 style += f', fill={colors[leaf_label]}'
-            node_label = str(leaf_label)
+            node_label = str(int(np.max(subtree.n_examples_by_label)))
         else:
             style = 'internal'
-            node_label = f'$x_{subtree.rule_feature} \le {subtree.rule_threshold:.2f}$'
+            node_label = []
+            if show_rule:
+                node_label.append(f'$x_{subtree.rule_feature} \le {subtree.rule_threshold:.2f}$')
+            if show_impurity:
+                node_label.append(f'Impurity: ${subtree.impurity_score:.2f}$')
+            if show_n_examples_by_label:
+                node_label.append('$[' + ', '.join(str(int(n)) for n in subtree.n_examples_by_label) + ']$')
+            node_label = ' \\\\ '.join(node_label)
+            
         color = '' 
-        pic += f'\\node[{style}](node{node}) at ({min_node_distance*subtree.position/2:.3f}, {-level_distance*subtree.depth:.3f}) {{{node_label}}};'
+        pic += f'\\node[{style}, align=center](node{node}) at ({min_node_distance*subtree.position/2:.3f}, {-level_distance*subtree.depth:.3f}) {{{node_label}}};'
         
         subtree.node_id = node
 
