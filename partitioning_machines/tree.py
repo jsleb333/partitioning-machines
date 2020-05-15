@@ -40,7 +40,6 @@ class Tree:
         self.n_leaves = 1
         self.n_nodes = 0
         self.hash_value = 0
-        self.position = 0
 
         self.update_tree()
 
@@ -58,7 +57,6 @@ class Tree:
         root._update_n_leaves()
         root._update_n_nodes()
         root._update_hash_value()
-        root._update_position()
 
     def is_leaf(self):
         return self.left_subtree is None and self.right_subtree is None
@@ -108,61 +106,7 @@ class Tree:
             self.left_subtree._update_hash_value()
             self.right_subtree._update_hash_value()
             self.hash_value = self.n_leaves + self.left_subtree.hash_value + self.right_subtree.hash_value
-
-    def _update_position(self):
-        self.tree_root._init_position()
-        self.tree_root._deoverlap_position()
-
-    def _init_position(self, position=0):
-        self.position = position
-        if not self.is_leaf():
-            self.left_subtree._init_position(position - 1)
-            self.right_subtree._init_position(position + 1)
-
-    def _deoverlap_position(self):
-        if self.is_leaf():
-            return
-        else:
-            self.left_subtree._deoverlap_position()
-            self.right_subtree._deoverlap_position()
-            overlap = self._find_largest_overlap()
-            if overlap >= -1:
-                self.left_subtree._shift_tree(-overlap/2 - 1)
-                self.right_subtree._shift_tree(overlap/2 + 1)
-
-    def _find_largest_overlap(self):
-        rightest_position = self.left_subtree._find_extremal_position_by_depth('max')
-        leftest_position = self.right_subtree._find_extremal_position_by_depth('min')
-        overlaps = [r - l for l, r in zip(leftest_position, rightest_position)]
-        return max(overlaps)
-
-    def _find_extremal_position_by_depth(self, mode):
-        extremal_position_by_depth = []
-        subtrees_in_depth = [self]
-        while subtrees_in_depth:
-            subtrees_in_next_depth = []
-            extremal_pos = subtrees_in_depth[0].position
-            for subtree in subtrees_in_depth:
-                if mode == 'max':
-                    if subtree.position > extremal_pos:
-                        extremal_pos = subtree.position
-                elif mode == 'min':
-                    if subtree.position < extremal_pos:
-                        extremal_pos = subtree.position
-                if not subtree.is_leaf():
-                    subtrees_in_next_depth.append(subtree.left_subtree)
-                    subtrees_in_next_depth.append(subtree.right_subtree)
-            extremal_position_by_depth.append(extremal_pos)
-            subtrees_in_depth = subtrees_in_next_depth
-
-        return extremal_position_by_depth
-
-    def _shift_tree(self, shift):
-        self.position += shift
-        if not self.is_leaf():
-            self.left_subtree._shift_tree(shift)
-            self.right_subtree._shift_tree(shift)
-
+            
     def __repr__(self):
         if self.is_leaf():
             return 'Tree()'

@@ -12,10 +12,65 @@ except ImportError:
 
 from partitioning_machines.tree import Tree
 
+def compute_nodes_position(tree):
+    _init_position(tree)
+    _deoverlap_position(tree)
+
+def _init_position(tree, position=0):
+    tree.position = position
+    if not tree.is_leaf():
+        _init_position(tree.left_subtree, position - 1)
+        _init_position(tree.right_subtree, position + 1)
+
+def _deoverlap_position(tree):
+    if tree.is_leaf():
+        return
+    else:
+        _deoverlap_position(tree.left_subtree)
+        _deoverlap_position(tree.right_subtree)
+        overlap = _find_largest_overlap(tree)
+        if overlap >= -1:
+            _shift_tree(tree.left_subtree, -overlap/2 - 1)
+            _shift_tree(tree.right_subtree, overlap/2 + 1)
+
+def _find_largest_overlap(tree):
+    rightest_position = _find_extremal_position_by_layer(tree.left_subtree, 'max')
+    leftest_position = _find_extremal_position_by_layer(tree.right_subtree, 'min')
+    overlaps = [r - l for l, r in zip(leftest_position, rightest_position)]
+    return max(overlaps)
+
+def _find_extremal_position_by_layer(tree, mode):
+    extremal_position_by_layer = []
+    subtrees_in_layer = [tree]
+    while subtrees_in_layer:
+        subtrees_in_next_layer = []
+        extremal_pos = subtrees_in_layer[0].position
+        for subtree in subtrees_in_layer:
+            if mode == 'max' and subtree.position > extremal_pos:
+                extremal_pos = subtree.position
+            elif mode == 'min' and subtree.position < extremal_pos:
+                extremal_pos = subtree.position
+            if not subtree.is_leaf():
+                subtrees_in_next_layer.append(subtree.left_subtree)
+                subtrees_in_next_layer.append(subtree.right_subtree)
+        extremal_position_by_layer.append(extremal_pos)
+        subtrees_in_layer = subtrees_in_next_layer
+
+    return extremal_position_by_layer
+
+def _shift_tree(tree, shift):
+    tree.position += shift
+    if not tree.is_leaf():
+        _shift_tree(tree.left_subtree, shift)
+        _shift_tree(tree.right_subtree, shift)
+
+
 def tree_struct_to_tikz(tree, min_node_distance=1.3, level_distance=1.6, node_size=.6):
     pic = p2l.TexEnvironment('tikzpicture')
     pic.options += f"""leaf/.style={{draw, diamond, minimum width={node_size}cm, minimum height={2*node_size}cm, inner sep=0pt}}""",
     pic.options += f"""internal/.style={{draw, circle, minimum width={node_size}cm, inner sep=0pt}}""",
+    
+    compute_nodes_position(tree)
 
     for node, subtree in enumerate(tree):
         style = 'leaf' if subtree.is_leaf() else 'internal'
@@ -56,6 +111,8 @@ def decision_tree_to_tikz(decision_tree,
             pic.preamble.extend(color.preamble)
     else:
         colors = []
+        
+    compute_nodes_position(decision_tree.tree)
     
     for node, subtree in enumerate(decision_tree.tree):
         if subtree.is_leaf():
