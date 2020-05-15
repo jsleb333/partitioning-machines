@@ -113,7 +113,7 @@ def test_decision_tree_to_tikz(trees):
     y = np.array([0,1,0,2,2])
     dtc = DecisionTreeClassifier(gini_impurity_criterion)
     dtc.fit(X, y)
-    pic = decision_tree_to_tikz(dtc)
+    pic = decision_tree_to_tikz(dtc, dtc.label_encoder.labels)
     print(pic.build())
 
 def test_draw_tree_structure(trees):

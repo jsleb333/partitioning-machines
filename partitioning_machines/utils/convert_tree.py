@@ -1,4 +1,5 @@
 from partitioning_machines.tree import Tree
+from partitioning_machines.decision_tree_classifier import DecisionTreeClassifier
 
 
 def tree_from_sklearn_decision_tree(sklearn_tree):
@@ -8,7 +9,9 @@ def tree_from_sklearn_decision_tree(sklearn_tree):
     Args:
         sklearn_tree (DecisionTreeClassifier object): Learned tree needed to be converted.
     """
-    return _build_tree_from_sklearn_tree(sklearn_tree.tree_)
+    dtc = DecisionTreeClassifier()
+    dtc.tree = _build_tree_from_sklearn_tree(sklearn_tree.tree_)
+    return dtc
 
 def _build_tree_from_sklearn_tree(sklearn_tree, current_node=0):
     children_left, children_right = sklearn_tree.children_left, sklearn_tree.children_right

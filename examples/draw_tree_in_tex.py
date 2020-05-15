@@ -15,7 +15,7 @@ y = [dataset.target_names[i] for i in dataset.target]
 dtc = DecisionTreeClassifier(gini_impurity_criterion)
 dtc.fit(X, y)
 
-tikzpicture_object = decision_tree_to_tikz(dtc)
+tikzpicture_object = decision_tree_to_tikz(dtc, dtc.label_encoder.labels)
 
 print(tikzpicture_object.build()) # Converts object to string usable in tex file
 

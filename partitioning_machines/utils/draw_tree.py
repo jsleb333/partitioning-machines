@@ -10,7 +10,7 @@ except ImportError:
     from warnings import warn
     warn('Consider installing the seaborn package to have access to easy color coding in the pictures.')
 
-from partitioning_machines.tree import Tree
+from partitioning_machines import Tree
 
 def compute_nodes_position(tree):
     _init_position(tree)
@@ -94,6 +94,7 @@ def tree_struct_to_tikz(tree, min_node_distance=1.3, level_distance=1.6, node_si
 
 
 def decision_tree_to_tikz(decision_tree,
+                          classes,
                           min_node_distance=1.45,
                           level_distance=1.6,
                           label_color_palette=None,
@@ -103,7 +104,7 @@ def decision_tree_to_tikz(decision_tree,
     pic.options += f"""internal/.style={{draw, rectangle, minimum width={node_size}cm, inner sep=4pt}}""",
 
     if label_color_palette is None and sns is not None:
-        label_color_palette = sns.color_palette(n_colors=decision_tree.label_encoder.n_classes)
+        label_color_palette = sns.color_palette(n_colors=len(classes))
     
     if label_color_palette is not None:
         colors = [p2l.Color(*color) for color in label_color_palette]
@@ -143,7 +144,7 @@ def decision_tree_to_tikz(decision_tree,
                 pic += f'\\draw (node{subtree.node_id}) -- (node{subtree.right_subtree.node_id});'
 
     legend_start_y = -level_distance * (decision_tree.tree.height + .75)
-    for i, label in enumerate(decision_tree.label_encoder.labels):
+    for i, label in enumerate(classes):
         pic += (f'\\node[inner sep=0pt, minimum height=10pt, minimum width=10pt, fill={colors[i]}, draw]'
                 f'(legend{i}) at (0, {legend_start_y - 0.4233*i:.3f}) {{}};')
         pic += f'\\node[anchor=west] at (legend{i}.east) {{{label}}};'
@@ -165,5 +166,5 @@ def draw_decision_tree(decision_tree, show_pdf=True):
     doc.add_package('tikz')
     del doc.packages['geometry']
     doc.add_to_preamble('\\usetikzlibrary{shapes}')
-    doc += decision_tree_to_tikz(decision_tree)
+    doc += decision_tree_to_tikz(decision_tree, decision_tree.label_encoder.labels)
     doc.build(show_pdf=show_pdf)

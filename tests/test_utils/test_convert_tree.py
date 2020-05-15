@@ -2,7 +2,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.datasets import load_iris
 import numpy as np
 
-from partitioning_machines import Tree, tree_from_sklearn_decision_tree
+from partitioning_machines import Tree
+from partitioning_machines.utils import tree_from_sklearn_decision_tree
 
 
 def test_tree_from_sklearn_decision_tree_with_actual_tree():
