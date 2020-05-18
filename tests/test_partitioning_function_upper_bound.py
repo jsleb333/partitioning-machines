@@ -2,15 +2,6 @@ from partitioning_machines import Tree, PartitioningFunctionUpperBound, growth_f
 
 
 class TestPatitioninFunctionUpperBound:
-    def test__compute_list_of_distinct_subtrees(self):
-        leaf = Tree()
-        stump = Tree(Tree(), Tree())
-        tree = Tree(Tree(Tree(), Tree()), Tree(Tree(), Tree()))
-        pfub = PartitioningFunctionUpperBound(tree, 10)
-        pfub._compute_list_of_distinct_subtrees(pfub.tree)
-
-        assert pfub.subtrees == [leaf, stump, tree]
-
     def test_compute_upper_bound_leaf(self):
         leaf = Tree()
         pfub = PartitioningFunctionUpperBound(leaf, 10)
@@ -50,6 +41,5 @@ class TestPatitioninFunctionUpperBound:
 
 
 def test_growth_function_upper_bound():
-    upper_bound = growth_function_upper_bound(Tree(Tree(), Tree()), n_features=10, n_classes=3)
-    assert upper_bound(1) == 3
-    assert upper_bound(2) == 3 + 6
+    assert growth_function_upper_bound(Tree(Tree(), Tree()), 1, n_features=10, n_classes=3) == 3
+    assert growth_function_upper_bound(Tree(Tree(), Tree()), 2, n_features=10, n_classes=3) == 3 + 6

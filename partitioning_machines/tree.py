@@ -1,5 +1,6 @@
 """Implementation of a binary tree"""
 from copy import copy, deepcopy
+from inspect import signature, Parameter
 
 
 class Tree:
@@ -162,16 +163,20 @@ class Tree:
     def __copy__(self):
         # Delete critical references
         copy_of_dict = copy(self.__dict__)
-        del copy_of_dict['parent']
-        del copy_of_dict['left_subtree']
-        del copy_of_dict['right_subtree']
+        copy_of_dict['parent'] = None
+        copy_of_dict['left_subtree'] = None
+        copy_of_dict['right_subtree'] = None
         
         # Creating new instances
-        if self.is_leaf():
-            copy_of_tree = type(self)()
-        else:
-            copy_of_tree = type(self)(left_subtree=copy(self.left_subtree),
-                                      right_subtree=copy(self.right_subtree))
+        copy_of_tree = type(self).__new__(type(self))
+        if not self.is_leaf():
+            left_subtree = copy(self.left_subtree)
+            left_subtree.parent = copy_of_tree
+            copy_of_tree.left_subtree = left_subtree
+
+            right_subtree = copy(self.right_subtree)
+            right_subtree.parent = copy_of_tree
+            copy_of_tree.right_subtree = right_subtree
         
         copy_of_tree.__dict__.update(copy_of_dict)
         return copy_of_tree
@@ -181,19 +186,23 @@ class Tree:
         copy_of_dict = copy(self.__dict__)
         
         # Delete critical references
-        del copy_of_dict['parent']
-        del copy_of_dict['left_subtree']
-        del copy_of_dict['right_subtree']
+        copy_of_dict['parent'] = None
+        copy_of_dict['left_subtree'] = None
+        copy_of_dict['right_subtree'] = None
         
         # Deepcopy of other references
         deepcopy_of_dict = deepcopy(copy_of_dict, memo)
         
         # Creating new instances
-        if self.is_leaf():
-            deepcopy_of_tree = type(self)()
-        else:
-            deepcopy_of_tree = type(self)(left_subtree=deepcopy(self.left_subtree, memo),
-                                      right_subtree=deepcopy(self.right_subtree, memo))
+        deepcopy_of_tree = type(self).__new__(type(self))
+        if not self.is_leaf():
+            left_subtree = deepcopy(self.left_subtree, memo)
+            left_subtree.parent = deepcopy_of_tree
+            deepcopy_of_tree.left_subtree = left_subtree
+
+            right_subtree = deepcopy(self.right_subtree, memo)
+            right_subtree.parent = deepcopy_of_tree
+            deepcopy_of_tree.right_subtree = right_subtree
         
         deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
 

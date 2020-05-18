@@ -1,6 +1,7 @@
 from scipy.special import binom, factorial
 from sympy.functions.combinatorial.numbers import stirling
 from sympy.functions.combinatorial.factorials import ff
+from copy import copy
 
 
 class PartitioningFunctionUpperBound:
@@ -16,33 +17,11 @@ class PartitioningFunctionUpperBound:
         Args:
             tree (Tree object): Tree structure for which to compute the bound.
             n_features (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
-            pre_computed_tables (Union[dict, None]): If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. If None, a table will be created from scratch.
+            pre_computed_tables (Union[dict, None]): If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. The transfered table will be updated with any new value computed. If None, a table will be created from scratch.
         """
         self.tree = tree
         self.n_features = n_features
-
-        self.subtrees = []
-        self._compute_list_of_distinct_subtrees(tree)
-
-        self.pfub_table = {subtree:{} for subtree in self.subtrees}
-        if pre_computed_tables is not None:
-            self.pfub_table.update(pre_computed_tables)
-
-    def _compute_list_of_distinct_subtrees(self, tree):
-        """
-        height-first search of all subtrees of the tree 'tree'.
-        """
-        if not tree.is_leaf():
-            self._compute_list_of_distinct_subtrees(tree.left_subtree)
-            if tree.left_subtree not in self.subtrees:
-                self.subtrees.append(tree.left_subtree)
-
-            self._compute_list_of_distinct_subtrees(tree.right_subtree)
-            if tree.right_subtree not in self.subtrees:
-                self.subtrees.append(tree.right_subtree)
-
-        if tree not in self.subtrees:
-            self.subtrees.append(tree)
+        self.pfub_table = {} if pre_computed_tables is None else pre_computed_tables
 
     def _compute_upper_bound(self, tree, n_parts, n_examples, n_features):
         """
@@ -57,7 +36,8 @@ class PartitioningFunctionUpperBound:
         elif m <= tree.n_leaves:
             return stirling(m, c)
         # Modification 1: Check first in the table if value is already computed.
-        elif (c, m, l) not in self.pfub_table[tree]:
+        table = self.pfub_table.setdefault(tree, {})
+        if (c, m, l) not in table:
             N = 0
             min_k = tree.left_subtree.n_leaves
             max_k = m - tree.right_subtree.n_leaves
