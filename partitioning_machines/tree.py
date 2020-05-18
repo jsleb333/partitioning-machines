@@ -45,14 +45,14 @@ class Tree:
         self.update_tree()
 
     @property
-    def tree_root(self):
+    def root(self):
         if self.parent is None:
             return self
         else:
-            return self.parent.tree_root
+            return self.parent.root
 
     def update_tree(self):
-        root = self.tree_root
+        root = self.root
         root._update_height()
         root._update_depth()
         root._update_n_leaves()
@@ -169,6 +169,7 @@ class Tree:
         
         # Creating new instances
         copy_of_tree = type(self).__new__(type(self))
+        copy_of_tree.__dict__.update(copy_of_dict)
         if not self.is_leaf():
             left_subtree = copy(self.left_subtree)
             left_subtree.parent = copy_of_tree
@@ -178,7 +179,6 @@ class Tree:
             right_subtree.parent = copy_of_tree
             copy_of_tree.right_subtree = right_subtree
         
-        copy_of_tree.__dict__.update(copy_of_dict)
         return copy_of_tree
 
     def __deepcopy__(self, memo):
@@ -195,6 +195,7 @@ class Tree:
         
         # Creating new instances
         deepcopy_of_tree = type(self).__new__(type(self))
+        deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
         if not self.is_leaf():
             left_subtree = deepcopy(self.left_subtree, memo)
             left_subtree.parent = deepcopy_of_tree
@@ -204,7 +205,6 @@ class Tree:
             right_subtree.parent = deepcopy_of_tree
             deepcopy_of_tree.right_subtree = right_subtree
         
-        deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
 
         return deepcopy_of_tree
 
@@ -241,4 +241,41 @@ class Tree:
 
         Returns self.
         """
-        return self.replace_subtree(Tree(), update_tree=update_tree)
+        self.left_subtree = None
+        self.right_subtree = None
+        if update_tree:
+            self.update_tree()
+        return self
+
+    def path_from_root(self):
+        """
+        Returns a list of strings indicating to go 'left' or 'right' for each node starting from the root node.
+        """
+        path = []
+        parent = self.parent
+        child = self
+        while parent is not None:
+            if child is parent.left_subtree:
+                path.append('left')
+            else:
+                path.append('right')
+            child = parent
+            parent = parent.parent
+        
+        path.reverse()
+        return path
+    
+    def follow_path(self, path):
+        """
+        Given a path (list of 'left' and 'right' strings), returns the corresponding node.
+        """
+        subtree = self
+        for indication in path:
+            if indication == 'left':
+                subtree = subtree.left_subtree
+            else:
+                subtree = subtree.right_subtree
+        
+        return subtree
+            
+        

@@ -26,7 +26,7 @@ class _DecisionTree(Tree):
 
     @property
     def n_examples(self):
-        return self.n_examples_by_label.sum()
+        return int(self.n_examples_by_label.sum())
 
     @property
     def n_errors(self):
@@ -338,11 +338,11 @@ def breiman_alpha_pruning_objective(tree):
         n_leaves(T_t) is the number of leaves of the subtree T_t.
     """
     node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
-    return (node_n_errors - tree.n_errors) / ( tree.tree_root.n_examples * (tree.n_leaves - 1) )
+    return (node_n_errors - tree.n_errors) / ( tree.root.n_examples * (tree.n_leaves - 1) )
 
 def leboeuf_alpha_pruning_objective_factory(n_features):
     def leboeuf_alpha_pruning_objective(tree):
         node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
         denominator = tree.n_leaves * np.log(tree.n_leaves * n_features) - np.log(n_features)
-        return (node_n_errors - tree.n_errors) / (tree.tree_root.n_examples * denominator)
+        return (node_n_errors - tree.n_errors) / (tree.root.n_examples * denominator)
     return leboeuf_alpha_pruning_objective

@@ -151,3 +151,14 @@ class TestTree:
         assert deepcopy_of_tree3 == trees[3]
         assert all(deepcopy_of_subtree is not subtree for deepcopy_of_subtree, subtree in zip(deepcopy_of_tree3, trees[3]))
         assert all(deepcopy_of_subtree.some_reference is not subtree.some_reference for deepcopy_of_subtree, subtree in zip(deepcopy_of_tree3, trees[3]))
+
+    def test_path_from_root(self, trees):
+        tree = trees[-1]
+        subtree = tree.left_subtree.right_subtree
+        assert subtree.path_from_root() == ['left', 'right']
+        
+    def test_follow_path(self, trees):
+        assert trees[9].left_subtree.left_subtree is trees[9].follow_path(['left', 'left'])
+        assert trees[9].left_subtree.right_subtree is trees[9].follow_path(['left', 'right'])
+        subtree = trees[9].left_subtree.right_subtree
+        assert subtree is subtree.root.follow_path(subtree.path_from_root())
