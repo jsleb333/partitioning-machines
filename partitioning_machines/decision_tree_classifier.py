@@ -26,7 +26,7 @@ class _DecisionTree(Tree):
 
     @property
     def n_examples(self):
-        return self.n_examples_by_label.sum()
+        return int(self.n_examples_by_label.sum())
 
     @property
     def n_errors(self):

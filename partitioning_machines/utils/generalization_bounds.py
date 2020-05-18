@@ -14,16 +14,15 @@ def shawe_taylor_bound(n_examples, n_errors, growth_function, hypothesis_class_i
 
 def shawe_taylor_bound_pruning_objective_factory(n_features, table={}):
     def shawe_taylor_bound_pruning_objective(subtree):
-        copy_of_subtree = copy(subtree)
-        copy_of_subtree.left_subtree = None
-        copy_of_subtree.right_subtree = None
-        copy_of_subtree.root.update_tree()
+        copy_of_tree = copy(subtree.root)
+        copy_of_subtree = copy_of_tree.follow_path(subtree.path_from_root())
+        copy_of_subtree.remove_subtree()
         
-        n_classes = copy_of_subtree.n_examples_by_label.shape[0]
-        growth_function = growth_function_upper_bound(copy_of_subtree, n_features, n_classes, table)
-        n_examples = copy_of_subtree.root.n_examples
-        n_errors = copy_of_subtree.root.n_errors
-        hypothesis_class_index = copy_of_subtree.root.hash_value
+        n_classes = copy_of_tree.n_examples_by_label.shape[0]
+        growth_function = growth_function_upper_bound(copy_of_tree, n_features, n_classes, table)
+        n_examples = copy_of_tree.n_examples
+        n_errors = copy_of_tree.n_errors
+        hypothesis_class_index = copy_of_tree.hash_value
         
         return shawe_taylor_bound(n_examples, n_errors, growth_function, hypothesis_class_index)
     return shawe_taylor_bound_pruning_objective

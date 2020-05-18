@@ -36,18 +36,19 @@ class PartitioningFunctionUpperBound:
         elif m <= tree.n_leaves:
             return stirling(m, c)
         # Modification 1: Check first in the table if value is already computed.
-        table = self.pfub_table.setdefault(tree, {})
-        if (c, m, l) not in table:
+        if tree not in self.pfub_table:
+            self.pfub_table[tree] = {}
+        if (c, m, l) not in self.pfub_table[tree]:
             N = 0
             min_k = tree.left_subtree.n_leaves
             max_k = m - tree.right_subtree.n_leaves
             for k in range(min_k, max_k+1):
-                # Modification 2: Since c = 2 is the most common use case, we give an optimized version, avoiding the sum over a and b.
+                # Modification 2: Since c = 2 is the most common use case, we give an optimized version, writing explicitely the sum over a and b.
                 if c == 2:
                     N +=  min(2*l, binom(m, k)) * (1
                             + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l)
                             + 2 * self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
-                            + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l) *                 self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
+                            + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l) * self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
                             )
                 else:
                     N += min(2*l, binom(m, k)) * sum(

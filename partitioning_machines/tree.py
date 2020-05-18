@@ -241,7 +241,11 @@ class Tree:
 
         Returns self.
         """
-        return self.replace_subtree(Tree(), update_tree=update_tree)
+        self.left_subtree = None
+        self.right_subtree = None
+        if update_tree:
+            self.update_tree()
+        return self
 
     def path_from_root(self):
         """
