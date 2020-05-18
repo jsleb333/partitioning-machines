@@ -75,14 +75,14 @@ class DecisionTreeClassifier:
         self.tree = None
 
     def fit(self, X, y, X_idx_sorted=None):
-        n_examples, n_features = X.shape
+        self.n_examples, self.n_features = X.shape
         self.label_encoder = OneHotEncoder(y)
         encoded_y, _ = self.label_encoder.encode_labels(y)
 
         if X_idx_sorted is None:
             X_idx_sorted = np.argsort(X, 0)
 
-        self._init_tree(encoded_y, n_examples)
+        self._init_tree(encoded_y, self.n_examples)
 
         splitter = Splitter(X, encoded_y, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
 
