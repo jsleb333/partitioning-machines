@@ -8,8 +8,9 @@ def shawe_taylor_bound(n_examples, n_errors, growth_function, hypothesis_class_i
     Theorem 2.3 of Shawe-Taylor et al. (1997), Structural Risk Minimization over Data-Dependent Hierarchies, with the modification that Sauer's lemma is not used.
     """
     p_d = 6/(np.pi**2*(hypothesis_class_index + 1))
-    q_k = 6/(np.pi**2*(n_errors + 1))
-    epsilon = 2*n_errors + 4*np.log(float(growth_function(2*n_examples))) + np.log(4/(p_d*q_k*delta))
+    q_k = 2**-(n_errors + 1)
+    # q_k = 6/(np.pi**2*(n_errors + 1))
+    epsilon = 2*n_errors + 4*np.log(float(growth_function(2*n_examples))) + 4*np.log(4/(p_d*q_k*delta))
     return epsilon / n_examples
 
 def shawe_taylor_bound_pruning_objective_factory(n_features, table={}):
@@ -26,3 +27,32 @@ def shawe_taylor_bound_pruning_objective_factory(n_features, table={}):
         
         return shawe_taylor_bound(n_examples, n_errors, growth_function, hypothesis_class_index)
     return shawe_taylor_bound_pruning_objective
+
+
+def vapnik_bound(n_examples, n_errors, growth_function, hypothesis_class_index, delta=.05):
+    """
+    Equation (4.41) of Vapnik's book (1998) extended to SRM.
+    """
+    p_d = 6/(np.pi**2*(hypothesis_class_index + 1))
+    q_k = 2**-(n_errors + 1)
+    # q_k = 6/(np.pi**2*(n_errors + 1))
+    epsilon = 4 / n_examples * (np.log(float(growth_function(2*n_examples))) + np.log(4/(p_d*q_k*delta)))
+    
+    empirical_risk = n_errors / n_examples
+    
+    return empirical_risk + epsilon/2 * (1 + np.sqrt(1 + 4*empirical_risk/epsilon))
+
+def vapnik_bound_pruning_objective_factory(n_features, table={}):
+    def vapnik_bound_pruning_objective(subtree):
+        copy_of_tree = copy(subtree.root)
+        copy_of_subtree = copy_of_tree.follow_path(subtree.path_from_root())
+        copy_of_subtree.remove_subtree()
+        
+        n_classes = copy_of_tree.n_examples_by_label.shape[0]
+        growth_function = growth_function_upper_bound(copy_of_tree, n_features, n_classes, table)
+        n_examples = copy_of_tree.n_examples
+        n_errors = copy_of_tree.n_errors
+        hypothesis_class_index = copy_of_tree.hash_value
+        
+        return vapnik_bound(n_examples, n_errors, growth_function, hypothesis_class_index)
+    return vapnik_bound_pruning_objective
