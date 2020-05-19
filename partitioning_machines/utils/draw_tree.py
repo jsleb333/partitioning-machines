@@ -124,7 +124,8 @@ def decision_tree_to_tikz(decision_tree,
             leaf_label = np.argmax(subtree.label)
             if colors:
                 style += f', fill={colors[leaf_label]}'
-            node_label = str(int(np.max(subtree.n_examples_by_label)))
+            node_label = str(subtree.n_examples)
+            # node_label = str(int(np.max(subtree.n_examples_by_label)))
         else:
             style = 'internal'
             node_label = []
