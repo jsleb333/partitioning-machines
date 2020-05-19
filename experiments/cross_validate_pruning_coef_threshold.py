@@ -44,7 +44,7 @@ def cross_validate_pruning_coef_threshold(
 if __name__ == '__main__':
     decision_tree = DecisionTreeClassifier(gini_impurity_criterion)
     X, y = load_iris(return_X_y=True)
-    X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=0.15, random_state=42)
+    X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=0.25, random_state=42)
     n_examples, n_features = X.shape
     
     print(
@@ -60,11 +60,11 @@ if __name__ == '__main__':
     print(f'Accuracy score of original tree on train dataset: {acc_tr:.3f}')
     print(f'Accuracy score of original tree on test dataset: {acc_ts:.3f}')
 
-    original_tree = decision_tree_to_tikz(decision_tree)
+    original_tree = decision_tree_to_tikz(decision_tree, decision_tree.label_encoder.labels)
     optimal_threshold = cross_validate_pruning_coef_threshold(decision_tree, X_tr, y_tr, n_fold=5)
     print(f'Optimal cross-validated pruning coefficient threshold: {optimal_threshold:.3f}')
 
-    pruned_tree = decision_tree_to_tikz(decision_tree)
+    pruned_tree = decision_tree_to_tikz(decision_tree, decision_tree.label_encoder.labels)
     acc_tr = accuracy_score(y_true=y_tr, y_pred=decision_tree.predict(X_tr))
     acc_ts = accuracy_score(y_true=y_ts, y_pred=decision_tree.predict(X_ts))
     print(f'Accuracy score of pruned tree on train dataset: {acc_tr:.3f}')
