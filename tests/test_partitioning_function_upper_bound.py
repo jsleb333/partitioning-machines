@@ -38,7 +38,14 @@ class TestPatitioninFunctionUpperBound:
         pfub = PartitioningFunctionUpperBound(other_tree, 10, pfub.pfub_table)
         assert pfub.pfub_table[tree][2, 16, 10] == 2**(16-1)-1
         pfub(17, 2)
-
+    
+    def test_loose_bound(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree = Tree(stump, leaf)
+        pfub = PartitioningFunctionUpperBound(tree, 10, loose=True)
+        pfub(100, 2)
+        pfub(100, 3)
 
 def test_growth_function_upper_bound():
     assert growth_function_upper_bound(Tree(Tree(), Tree()), n_features=10, n_classes=3)(1) == 3

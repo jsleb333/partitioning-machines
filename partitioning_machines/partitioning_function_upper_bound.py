@@ -10,20 +10,23 @@ class PartitioningFunctionUpperBound:
 
     It implements an optimized version of the algorithm 1 of Appendix E by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
-    def __init__(self, tree, n_features, pre_computed_tables=None):
+    def __init__(self, tree, n_features, pre_computed_tables=None, loose=False):
         """
-        At initialization, a list of all subtrees is computed and then a dict is created with subtrees as keys. This dict is used as a look-up table to store upper bound values already computed for each subtrees to avoid computing the same thing multiple times.
-
         Args:
             tree (Tree object): Tree structure for which to compute the bound.
+            
             n_features (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
-            pre_computed_tables (Union[dict, None]): If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. The transfered table will be updated with any new value computed. If None, a table will be created from scratch.
+            
+            pre_computed_tables (Union[dict, None]): If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. The transfered table will be updated with any new value computed. If None, a table will be created from scratch. One can get the computed table by accessing the 'pfub_table' attribute.
+            
+            loose (bool): If loose is True, a looser but *much more* computationally efficient version of the bound is computed. In that case, no table is needed.
         """
         self.tree = tree
         self.n_features = n_features
         self.pfub_table = {} if pre_computed_tables is None else pre_computed_tables
+        self.loose = loose
 
-    def _compute_upper_bound(self, tree, n_parts, n_examples, n_features):
+    def _compute_upper_bound_tight(self, tree, n_parts, n_examples, n_features):
         """
         Optimized implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
         """
@@ -46,16 +49,16 @@ class PartitioningFunctionUpperBound:
                 # Modification 2: Since c = 2 is the most common use case, we give an optimized version, writing explicitely the sum over a and b.
                 if c == 2:
                     N +=  min(2*l, binom(m, k)) * (1
-                            + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l)
-                            + 2 * self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
-                            + 2 * self._compute_upper_bound(tree.left_subtree, 2, k, l) * self._compute_upper_bound(tree.right_subtree, 2, m-k, l)
+                            + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, l)
+                            + 2 * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, l)
+                            + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, l) * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, l)
                             )
                 else:
                     N += min(2*l, binom(m, k)) * sum(
                         sum(
                             binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
-                            self._compute_upper_bound(tree.left_subtree, a, k, l) *
-                            self._compute_upper_bound(tree.right_subtree, b, m-k, l)
+                            self._compute_upper_bound_tight(tree.left_subtree, a, k, l) *
+                            self._compute_upper_bound_tight(tree.right_subtree, b, m-k, l)
                             for b in range(max(1,c-a), c+1)
                         )
                         for a in range(1, c+1)
@@ -68,6 +71,46 @@ class PartitioningFunctionUpperBound:
             self.pfub_table[tree][n_parts, n_examples, n_features] = min(N, stirling(n_examples, n_parts))
 
         return self.pfub_table[tree][n_parts, n_examples, n_features]
+    
+    def _compute_upper_bound_loose(self, tree, n_parts, n_examples, n_features):
+        """
+        Looser but faster implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        """
+        c, m, l = n_parts, n_examples, n_features
+
+        if c > m or c > tree.n_leaves:
+            return 0
+        elif c == m or c == 1 or m == 1:
+            return 1
+        elif m <= tree.n_leaves:
+            return stirling(m, c)
+        else:
+            N = 0
+            k_left = m - tree.right_subtree.n_leaves
+            k_right = m - tree.left_subtree.n_leaves
+            N = 0
+            if c == 2:
+                N +=  2*l * (1
+                        + 2 * self._compute_upper_bound_loose(tree.left_subtree, 2, k_left, l)
+                        + 2 * self._compute_upper_bound_loose(tree.right_subtree, 2, k_right, l)
+                        + 2 * self._compute_upper_bound_loose(tree.left_subtree, 2, k_left, l) * self._compute_upper_bound_loose(tree.right_subtree, 2, k_right, l)
+                        )
+            else:
+                N += 2*l * sum(
+                    sum(
+                        binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
+                        self._compute_upper_bound_loose(tree.left_subtree, a, k_left, l) *
+                        self._compute_upper_bound_loose(tree.right_subtree, b, k_right, l)
+                        for b in range(max(1,c-a), c+1)
+                    )
+                    for a in range(1, c+1)
+                )
+            N *= m - tree.n_leaves
+            
+            if tree.left_subtree == tree.right_subtree:
+                N /= 2
+
+        return N
 
     def __call__(self, n_examples, n_parts=2):
         """
@@ -75,7 +118,11 @@ class PartitioningFunctionUpperBound:
             n_examples (int): Number of examples. Corresponds to the variable 'm' in the paper.
             n_parts (int): Number of parts. Corresponds to the variable 'c' in the paper.
         """
-        return self._compute_upper_bound(self.tree, n_parts, n_examples, self.n_features)
+        if self.loose:
+            return self._compute_upper_bound_loose(self.tree, n_parts, n_examples, self.n_features)
+        else:
+            return self._compute_upper_bound_tight(self.tree, n_parts, n_examples, self.n_features)
+            
 
 
 def partitioning_function_upper_bound(tree, n_parts, n_examples, n_features):
@@ -90,8 +137,8 @@ def partitioning_function_upper_bound(tree, n_parts, n_examples, n_features):
     return pfub(n_examples, n_parts)
 
 
-def growth_function_upper_bound(tree, n_features, n_classes=2, pre_computed_tables=None):
-    pfub = PartitioningFunctionUpperBound(tree, n_features, pre_computed_tables)
+def growth_function_upper_bound(tree, n_features, n_classes=2, pre_computed_tables=None, loose=False):
+    pfub = PartitioningFunctionUpperBound(tree, n_features, pre_computed_tables, loose=loose)
     def upper_bound(n_examples):
         max_range = min(n_classes, tree.n_leaves, n_examples)
         return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))
