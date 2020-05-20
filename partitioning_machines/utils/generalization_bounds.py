@@ -38,7 +38,7 @@ def vapnik_bound(n_examples, n_errors, growth_function, hypothesis_class_index, 
     """
     s = 2
     p_d = 1/zeta(s) * 1/(hypothesis_class_index + 1)**2
-    r = 1/2
+    r = 1/200
     q_k = (1-r) * r**n_errors
     # q_k = 1/zeta(s) * 1/(n_errors + 1)**2
     epsilon = 4 / n_examples * (np.log(float(growth_function(2*n_examples))) + np.log(4/(p_d*q_k*delta)))
