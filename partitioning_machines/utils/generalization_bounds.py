@@ -1,5 +1,6 @@
 import numpy as np
 from copy import copy
+from scipy.special import zeta
 from partitioning_machines import growth_function_upper_bound
 
 
@@ -7,9 +8,11 @@ def shawe_taylor_bound(n_examples, n_errors, growth_function, hypothesis_class_i
     """
     Theorem 2.3 of Shawe-Taylor et al. (1997), Structural Risk Minimization over Data-Dependent Hierarchies, with the modification that Sauer's lemma is not used.
     """
-    p_d = 6/(np.pi**2*(hypothesis_class_index + 1))
-    q_k = 2**-(n_errors + 1)
-    # q_k = 6/(np.pi**2*(n_errors + 1))
+    s = 2
+    p_d = 1/zeta(s) * 1/(hypothesis_class_index + 1)**2
+    r = 1/2
+    q_k = (1-r) * r**n_errors
+    # q_k = 1/zeta(s) * 1/(n_errors + 1)**2
     epsilon = 2*n_errors + 4*np.log(float(growth_function(2*n_examples))) + 4*np.log(4/(p_d*q_k*delta))
     return epsilon / n_examples
 
@@ -33,9 +36,11 @@ def vapnik_bound(n_examples, n_errors, growth_function, hypothesis_class_index, 
     """
     Equation (4.41) of Vapnik's book (1998) extended to SRM.
     """
-    p_d = 6/(np.pi**2*(hypothesis_class_index + 1))
-    q_k = 2**-(n_errors + 1)
-    # q_k = 6/(np.pi**2*(n_errors + 1))
+    s = 2
+    p_d = 1/zeta(s) * 1/(hypothesis_class_index + 1)**2
+    r = 1/2
+    q_k = (1-r) * r**n_errors
+    # q_k = 1/zeta(s) * 1/(n_errors + 1)**2
     epsilon = 4 / n_examples * (np.log(float(growth_function(2*n_examples))) + np.log(4/(p_d*q_k*delta)))
     
     empirical_risk = n_errors / n_examples
