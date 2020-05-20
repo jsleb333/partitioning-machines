@@ -13,17 +13,13 @@ from partitioning_machines import shawe_taylor_bound_pruning_objective_factory, 
                                   vapnik_bound_pruning_objective_factory
 
 
-def prune_with_bound(
-        decision_tree,
-        bound=None):
+def prune_with_bound(decision_tree, bound):
     
     leaf = decision_tree.tree
     while not leaf.is_leaf():
         leaf = leaf.left_subtree
     best_bound = bound(leaf)
-    print('bound for full tree', best_bound)
     bounds_value = decision_tree.compute_pruning_coefficients(bound)
-    print('bound for every nodes', bounds_value)
     
     while bounds_value[0] <= best_bound:
         best_bound = bounds_value[0]
@@ -32,16 +28,46 @@ def prune_with_bound(
         print(bounds_value)
     
     return best_bound
+
+
+def cross_validate_pruning_coef_threshold(
+        decision_tree,
+        X,
+        y,
+        n_fold=10,
+        pruning_objective=breiman_alpha_pruning_objective,
+        optimisation_mode='min'):
+    pruning_coefs = decision_tree.compute_pruning_coefficients(pruning_objective)
     
+    CV_trees = [copy(decision_tree) for i in range(n_fold)]
+    
+    fold_idx = KFold(n_splits=n_fold).split(X)
+    
+    for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
+        X_tr, y_tr = X[tr_idx], y[tr_idx]
+        CV_trees[fold].fit(X_tr, y_tr)
+    
+    n_errors = [0] * len(pruning_coefs)
+    for k, threshold in enumerate(pruning_coefs):
+        for tree, (tr_idx, ts_idx) in zip(CV_trees, fold_idx):
+            tree.prune_tree(threshold, pruning_objective)
+            X_ts, y_ts = X[ts_idx], y[ts_idx]
+            y_pred = tree.predict(X_ts)
+            n_errors[k] += zero_one_loss(y_true=y_ts, y_pred=y_pred, normalize=False)
+    
+    argext = np.argmin if optimisation_mode == 'min' else np.argmax
+    optimal_pruning_coef_threshold = pruning_coefs[argext(n_errors)]
+    decision_tree.prune_tree(optimal_pruning_coef_threshold)
+    
+    return optimal_pruning_coef_threshold
+
 
 if __name__ == '__main__':
-    
-    from experiments.cross_validate_pruning_coef_threshold import cross_validate_pruning_coef_threshold
     
     with Timer():    
         decision_tree = DecisionTreeClassifier(gini_impurity_criterion)
         X, y = load_iris(return_X_y=True)
-        X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=0.5, random_state=42)
+        X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=0.25, random_state=40)
         n_examples, n_features = X.shape
         classes = ['Setosa', 'Versicolour', 'Virginica']
         table = {}
@@ -73,7 +99,7 @@ if __name__ == '__main__':
         print(f'Accuracy score of pruned tree on test dataset: {acc_ts_bound:.3f}')
 
         decision_tree = copy_of_tree
-        n_fold = 5
+        n_fold = 10
         optimal_threshold = cross_validate_pruning_coef_threshold(decision_tree, X_tr, y_tr, n_fold=n_fold)
         print(f'Optimal cross-validated pruning coefficient threshold: {optimal_threshold:.3f}')
         pruned_tree_with_cv = decision_tree_to_tikz(decision_tree, classes)
