@@ -25,23 +25,22 @@ def prune_with_bound(decision_tree, bound):
         best_bound = bounds_value[0]
         decision_tree.prune_tree(best_bound)
         bounds_value = decision_tree.compute_pruning_coefficients(bound)
-        print(bounds_value)
     
     return best_bound
 
 
-def cross_validate_pruning_coef_threshold(
+def prune_with_cv(
         decision_tree,
         X,
         y,
-        n_fold=10,
+        n_folds=10,
         pruning_objective=breiman_alpha_pruning_objective,
         optimisation_mode='min'):
     pruning_coefs = decision_tree.compute_pruning_coefficients(pruning_objective)
     
-    CV_trees = [copy(decision_tree) for i in range(n_fold)]
+    CV_trees = [copy(decision_tree) for i in range(n_folds)]
     
-    fold_idx = KFold(n_splits=n_fold).split(X)
+    fold_idx = KFold(n_splits=n_folds).split(X)
     
     for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
         X_tr, y_tr = X[tr_idx], y[tr_idx]
@@ -99,8 +98,8 @@ if __name__ == '__main__':
         print(f'Accuracy score of pruned tree on test dataset: {acc_ts_bound:.3f}')
 
         decision_tree = copy_of_tree
-        n_fold = 10
-        optimal_threshold = cross_validate_pruning_coef_threshold(decision_tree, X_tr, y_tr, n_fold=n_fold)
+        n_folds = 10
+        optimal_threshold = prune_with_cv(decision_tree, X_tr, y_tr, n_folds=n_folds)
         print(f'Optimal cross-validated pruning coefficient threshold: {optimal_threshold:.3f}')
         pruned_tree_with_cv = decision_tree_to_tikz(decision_tree, classes)
         acc_tr_cv = accuracy_score(y_true=y_tr, y_pred=decision_tree.predict(X_tr))
@@ -121,7 +120,7 @@ if __name__ == '__main__':
         table[1,0] = f'Number of examples (total): {n_examples}'
         table[2,0] = f'Train-test split: {X_tr.shape[0]}:{X_ts.shape[0]}'
         table[3,0] = f'Number of features: {n_features}'
-        table[4,0] = f'Number of fold in CV: {n_fold}'
+        table[4,0] = f'Number of fold in CV: {n_folds}'
         
         table = doc.new(p2l.Table((3,3), as_float_env=False, bottom_rule=False, top_rule=False))
         table[0,0] = 'Full tree (no pruning)'
