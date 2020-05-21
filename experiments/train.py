@@ -17,7 +17,9 @@ from pruning import *
 def train(X, y, n_folds=10):
     decision_tree = DecisionTreeClassifier(gini_impurity_criterion)
     n_examples, n_features = X.shape
-    bound = vapnik_bound_pruning_objective_factory(n_features)
+    r = 1/2000
+    errors_prob_prior = lambda n_errors: (1-r) * r**n_errors
+    bound = vapnik_bound_pruning_objective_factory(n_features, errors_prob_prior=errors_prob_prior)
     
     decision_tree.fit(X, y)
     
@@ -37,14 +39,14 @@ def train(X, y, n_folds=10):
 if __name__ == "__main__":
     with Timer('whole script'):
         test_split_ratio = .25
-        n_draws = 25
+        n_draws = 10
         n_folds = 10
         n_models = 4
         
         datasets = {'iris':dataset_loader.load_iris(),
                     # 'digits':dataset_loader.load_digits(),
-                    'wine':dataset_loader.load_wine(),
-                    'breast_cancer':dataset_loader.load_breast_cancer(),
+                    # 'wine':dataset_loader.load_wine(),
+                    # 'breast_cancer':dataset_loader.load_breast_cancer(),
         }
         
         for name, dataset in datasets.items():
@@ -66,6 +68,8 @@ if __name__ == "__main__":
                         acc_tr[i][draw] = accuracy_score(y_tr, tree.predict(X_tr))
                         acc_ts[i][draw] = accuracy_score(y_ts, tree.predict(X_ts))
                         leaves[i][draw] = tree.tree.n_leaves
+                    if acc_tr[0][draw] < 1:
+                        print(draw)
                 
                 acc_tr_mean = [acc.mean() for acc in acc_tr]
                 acc_tr_std = [acc.std() for acc in acc_tr]
