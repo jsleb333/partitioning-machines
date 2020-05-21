@@ -30,7 +30,7 @@ def shawe_taylor_bound_pruning_objective_factory(n_features,
         
     if complexity_prob_prior is None:
         s = 2
-        errors_prob_prior = lambda complexity_idx: 1 / (zeta(s) * (complexity_idx + 1)**s)
+        complexity_prob_prior = lambda complexity_idx: 1 / (zeta(s) * (complexity_idx + 1)**s)
         
     def shawe_taylor_bound_pruning_objective(subtree):
         copy_of_tree = copy(subtree.root)
@@ -77,7 +77,7 @@ def vapnik_bound_pruning_objective_factory(n_features,
         
     if complexity_prob_prior is None:
         s = 2
-        errors_prob_prior = lambda complexity_idx: 1 / (zeta(s) * (complexity_idx + 1)**s)
+        complexity_prob_prior = lambda complexity_idx: 1 / (zeta(s) * (complexity_idx + 1)**s)
         
     def vapnik_bound_pruning_objective(subtree):
         copy_of_tree = copy(subtree.root)
