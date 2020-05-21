@@ -46,9 +46,23 @@ def prune_with_cv(
             X_ts, y_ts = X[ts_idx], y[ts_idx]
             y_pred = tree.predict(X_ts)
             n_errors[k] += zero_one_loss(y_true=y_ts, y_pred=y_pred, normalize=False)
+        print(n_errors[k])
     
-    argext = np.argmin if optimisation_mode == 'min' else np.argmax
-    optimal_pruning_coef_threshold = pruning_coefs[argext(n_errors)]
+    sign = 1 if optimisation_mode == 'min' else -1
+
+    argmin_first = 0
+    argmin_last = 0
+    val_min = np.infty
+    for i, errors in enumerate(n_errors):
+        if sign*errors < sign*val_min:
+            argmin_first = i
+            argmin_last = i
+            val_min = errors
+        elif errors == val_min:
+            argmin_last = i
+    
+
+    optimal_pruning_coef_threshold = (pruning_coefs[argmin_first] + pruning_coefs[argmin_last])/2
     decision_tree.prune_tree(optimal_pruning_coef_threshold)
     
     return optimal_pruning_coef_threshold
