@@ -9,7 +9,7 @@ from copy import copy, deepcopy
 from graal_utils import Timer
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
-from partitioning_machines import breiman_alpha_pruning_objective, leboeuf_alpha_pruning_objective_factory
+from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from partitioning_machines import vapnik_bound_pruning_objective_factory
 from pruning import *
 
@@ -28,7 +28,7 @@ def train(X, y, n_folds=10):
     prune_with_cv(pruned_with_breiman_tree, X, y, n_folds=n_folds)
 
     pruned_with_modified_breiman_tree = deepcopy(decision_tree)
-    modified_breiman_pruning_objective = leboeuf_alpha_pruning_objective_factory(n_features)
+    modified_breiman_pruning_objective = modified_breiman_pruning_objective_factory(n_features)
     prune_with_cv(pruned_with_modified_breiman_tree, X, y, n_folds=n_folds, pruning_objective=modified_breiman_pruning_objective)
     
     return decision_tree, pruned_with_bound_tree, pruned_with_breiman_tree, pruned_with_modified_breiman_tree
