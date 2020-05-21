@@ -1,5 +1,7 @@
 import numpy as np
 from sklearn.datasets import load_iris
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 from partitioning_machines.decision_tree_classifier import *
 from partitioning_machines.decision_tree_classifier import _DecisionTree
@@ -176,6 +178,7 @@ class TestDecisionTreeClassifier:
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(X, y)
         assert dtc.tree.n_leaves == 3
+        assert accuracy_score(y_true=y, y_pred=dtc.predict(X)) == 1
         assert all(leaf.is_pure() for leaf in dtc.tree if leaf.is_leaf())
 
     def test_fit_max_2_leaves(self):
@@ -223,6 +226,14 @@ class TestDecisionTreeClassifier:
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(iris_X, iris_y)
         dtc.predict(iris_X)
+        assert accuracy_score(y_true=iris_y, y_pred=dtc.predict(iris_X)) == 1
+
+    def test_on_real_dataset_second_test(self):
+        iris_X, iris_y = load_iris(return_X_y=True)
+        X_tr, X_ts, y_tr, y_ts = train_test_split(iris_X, iris_y, test_size=.25, random_state=1)
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X_tr, y_tr)
+        assert accuracy_score(y_true=y_tr, y_pred=dtc.predict(X_tr))
 
     def test_predict_proba(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
@@ -253,3 +264,13 @@ class TestDecisionTreeClassifier:
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(X, [0]*n_examples)
         assert dtc.tree.n_leaves == 1
+    
+
+class Test_DecisionTree:
+    def test_n_examples(self):
+        iris_X, iris_y = load_iris(return_X_y=True)
+        X_tr, X_ts, y_tr, y_ts = train_test_split(iris_X, iris_y, test_size=.25, random_state=1)
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X_tr, y_tr)
+        
+        assert dtc.tree.n_examples == sum(subtree.n_examples for subtree in dtc.tree if subtree.is_leaf())
