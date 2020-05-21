@@ -85,8 +85,13 @@ class DecisionTreeClassifier:
         self._init_tree(encoded_y, self.n_examples)
 
         splitter = Splitter(X, encoded_y, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf)
+        
+        possible_splits = [] # List of splits that can be produced.
 
-        possible_splits = [splitter.split(self.tree, X_idx_sorted)] # List of splits that can be produced.
+        first_split = splitter.split(self.tree, X_idx_sorted)
+        if first_split:
+            possible_splits.append(first_split)
+            
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
             best_split = possible_splits[0]
             for split in possible_splits:
@@ -340,9 +345,11 @@ def breiman_alpha_pruning_objective(tree):
     node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
     return (node_n_errors - tree.n_errors) / ( tree.root.n_examples * (tree.n_leaves - 1) )
 
-def leboeuf_alpha_pruning_objective_factory(n_features):
-    def leboeuf_alpha_pruning_objective(tree):
+def modified_breiman_pruning_objective_factory(n_features):
+    def modified_breiman_pruning_objective(tree):
+        d = lambda n_leaves: n_leaves * np.log(n_features * n_leaves)
+        complexity = lambda n_leaves, n_examples: d(n_leaves) * np.log(n_examples / d(n_leaves))
         node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
-        denominator = tree.n_leaves * np.log(tree.n_leaves * n_features) - np.log(n_features)
-        return (node_n_errors - tree.n_errors) / (tree.root.n_examples * denominator)
-    return leboeuf_alpha_pruning_objective
+        m = tree.root.n_examples
+        return (node_n_errors - tree.n_errors) / (complexity(tree.n_leaves, m) - complexity(1, m))
+    return modified_breiman_pruning_objective
