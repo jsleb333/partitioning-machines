@@ -252,3 +252,4 @@ class TestDecisionTreeClassifier:
     def test_fit_with_only_one_class(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(X, [0]*n_examples)
+        assert dtc.tree.n_leaves == 1
