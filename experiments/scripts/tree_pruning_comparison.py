@@ -19,7 +19,7 @@ import python2latex as p2l
 with Timer():    
     decision_tree = DecisionTreeClassifier(gini_impurity_criterion)
     X, y = load_iris(return_X_y=True)
-    X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=0.25, random_state=40)
+    X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=0.25, random_state=42)
     n_examples, n_features = X.shape
     classes = ['Setosa', 'Versicolour', 'Virginica']
     table = {}
