@@ -248,3 +248,7 @@ class TestDecisionTreeClassifier:
         assert dtc.prune_tree(1/3, breiman_alpha_pruning_objective) == 2
         assert dtc.tree.is_leaf()
         assert (dtc.tree.label == np.array([1,0,0])).all()
+
+    def test_fit_with_only_one_class(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, [0]*n_examples)
