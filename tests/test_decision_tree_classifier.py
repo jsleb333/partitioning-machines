@@ -54,10 +54,10 @@ def test_breiman_alpha_pruning_objective():
     assert breiman_alpha_pruning_objective(dtc.tree) == 3/10
     assert breiman_alpha_pruning_objective(dtc.tree.left_subtree) == 1/5
 
-def test_leboeuf_alpha_pruning_objective():
+def test_modified_breiman_pruning_objective():
     dtc = DecisionTreeClassifier(gini_impurity_criterion)
     dtc.fit(X, y)
-    pruning_objective = leboeuf_alpha_pruning_objective_factory(n_features)
+    pruning_objective = modified_breiman_pruning_objective_factory(n_features)
     assert pruning_objective(dtc.tree) > pruning_objective(dtc.tree.left_subtree)
 
 

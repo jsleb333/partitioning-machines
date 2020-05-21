@@ -340,9 +340,9 @@ def breiman_alpha_pruning_objective(tree):
     node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
     return (node_n_errors - tree.n_errors) / ( tree.root.n_examples * (tree.n_leaves - 1) )
 
-def leboeuf_alpha_pruning_objective_factory(n_features):
-    def leboeuf_alpha_pruning_objective(tree):
+def modified_breiman_pruning_objective_factory(n_features):
+    def modified_breiman_pruning_objective(tree):
         node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
         denominator = tree.n_leaves * np.log(tree.n_leaves * n_features) - np.log(n_features)
         return (node_n_errors - tree.n_errors) / (tree.root.n_examples * denominator)
-    return leboeuf_alpha_pruning_objective
+    return modified_breiman_pruning_objective
