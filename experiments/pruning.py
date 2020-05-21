@@ -33,7 +33,7 @@ def prune_with_cv(
     
     CV_trees = [copy(decision_tree) for i in range(n_folds)]
     
-    fold_idx = KFold(n_splits=n_folds).split(X)
+    fold_idx = list(KFold(n_splits=n_folds).split(X))
     
     for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
         X_tr, y_tr = X[tr_idx], y[tr_idx]
