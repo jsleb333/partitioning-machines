@@ -342,7 +342,9 @@ def breiman_alpha_pruning_objective(tree):
 
 def modified_breiman_pruning_objective_factory(n_features):
     def modified_breiman_pruning_objective(tree):
+        d = lambda n_leaves: n_leaves * np.log(n_features * n_leaves)
+        complexity = lambda n_leaves, n_examples: d(n_leaves) * np.log(n_examples / d(n_leaves))
         node_n_errors = tree.n_examples - np.max(tree.n_examples_by_label)
-        denominator = tree.n_leaves * np.log(tree.n_leaves * n_features) - np.log(n_features)
-        return (node_n_errors - tree.n_errors) / (tree.root.n_examples * denominator)
+        m = tree.root.n_examples
+        return (node_n_errors - tree.n_errors) / (complexity(tree.n_leaves, m) - complexity(1, m))
     return modified_breiman_pruning_objective
