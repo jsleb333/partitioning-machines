@@ -17,7 +17,7 @@ from pruning import *
 def train(X, y, n_folds=10):
     decision_tree = DecisionTreeClassifier(gini_impurity_criterion)
     n_examples, n_features = X.shape
-    r = 1/2**13
+    r = 1/2**13.1
     errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
     bound = vapnik_bound_pruning_objective_factory(n_features, errors_logprob_prior=errors_logprob_prior)
     
