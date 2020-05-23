@@ -126,7 +126,7 @@ dataset_list.append(DiabeticRetinopathyDebrecen)
     
 class Fertility(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00244/fertility_Diagnosis.txt"
-    name = "iris"
+    name = "fertility"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -143,11 +143,21 @@ class Iris(Dataset):
             df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'flower type'])
         return df
 dataset_list.append(Iris)
+    
+class Wine(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
+    name = "wine"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+        return df
+dataset_list.append(Wine)
 
     
     
 if __name__ == "__main__":
-    dataset = Fertility
+    dataset = Wine
     dataset.download_dataset()
     dataset.process_dataset()
     d = dataset.load()
