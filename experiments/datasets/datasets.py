@@ -1,19 +1,154 @@
+import os, sys
+sys.path.append(os.getcwd())
+import pickle as pkl
+from urllib import request
+import pandas as pd
 
 
-def load_dataset(dataset_name):
-    return
+dataset_list = []
 
+
+def classproperty(method):
+    class ClassPropertyDescriptor:
+        def __init__(self, method):
+            self.method = method
+        def __get__(self, obj, objtype=None):
+            return self.method(objtype)
+    return ClassPropertyDescriptor(method)
+    
 
 class Dataset:
-    def __init__(self):
-        pass
+    def __init__(self, dataframe):
+        self.dataframe = dataframe
+        self.n_examples, self.n_features = self.data.shape
+        
+    @property
+    def data(self):
+        return self.dataframe.to_numpy()[:,:-1]
+    
+    @property
+    def target(self):
+        return self.dataframe.to_numpy()[:,-1]
+    
+    def __repr__(self):
+        return f'Dataset f{type(self).name} with {self.n_examples} examples and {self.n_features} features'
+        
+    @classproperty
+    def path_to_raw_file(cls):
+        return './experiments/datasets/raw/' + cls.name + '.raw'
+    
+    @classproperty
+    def path_to_processed_file(cls):
+        return './experiments/datasets/processed/' + cls.name + '.pkl'
+    
+    @classmethod
+    def load(cls):
+        if not os.path.exists(cls.path_to_processed_file):
+            cls.download_dataset()
+            cls.process_dataset()
+            
+        with open(cls.path_to_processed_file, 'rb') as file:
+            return pkl.load(file)
+    
+    @classmethod
+    def download_dataset(cls):
+        content = request.urlopen(cls.url)
+        with open(cls.path_to_raw_file, 'wb') as file:
+            for line in content:
+                file.write(line)
+
+    @classmethod
+    def process_dataset(cls):
+        with open(cls.path_to_processed_file, 'wb') as file:
+            pkl.dump(cls(dataframe=cls.create_dataframe()), file)
+
+    @classmethod
+    def create_dataframe(cls):
+        raise NotImplementedError
 
 
-class BreastCancerWisconsin(Dataset):
+
+class BreastCancerWisconsinOriginal(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
-    def __init__(self):
-        super().__init__()
+    name = "breast_cancer_wisconsin_original"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            col_names = [
+                'id number',
+                'Clump Thickness',
+                'Uniformity of Cell Size',
+                'Uniformity of Cell Shape',
+                'Marginal Adhesion',
+                'Single Epithelial Cell Size',
+                'Bare Nuclei',
+                'Bland Chromatin',
+                'Normal Nucleoli',
+                'Mitoses',
+                'Class',
+            ]
+            df = pd.read_csv(file, header=None, names=col_names)
+            df.drop(columns=col_names[0], inplace=True)
+        return df
+dataset_list.append(BreastCancerWisconsinOriginal)
 
-
-class d(Dataset):
+class ClimateModelSimulationCrashes(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
+    name = "climate_model_simulation_crashes"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=0, delim_whitespace=True)
+            print(list(df))
+            df.drop(columns=list(df)[:2], inplace=True)
+        return df
+dataset_list.append(ClimateModelSimulationCrashes)
+
+class ConnectionistBenchSonar(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"
+    name = "connectionist_bench_sonar"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+        return df
+dataset_list.append(ConnectionistBenchSonar)
+
+class DiabeticRetinopathyDebrecen(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00329/messidor_features.arff"
+    name = "diabetic_retinopathy_debrecen"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, skiprows=list(range(24)))
+        return df
+dataset_list.append(DiabeticRetinopathyDebrecen)
+    
+class Fertility(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00244/fertility_Diagnosis.txt"
+    name = "iris"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+        return df
+dataset_list.append(Fertility)
+    
+class Iris(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+    name = "iris"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'flower type'])
+        return df
+dataset_list.append(Iris)
+
+    
+    
+if __name__ == "__main__":
+    dataset = Fertility
+    dataset.download_dataset()
+    dataset.process_dataset()
+    d = dataset.load()
+    print(d.n_examples, d.n_features, d.data, d.target)
