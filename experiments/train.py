@@ -12,6 +12,7 @@ from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterio
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from partitioning_machines import vapnik_bound_pruning_objective_factory
 from pruning import *
+from datasets.datasets import load_datasets
 
 
 def train(X, y, n_folds=10):
@@ -39,7 +40,7 @@ def train(X, y, n_folds=10):
 if __name__ == "__main__":
     with Timer('whole script'):
         test_split_ratio = .25
-        n_draws = 10
+        n_draws = 1
         n_folds = 10
         n_models = 4
         
@@ -49,13 +50,14 @@ if __name__ == "__main__":
                     'breast_cancer':dataset_loader.load_breast_cancer(),
         }
         
-        for name, dataset in datasets.items():
+        for dataset in load_datasets():
+            name = dataset.name
             with Timer(f'dataset {name}'):
                 X = dataset.data
                 y = dataset.target
-                n_examples = X.shape[0]
+                n_examples = dataset.n_examples
                 X.reshape((n_examples, -1))
-                n_features = X.shape[1]
+                n_features = dataset.n_features
                 
                 acc_tr = [np.zeros(n_draws) for _ in range(n_models)]
                 acc_ts = [np.zeros(n_draws) for _ in range(n_models)]
