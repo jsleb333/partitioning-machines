@@ -67,7 +67,6 @@ class Dataset:
         raise NotImplementedError
 
 
-
 class BreastCancerWisconsinOriginal(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
     name = "breast_cancer_wisconsin_original"
@@ -154,7 +153,6 @@ class Wine(Dataset):
         return df
 dataset_list.append(Wine)
 
-    
     
 if __name__ == "__main__":
     dataset = Wine
