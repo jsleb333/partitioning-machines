@@ -7,6 +7,10 @@ import pandas as pd
 
 dataset_list = []
 
+def load_datasets():
+    for dataset in dataset_list:
+        yield dataset.load()
+
 
 def classproperty(method):
     class ClassPropertyDescriptor:
@@ -24,31 +28,29 @@ class Dataset:
         
     @property
     def data(self):
-        return self.dataframe.to_numpy()[:,:-1]
+        return self.dataframe.loc[:,self.dataframe.columns[:-1]].to_numpy(dtype=float)
     
     @property
     def target(self):
-        return self.dataframe.to_numpy()[:,-1]
+        return self.dataframe.loc[:,self.dataframe.columns[-1]].to_numpy()
     
     def __repr__(self):
         return f'Dataset f{type(self).name} with {self.n_examples} examples and {self.n_features} features'
         
     @classproperty
     def path_to_raw_file(cls):
-        return './experiments/datasets/raw/' + cls.name + '.raw'
+        return os.path.dirname(__file__) + '/raw/' + cls.name + '.raw'
     
     @classproperty
     def path_to_processed_file(cls):
-        return './experiments/datasets/processed/' + cls.name + '.pkl'
+        return os.path.dirname(__file__) + '/processed/' + cls.name + '.pkl'
     
     @classmethod
     def load(cls):
         if not os.path.exists(cls.path_to_processed_file):
             cls.download_dataset()
-            cls.process_dataset()
-            
-        with open(cls.path_to_processed_file, 'rb') as file:
-            return pkl.load(file)
+        
+        return cls(cls.create_dataframe())
     
     @classmethod
     def download_dataset(cls):
@@ -58,38 +60,33 @@ class Dataset:
                 file.write(line)
 
     @classmethod
-    def process_dataset(cls):
-        with open(cls.path_to_processed_file, 'wb') as file:
-            pkl.dump(cls(dataframe=cls.create_dataframe()), file)
-
-    @classmethod
     def create_dataframe(cls):
         raise NotImplementedError
 
 
-class BreastCancerWisconsinOriginal(Dataset):
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
-    name = "breast_cancer_wisconsin_original"
-    @classmethod
-    def create_dataframe(cls):
-        with open(cls.path_to_raw_file, 'r') as file:
-            col_names = [
-                'id number',
-                'Clump Thickness',
-                'Uniformity of Cell Size',
-                'Uniformity of Cell Shape',
-                'Marginal Adhesion',
-                'Single Epithelial Cell Size',
-                'Bare Nuclei',
-                'Bland Chromatin',
-                'Normal Nucleoli',
-                'Mitoses',
-                'Class',
-            ]
-            df = pd.read_csv(file, header=None, names=col_names)
-            df.drop(columns=col_names[0], inplace=True)
-        return df
-dataset_list.append(BreastCancerWisconsinOriginal)
+# class BreastCancerWisconsinOriginal(Dataset):
+#     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+#     name = "breast_cancer_wisconsin_original"
+#     @classmethod
+#     def create_dataframe(cls):
+#         with open(cls.path_to_raw_file, 'r') as file:
+#             col_names = [
+#                 'id number',
+#                 'Clump Thickness',
+#                 'Uniformity of Cell Size',
+#                 'Uniformity of Cell Shape',
+#                 'Marginal Adhesion',
+#                 'Single Epithelial Cell Size',
+#                 'Bare Nuclei',
+#                 'Bland Chromatin',
+#                 'Normal Nucleoli',
+#                 'Mitoses',
+#                 'Class',
+#             ]
+#             df = pd.read_csv(file, header=None, names=col_names)
+#             df.drop(columns=col_names[0], inplace=True)
+#         return df
+# dataset_list.append(BreastCancerWisconsinOriginal)
 
 class ClimateModelSimulationCrashes(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
@@ -98,7 +95,6 @@ class ClimateModelSimulationCrashes(Dataset):
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=0, delim_whitespace=True)
-            print(list(df))
             df.drop(columns=list(df)[:2], inplace=True)
         return df
 dataset_list.append(ClimateModelSimulationCrashes)
@@ -155,8 +151,10 @@ dataset_list.append(Wine)
 
     
 if __name__ == "__main__":
-    dataset = Wine
-    dataset.download_dataset()
-    dataset.process_dataset()
-    d = dataset.load()
-    print(d.n_examples, d.n_features, d.data, d.target)
+    # for dataset in dataset_list:
+    #     dataset.download_dataset()
+    # dataset = Wine
+    # d = dataset.load()
+    # print(d.n_examples, d.n_features, d.data, d.target)
+    for d in load_datasets():
+        d
