@@ -7,18 +7,17 @@ from partitioning_machines import breiman_alpha_pruning_objective
 
 
 def prune_with_bound(decision_tree, bound):
-    
     leaf = decision_tree.tree
     while not leaf.is_leaf():
         leaf = leaf.left_subtree
     best_bound = bound(leaf)
     bounds_value = decision_tree.compute_pruning_coefficients(bound)
     
-    while bounds_value[0] <= best_bound:
+    while bounds_value and bounds_value[0] <= best_bound:
         best_bound = bounds_value[0]
         decision_tree.prune_tree(best_bound)
         bounds_value = decision_tree.compute_pruning_coefficients(bound)
-    
+        
     return best_bound
 
 
