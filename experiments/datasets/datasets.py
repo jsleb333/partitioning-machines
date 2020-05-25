@@ -159,6 +159,12 @@ class IndianLiverPatient(Dataset):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, skiprows=list(range(4)))
             df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[1]:'gender'}, inplace=True)
+            for i, gender in enumerate(df['gender']):
+                if gender == 'Male':
+                    df.at[i, 'gender'] = 0
+                else:
+                    df.at[i, 'gender'] = 1
         return df
 dataset_list.append(IndianLiverPatient)
     

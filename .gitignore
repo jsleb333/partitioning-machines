@@ -139,4 +139,4 @@ dmypy.json
 
 # Datasets
 experiments/datasets/raw
-experiments/datasets/processed
+experiments/results/
