@@ -128,6 +128,39 @@ class Fertility(Dataset):
             df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(Fertility)
+
+class HabermansSurvival(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data"
+    name = "habermans_survival"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(HabermansSurvival)
+
+class ImageSegmentation(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/image/segmentation.data"
+    name = "image_segmentation"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, skiprows=list(range(4)))
+            df.rename(columns={list(df)[0]:'class'}, inplace=True)
+        return df
+dataset_list.append(ImageSegmentation)
+
+class IndianLiverPatient(Dataset):
+    url = r"https://archive.ics.uci.edu/ml/machine-learning-databases/00225/Indian%20Liver%20Patient%20Dataset%20(ILPD).csv"
+    name = "indian_liver_patient"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, skiprows=list(range(4)))
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(IndianLiverPatient)
     
 class Iris(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
@@ -167,10 +200,10 @@ dataset_list.append(Wine)
 
 
 if __name__ == "__main__":
-    # dataset = DiabeticRetinopathyDebrecen
-    # dataset.download_dataset()
-    # df = dataset.create_dataframe()
-    # print(df)
+    dataset = IndianLiverPatient
+    dataset.download_dataset()
+    df = dataset.create_dataframe()
+    print(df)
     
-    for d in load_datasets():
-        print(d.n_examples, d.target)
+    # for d in load_datasets():
+    #     print(d.n_examples, d.target)
