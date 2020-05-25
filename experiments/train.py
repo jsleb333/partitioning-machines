@@ -15,8 +15,8 @@ from pruning import *
 from datasets.datasets import load_datasets
 
 
-def train(X, y, n_folds=10):
-    decision_tree = DecisionTreeClassifier(gini_impurity_criterion)
+def train(X, y, n_folds, max_n_leaves):
+    decision_tree = DecisionTreeClassifier(gini_impurity_criterion, max_n_leaves=max_n_leaves)
     n_examples, n_features = X.shape
     r = 1/2**13.1
     errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
@@ -43,6 +43,7 @@ if __name__ == "__main__":
         n_draws = 1
         n_folds = 10
         n_models = 4
+        max_n_leaves = 40
         
         datasets = {'iris':dataset_loader.load_iris(),
                     # 'digits':dataset_loader.load_digits(),
@@ -50,7 +51,7 @@ if __name__ == "__main__":
                     'breast_cancer':dataset_loader.load_breast_cancer(),
         }
         
-        for dataset in load_datasets():
+        for dataset in load_datasets('diabetic_retinopathy_debrecen'):
             name = dataset.name
             with Timer(f'dataset {name}'):
                 X = dataset.data
@@ -62,16 +63,18 @@ if __name__ == "__main__":
                 acc_tr = [np.zeros(n_draws) for _ in range(n_models)]
                 acc_ts = [np.zeros(n_draws) for _ in range(n_models)]
                 leaves = [np.zeros(n_draws) for _ in range(n_models)]
+                depth = [np.zeros(n_draws) for _ in range(n_models)]
                 
                 for draw in range(n_draws):
                     X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=test_split_ratio, random_state=draw*10+1)
-                    trees = train(X_tr, y_tr, n_folds)
+                    trees = train(X_tr, y_tr,
+                                  n_folds=n_folds,
+                                  max_n_leaves=max_n_leaves)
                     for i, tree in enumerate(trees):
                         acc_tr[i][draw] = accuracy_score(y_tr, tree.predict(X_tr))
                         acc_ts[i][draw] = accuracy_score(y_ts, tree.predict(X_ts))
                         leaves[i][draw] = tree.tree.n_leaves
-                    if acc_tr[0][draw] < 1:
-                        print(draw)
+                        depth[i][draw] = tree.tree.height
                 
                 acc_tr_mean = [acc.mean() for acc in acc_tr]
                 acc_tr_std = [acc.std() for acc in acc_tr]
@@ -81,6 +84,9 @@ if __name__ == "__main__":
                 
                 leaves_mean = [l.mean() for l in leaves]
                 leaves_std = [l.std() for l in leaves]
+
+                depth_mean = [l.mean() for l in depth]
+                depth_std = [l.std() for l in depth]
                 
                 print(f"""
 Dataset: {name}
