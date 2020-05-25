@@ -7,9 +7,17 @@ import pandas as pd
 
 dataset_list = []
 
-def load_datasets():
+
+def load_datasets(datasets=None):
+    """
+    Args:
+        datasets (list of str): Lists of datasets to load by name. If None, all available datasets are loaded iteratively.
+    """
+    if datasets is None:
+        datasets = [d.name for d in dataset_list]
     for dataset in dataset_list:
-        yield dataset.load()
+        if dataset.name in datasets:
+            yield dataset.load()
 
 
 def classproperty(method):
@@ -28,11 +36,11 @@ class Dataset:
         
     @property
     def data(self):
-        return self.dataframe.loc[:,self.dataframe.columns[:-1]].to_numpy(dtype=float)
+        return self.dataframe.loc[:, self.dataframe.columns != 'class'].to_numpy(dtype=float)
     
     @property
     def target(self):
-        return self.dataframe.loc[:,self.dataframe.columns[-1]].to_numpy()
+        return self.dataframe.loc[:, 'class'].to_numpy()
     
     def __repr__(self):
         return f'Dataset f{type(self).name} with {self.n_examples} examples and {self.n_features} features'
@@ -64,29 +72,17 @@ class Dataset:
         raise NotImplementedError
 
 
-# class BreastCancerWisconsinOriginal(Dataset):
-#     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
-#     name = "breast_cancer_wisconsin_original"
-#     @classmethod
-#     def create_dataframe(cls):
-#         with open(cls.path_to_raw_file, 'r') as file:
-#             col_names = [
-#                 'id number',
-#                 'Clump Thickness',
-#                 'Uniformity of Cell Size',
-#                 'Uniformity of Cell Shape',
-#                 'Marginal Adhesion',
-#                 'Single Epithelial Cell Size',
-#                 'Bare Nuclei',
-#                 'Bland Chromatin',
-#                 'Normal Nucleoli',
-#                 'Mitoses',
-#                 'Class',
-#             ]
-#             df = pd.read_csv(file, header=None, names=col_names)
-#             df.drop(columns=col_names[0], inplace=True)
-#         return df
-# dataset_list.append(BreastCancerWisconsinOriginal)
+class BreastCancerWisconsinDiagnostic(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data"
+    name = "breast_cancer_wisconsin_diagnostic"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            col_names = ['id', 'class'] + [f'attr {i}' for i in range(30)]
+            df = pd.read_csv(file, names=col_names, header=None)
+            df.drop(columns=col_names[0], inplace=True)
+        return df
+dataset_list.append(BreastCancerWisconsinDiagnostic)
 
 class ClimateModelSimulationCrashes(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
@@ -96,6 +92,7 @@ class ClimateModelSimulationCrashes(Dataset):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=0, delim_whitespace=True)
             df.drop(columns=list(df)[:2], inplace=True)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(ClimateModelSimulationCrashes)
 
@@ -106,6 +103,7 @@ class ConnectionistBenchSonar(Dataset):
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(ConnectionistBenchSonar)
 
@@ -116,6 +114,7 @@ class DiabeticRetinopathyDebrecen(Dataset):
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, skiprows=list(range(24)))
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(DiabeticRetinopathyDebrecen)
     
@@ -126,6 +125,7 @@ class Fertility(Dataset):
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(Fertility)
     
@@ -135,7 +135,7 @@ class Iris(Dataset):
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
-            df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'flower type'])
+            df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'class'])
         return df
 dataset_list.append(Iris)
     
@@ -145,16 +145,32 @@ class Wine(Dataset):
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
-            df = pd.read_csv(file, header=None)
+            col_names = [
+                'class',
+                'Alcohol',
+                'Malic acid',
+                'Ash',
+                'Alcalinity of ash',
+                'Magnesium',
+                'Total phenols',
+                'Flavanoids',
+                'Nonflavanoid phenols',
+                'Proanthocyanins',
+                'Color intensity',
+                'Hue',
+                'OD280/OD315 of diluted wines',
+                'Proline'
+            ]
+            df = pd.read_csv(file, names=col_names, header=None)
         return df
 dataset_list.append(Wine)
 
-    
+
 if __name__ == "__main__":
-    # for dataset in dataset_list:
-    #     dataset.download_dataset()
-    # dataset = Wine
-    # d = dataset.load()
-    # print(d.n_examples, d.n_features, d.data, d.target)
+    # dataset = DiabeticRetinopathyDebrecen
+    # dataset.download_dataset()
+    # df = dataset.create_dataframe()
+    # print(df)
+    
     for d in load_datasets():
-        d
+        print(d.n_examples, d.target)
