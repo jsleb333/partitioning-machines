@@ -27,42 +27,39 @@ def classproperty(method):
         def __get__(self, obj, objtype=None):
             return self.method(objtype)
     return ClassPropertyDescriptor(method)
-    
+
 
 class Dataset:
     def __init__(self, dataframe):
         self.dataframe = dataframe
         self.n_examples, self.n_features = self.data.shape
-        
+
     @property
     def data(self):
         return self.dataframe.loc[:, self.dataframe.columns != 'class'].to_numpy(dtype=float)
-    
+
     @property
     def target(self):
         return self.dataframe.loc[:, 'class'].to_numpy()
-    
+
     def __repr__(self):
         return f'Dataset f{type(self).name} with {self.n_examples} examples and {self.n_features} features'
-        
+
     @classproperty
     def path_to_raw_file(cls):
         return os.path.dirname(__file__) + '/raw/' + cls.name + '.raw'
-    
-    @classproperty
-    def path_to_processed_file(cls):
-        return os.path.dirname(__file__) + '/processed/' + cls.name + '.pkl'
-    
+
     @classmethod
     def load(cls):
         if not os.path.exists(cls.path_to_processed_file):
             cls.download_dataset()
-        
+
         return cls(cls.create_dataframe())
-    
+
     @classmethod
     def download_dataset(cls):
         content = request.urlopen(cls.url)
+        os.makedirs(os.path.dirname(__file__) + '/raw/', exist_ok=True)
         with open(cls.path_to_raw_file, 'wb') as file:
             for line in content:
                 file.write(line)
@@ -117,7 +114,7 @@ class DiabeticRetinopathyDebrecen(Dataset):
             df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(DiabeticRetinopathyDebrecen)
-    
+
 class Fertility(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00244/fertility_Diagnosis.txt"
     name = "fertility"
@@ -167,7 +164,7 @@ class IndianLiverPatient(Dataset):
                     df.at[i, 'gender'] = 1
         return df
 dataset_list.append(IndianLiverPatient)
-    
+
 class Iris(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     name = "iris"
@@ -177,7 +174,7 @@ class Iris(Dataset):
             df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'class'])
         return df
 dataset_list.append(Iris)
-    
+
 class Wine(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
     name = "wine"
@@ -206,10 +203,10 @@ dataset_list.append(Wine)
 
 
 if __name__ == "__main__":
-    dataset = IndianLiverPatient
-    dataset.download_dataset()
-    df = dataset.create_dataframe()
-    print(df)
-    
-    # for d in load_datasets():
-    #     print(d.n_examples, d.target)
+    # dataset = IndianLiverPatient
+    # dataset.download_dataset()
+    # df = dataset.create_dataframe()
+    # print(df)
+
+    for d in load_datasets():
+        print(d.n_examples, d.target)
