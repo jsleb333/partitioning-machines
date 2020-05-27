@@ -51,7 +51,7 @@ class Dataset:
 
     @classmethod
     def load(cls):
-        if not os.path.exists(cls.path_to_processed_file):
+        if not os.path.exists(cls.path_to_raw_file):
             cls.download_dataset()
 
         return cls(cls.create_dataframe())
