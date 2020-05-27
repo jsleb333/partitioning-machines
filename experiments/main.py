@@ -20,18 +20,24 @@ def launch_experiment(dataset,
                       test_split_ratio=.25,
                       n_draws=10,
                       n_folds=10,
-                      max_n_leaves=40):   
+                      max_n_leaves=40,
+                      error_prior_exponent=13,
+                      exp_name=None):
+    exp_name = exp_name if exp_name is not None else datetime.now().strftime("%Y-%m-%d_%Hh%Mm")
+    
     exp_params = {
+        'exp_name':exp_name,
         'test_split_ratio':test_split_ratio,
         'n_draws':n_draws,
         'n_folds':n_folds,
         'max_n_leaves':max_n_leaves,
+        'error_prior_exponent':error_prior_exponent,
         }
     
     X, y = dataset.data, dataset.target
 
     # exp_path = f'./experiments/results/{dataset.name}/test_date/'
-    exp_path = f'./experiments/results/{dataset.name}/{datetime.now().strftime("%Y-%m-%d_%Hh%Mm")}/'
+    exp_path = f'./experiments/results/{dataset.name}/{exp_name}/'
 
     os.makedirs(exp_path, exist_ok=True)
 
@@ -79,6 +85,6 @@ def launch_experiment(dataset,
 if __name__ == "__main__":
     # datasets = list(load_datasets())
     # for dataset in datasets[4:]:
-    for dataset in dataset_list[5:]:
+    for dataset in dataset_list[-3:]:
         with Timer(f'Dataset {dataset.name}'):
             launch_experiment(dataset.load())
