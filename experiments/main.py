@@ -18,7 +18,7 @@ from train import train
 
 def launch_experiment(dataset,
                       test_split_ratio=.25,
-                      n_draws=10,
+                      n_draws=25,
                       n_folds=10,
                       max_n_leaves=40,
                       error_prior_exponent=13.1,
@@ -93,6 +93,6 @@ def launch_experiment(dataset,
 if __name__ == "__main__":
     # datasets = list(load_datasets())
     # for dataset in datasets[4:]:
-    for dataset in dataset_list[:1]:
+    for dataset in dataset_list:
         with Timer(f'Dataset {dataset.name}'):
             launch_experiment(dataset.load())
