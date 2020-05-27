@@ -136,7 +136,6 @@ dmypy.json
 *.pdf
 *.tex
 
-
 # Datasets
 experiments/datasets/raw
 experiments/results/

@@ -84,7 +84,9 @@ class PartitioningFunctionUpperBound:
             return 1
         elif m <= tree.n_leaves:
             return stirling(m, c)
-        else:
+        if tree not in self.pfub_table:
+            self.pfub_table[tree] = {}
+        if (c, m, l) not in self.pfub_table[tree]:
             N = 0
             k_left = m - tree.right_subtree.n_leaves
             k_right = m - tree.left_subtree.n_leaves
@@ -110,7 +112,8 @@ class PartitioningFunctionUpperBound:
             if tree.left_subtree == tree.right_subtree:
                 N /= 2
 
-        return N
+            self.pfub_table[tree][c, m, l] = min(N, stirling(n_examples, n_parts))
+        return self.pfub_table[tree][c, m, l]
 
     def __call__(self, n_examples, n_parts=2):
         """
