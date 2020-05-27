@@ -2,3 +2,5 @@ numpy
 scipy
 sympy
 sklearn
+python2latex
+xlrd

@@ -3,7 +3,8 @@ sys.path.append(os.getcwd())
 import pickle as pkl
 from urllib import request
 import pandas as pd
-
+import numpy as np
+from zipfile import ZipFile
 
 dataset_list = []
 
@@ -81,6 +82,20 @@ class BreastCancerWisconsinDiagnostic(Dataset):
         return df
 dataset_list.append(BreastCancerWisconsinDiagnostic)
 
+class Cardiotocography10(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00193/CTG.xls"
+    name = "cardiotocography_10"
+    @classmethod
+    def create_dataframe(cls):
+        with pd.ExcelFile(cls.path_to_raw_file) as file:
+            df = pd.read_excel(file, sheet_name=file.sheet_names[1], header=0, skiprows=[0] + [i for i in range(2128, 2131)])
+            cols = list(df)
+            cols_to_drop = cols[:10] + cols[31:43] + cols[-2:]
+            df.drop(columns=cols_to_drop, inplace=True)
+            df.rename(columns={'CLASS':'class'}, inplace=True)
+        return df
+dataset_list.append(Cardiotocography10)
+
 class ClimateModelSimulationCrashes(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
     name = "climate_model_simulation_crashes"
@@ -148,22 +163,16 @@ class ImageSegmentation(Dataset):
         return df
 dataset_list.append(ImageSegmentation)
 
-class IndianLiverPatient(Dataset):
-    url = r"https://archive.ics.uci.edu/ml/machine-learning-databases/00225/Indian%20Liver%20Patient%20Dataset%20(ILPD).csv"
-    name = "indian_liver_patient"
+class Ionosphere(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/ionosphere/ionosphere.data"
+    name = "ionosphere"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
-            df = pd.read_csv(file, header=None, skiprows=list(range(4)))
+            df = pd.read_csv(file, header=None)
             df.rename(columns={list(df)[-1]:'class'}, inplace=True)
-            df.rename(columns={list(df)[1]:'gender'}, inplace=True)
-            for i, gender in enumerate(df['gender']):
-                if gender == 'Male':
-                    df.at[i, 'gender'] = 0
-                else:
-                    df.at[i, 'gender'] = 1
         return df
-dataset_list.append(IndianLiverPatient)
+dataset_list.append(Ionosphere)
 
 class Iris(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
@@ -174,6 +183,99 @@ class Iris(Dataset):
             df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'class'])
         return df
 dataset_list.append(Iris)
+
+class Leaf(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00288/leaf.zip"
+    name = "leaf"
+    @classmethod
+    def create_dataframe(cls):
+        with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
+            with zipfile.open('leaf.csv') as file:
+                df = pd.read_csv(file, header=None)
+                df.rename(columns={list(df)[0]:'class'}, inplace=True)
+                df.drop(columns=list(df)[1], inplace=True)
+        return df
+dataset_list.append(Leaf)
+
+class Parkinson(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data"
+    name = "parkinson"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=0)
+            df.rename(columns={'status':'class'}, inplace=True)
+            df.drop(columns='name', inplace=True)
+        return df
+dataset_list.append(Parkinson)
+
+class PlanningRelax(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00230/plrx.txt"
+    name = "planning_relax"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, sep='\t', )
+            df.drop(columns=list(df)[-1], inplace=True)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(PlanningRelax)
+
+class QSARBiodegradation(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00254/biodeg.csv"
+    name = "qsar_biodegradation"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, sep=';')
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(QSARBiodegradation)
+
+class Seeds(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt"
+    name = "seeds"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, delim_whitespace=True)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(Seeds)
+
+class Spambase(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
+    name = "spambase"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(Spambase)
+
+class WallFollowingRobot24(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00194/sensor_readings_24.data"
+    name = "wall_following_robot_24"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(WallFollowingRobot24)
+
+class VertebralColumn3C(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00212/vertebral_column_data.zip"
+    name = "vertebral_column_3c"
+    @classmethod
+    def create_dataframe(cls):
+        with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
+            with zipfile.open('column_3C.dat') as file:
+                df = pd.read_csv(file, header=None, delim_whitespace=True)
+                df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(VertebralColumn3C)
 
 class Wine(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
@@ -201,12 +303,32 @@ class Wine(Dataset):
         return df
 dataset_list.append(Wine)
 
+class Yeast(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data"
+    name = "yeast"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None, delim_whitespace=True)
+            df.drop(columns=list(df)[0], inplace=True)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(Yeast)
+
 
 if __name__ == "__main__":
-    # dataset = IndianLiverPatient
-    # dataset.download_dataset()
-    # df = dataset.create_dataframe()
-    # print(df)
 
-    for d in load_datasets():
-        print(d.n_examples, d.target)
+    dataset = Cardiotocography10
+    # dataset.download_dataset()
+    df = dataset.create_dataframe()
+    print(df)
+    d = dataset.load()
+    print(d.n_examples, d.n_features, d.target)
+    assert not np.isnan(d.data.sum())
+    print(list(set(d.target)))
+    print(len(list(set(d.target))))
+
+    # for d in load_datasets():
+    #     print(d.n_examples, d.target)
+
+    print(len(dataset_list))
