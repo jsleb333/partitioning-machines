@@ -34,6 +34,7 @@ class Dataset:
     def __init__(self, dataframe):
         self.dataframe = dataframe
         self.n_examples, self.n_features = self.data.shape
+        self.n_classes = len(set(self.target))
 
     @property
     def data(self):
@@ -318,17 +319,17 @@ dataset_list.append(Yeast)
 
 if __name__ == "__main__":
 
-    dataset = Cardiotocography10
-    # dataset.download_dataset()
-    df = dataset.create_dataframe()
-    print(df)
-    d = dataset.load()
-    print(d.n_examples, d.n_features, d.target)
-    assert not np.isnan(d.data.sum())
-    print(list(set(d.target)))
-    print(len(list(set(d.target))))
+    # dataset = Cardiotocography10
+    # # dataset.download_dataset()
+    # df = dataset.create_dataframe()
+    # print(df)
+    # d = dataset.load()
+    # print(d.n_examples, d.n_features, d.target)
+    # assert not np.isnan(d.data.sum())
+    # print(list(set(d.target)))
+    # print(len(list(set(d.target))))
 
-    # for d in load_datasets():
-    #     print(d.n_examples, d.target)
+    for i, d in enumerate(load_datasets()):
+        assert not np.isnan(d.data.sum())
+        print(i, d.name, d.n_examples, d.n_classes)
 
-    print(len(dataset_list))
