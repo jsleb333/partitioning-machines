@@ -93,6 +93,6 @@ def launch_experiment(dataset,
 if __name__ == "__main__":
     # datasets = list(load_datasets())
     # for dataset in datasets[4:]:
-    for dataset in dataset_list:
+    for dataset in dataset_list[10:]:
         with Timer(f'Dataset {dataset.name}'):
             launch_experiment(dataset.load())

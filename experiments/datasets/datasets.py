@@ -185,18 +185,18 @@ class Iris(Dataset):
         return df
 dataset_list.append(Iris)
 
-class Leaf(Dataset):
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00288/leaf.zip"
-    name = "leaf"
-    @classmethod
-    def create_dataframe(cls):
-        with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
-            with zipfile.open('leaf.csv') as file:
-                df = pd.read_csv(file, header=None)
-                df.rename(columns={list(df)[0]:'class'}, inplace=True)
-                df.drop(columns=list(df)[1], inplace=True)
-        return df
-dataset_list.append(Leaf)
+# class Leaf(Dataset):
+#     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00288/leaf.zip"
+#     name = "leaf"
+#     @classmethod
+#     def create_dataframe(cls):
+#         with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
+#             with zipfile.open('leaf.csv') as file:
+#                 df = pd.read_csv(file, header=None)
+#                 df.rename(columns={list(df)[0]:'class'}, inplace=True)
+#                 df.drop(columns=list(df)[1], inplace=True)
+#         return df
+# dataset_list.append(Leaf)
 
 class Parkinson(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data"
