@@ -15,26 +15,24 @@ from pruning import *
 from datasets.datasets import load_datasets
 
 
-@timed
-def train(X, y, n_folds, max_n_leaves):
+def train(X, y, n_folds, max_n_leaves, error_prior_exponent):
     decision_tree = DecisionTreeClassifier(gini_impurity_criterion, max_n_leaves=max_n_leaves)
     n_examples, n_features = X.shape
-    r = 1/2**13.1
+    r = 1/2**error_prior_exponent
     errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
     bound = vapnik_bound_pruning_objective_factory(n_features, errors_logprob_prior=errors_logprob_prior)
     
-    timed(decision_tree.fit)(X, y)
-    print(decision_tree.tree.n_leaves)
+    decision_tree.fit(X, y)
     
     pruned_with_bound_tree = deepcopy(decision_tree)
-    timed(prune_with_bound)(pruned_with_bound_tree, bound)
+    pruned_with_bound_tree.bound_value = prune_with_bound(pruned_with_bound_tree, bound)
 
     pruned_with_breiman_tree = deepcopy(decision_tree)
-    timed(prune_with_cv)(pruned_with_breiman_tree, X, y, n_folds=n_folds)
+    prune_with_cv(pruned_with_breiman_tree, X, y, n_folds=n_folds)
 
     pruned_with_modified_breiman_tree = deepcopy(decision_tree)
     modified_breiman_pruning_objective = modified_breiman_pruning_objective_factory(n_features)
-    timed(prune_with_cv)(pruned_with_modified_breiman_tree, X, y, n_folds=n_folds, pruning_objective=modified_breiman_pruning_objective)
+    prune_with_cv(pruned_with_modified_breiman_tree, X, y, n_folds=n_folds, pruning_objective=modified_breiman_pruning_objective)
     
     return decision_tree, pruned_with_bound_tree, pruned_with_breiman_tree, pruned_with_modified_breiman_tree
 
@@ -42,10 +40,11 @@ def train(X, y, n_folds, max_n_leaves):
 if __name__ == "__main__":
     with Timer('whole script'):
         test_split_ratio = .25
-        n_draws = 1
+        n_draws = 10
         n_folds = 10
         n_models = 4
         max_n_leaves = 40
+        error_prior_exponent = 13.1
         
         datasets = {'iris':dataset_loader.load_iris(),
                     # 'digits':dataset_loader.load_digits(),
@@ -67,12 +66,12 @@ if __name__ == "__main__":
                 leaves = [np.zeros(n_draws) for _ in range(n_models)]
                 depth = [np.zeros(n_draws) for _ in range(n_models)]
                 
-                # for draw in range(n_draws):
-                for draw in [3]:
+                for draw in range(n_draws):
                     X_tr, X_ts, y_tr, y_ts = train_test_split(X, y, test_size=test_split_ratio, random_state=draw*10+1)
                     trees = train(X_tr, y_tr,
                                   n_folds=n_folds,
-                                  max_n_leaves=max_n_leaves)
+                                  max_n_leaves=max_n_leaves,
+                                  error_prior_exponent=error_prior_exponent)
                     for i, tree in enumerate(trees):
                         acc_tr[i][draw] = accuracy_score(y_tr, tree.predict(X_tr))
                         acc_ts[i][draw] = accuracy_score(y_ts, tree.predict(X_ts))
