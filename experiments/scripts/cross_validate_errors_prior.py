@@ -12,13 +12,17 @@ from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterio
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from partitioning_machines import vapnik_bound_pruning_objective_factory
 from experiments.pruning import prune_with_bound
+from experiments.datasets.datasets import dataset_list, load_datasets
 
 
 n_draws = 10
 exponents = [i for i in range(1, 20+1)]
 n_folds = 5
 
-X, y = load_wine(return_X_y=True)
+dataset = next(load_datasets('wine'))
+print(dataset.name)
+X, y = dataset.data, dataset.target
+
 n_examples, n_features = X.shape
 dtc = DecisionTreeClassifier(gini_impurity_criterion)
 best_exponents = np.zeros(n_draws)
