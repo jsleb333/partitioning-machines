@@ -8,10 +8,6 @@ import csv
 
 from graal_utils import Timer
 
-from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
-from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from partitioning_machines import vapnik_bound_pruning_objective_factory
-
 from datasets.datasets import load_datasets, dataset_list
 from train import train
 
@@ -45,10 +41,10 @@ def launch_experiment(dataset,
         file.write(f"exp_params = {exp_params}")
 
     model_names = ['original_tree',
-                'vapnik_tree',
-                'breiman_tree',
-                'modified_breiman_tree',
-                ]
+                   'vapnik_tree',
+                   'breiman_tree',
+                   'modified_breiman_tree',
+                   ]
 
     files = [open(exp_path + name + '.csv', 'w', newline='') for name in model_names]
     csv_writers = [csv.writer(file) for file in files]
@@ -65,7 +61,7 @@ def launch_experiment(dataset,
 
     for draw in range(n_draws):
         print(f'Running draw #{draw}')
-        seed = draw * 10 + 1
+        seed = draw*10 + 1
         X_tr, X_ts, y_tr, y_ts = train_test_split(X, y,
                                                 test_size=test_split_ratio,
                                                 random_state=seed)
@@ -92,12 +88,12 @@ def launch_experiment(dataset,
 
 if __name__ == "__main__":
     
-    exp_name = 'new_complexity_idx'
+    exp_name = 'shawe-taylor_bound'
     
-    # datasets = list(load_datasets())
-    # for dataset in datasets[4:]:
-    for dataset in load_datasets(['iris', 'wine']):
+    # for dataset in load_datasets(['iris', 'wine']):
+    datasets = list(load_datasets())
+    for dataset in datasets:
         with Timer(f'Dataset {dataset.name}'):
             launch_experiment(dataset,
-                              error_prior_exponent=13.7,
+                              error_prior_exponent=12.88,
                               exp_name=exp_name)

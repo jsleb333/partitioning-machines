@@ -10,7 +10,7 @@ from graal_utils import Timer, timed
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from partitioning_machines import vapnik_bound_pruning_objective_factory
+from partitioning_machines import vapnik_bound_pruning_objective_factory, shawe_taylor_bound_pruning_objective_factory
 from pruning import *
 from datasets.datasets import load_datasets
 
@@ -20,7 +20,7 @@ def train(X, y, n_folds, max_n_leaves, error_prior_exponent):
     n_examples, n_features = X.shape
     r = 1/2**error_prior_exponent
     errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
-    bound = vapnik_bound_pruning_objective_factory(n_features, errors_logprob_prior=errors_logprob_prior)
+    bound = shawe_taylor_bound_pruning_objective_factory(n_features, errors_logprob_prior=errors_logprob_prior)
     
     decision_tree.fit(X, y)
     

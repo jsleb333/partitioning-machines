@@ -10,12 +10,12 @@ from graal_utils import Timer
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from partitioning_machines import vapnik_bound_pruning_objective_factory
+from partitioning_machines import vapnik_bound_pruning_objective_factory, shawe_taylor_bound_pruning_objective_factory
 from experiments.pruning import prune_with_bound
 from experiments.datasets.datasets import dataset_list, load_datasets
 
 
-n_draws = 10
+n_draws = 25
 exponents = [i for i in range(1, 20+1)]
 n_folds = 5
 
@@ -46,9 +46,9 @@ with Timer():
         n_errors = [0] * len(exponents)
         for k, exp in enumerate(exponents):
             r = 2**-exp
-            bound = vapnik_bound_pruning_objective_factory(
-                                    n_features,
-                                    errors_logprob_prior=lambda n_err: np.log(1-r) + n_err * np.log(r))
+            bound = shawe_taylor_bound_pruning_objective_factory(
+                        n_features,
+                        errors_logprob_prior=lambda n_err: np.log(1-r) + n_err * np.log(r))
             for tree, (fold, (tr_idx, ts_idx)) in zip(cv_dtc, enumerate(fold_idx)):
                 X_tr, y_tr = X[tr_idx], y[tr_idx]
                 X_ts, y_ts = X[ts_idx], y[ts_idx]
@@ -68,4 +68,4 @@ with Timer():
         print(f'\nBest exponent: {optimal_exponent} (1/radius = {2**optimal_exponent}).')
         best_exponents[draw] = optimal_exponent
     
-    print(best_exponents, best_exponents.mean())
+    print(best_exponents, best_exponents.mean()) # Outputs 12.88
