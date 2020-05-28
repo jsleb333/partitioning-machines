@@ -1,6 +1,6 @@
 from sklearn.datasets import load_iris
 
-from partitioning_machines.utils.generalization_bounds import *
+from partitioning_machines.generalization_bounds import *
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 
 
