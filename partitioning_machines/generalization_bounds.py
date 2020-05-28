@@ -2,6 +2,7 @@ import numpy as np
 from copy import copy
 from scipy.special import zeta
 from partitioning_machines import growth_function_upper_bound
+from partitioning_machines import wedderburn_etherington
 
 
 def shawe_taylor_bound(n_examples,
@@ -33,7 +34,7 @@ def shawe_taylor_bound_pruning_objective_factory(n_features,
         
     if complexity_logprob_prior is None:
         s = 2
-        complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx + 1)
+        complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
         
     def shawe_taylor_bound_pruning_objective(subtree):
         copy_of_tree = copy(subtree.root)
@@ -45,7 +46,7 @@ def shawe_taylor_bound_pruning_objective_factory(n_features,
         n_examples = copy_of_tree.n_examples
         n_errors = copy_of_tree.n_errors
         errors_logprob = errors_logprob_prior(n_errors)
-        complexity_logprob = complexity_logprob_prior(copy_of_tree.hash_value)
+        complexity_logprob = complexity_logprob_prior(copy_of_tree.n_leaves)
         
         return shawe_taylor_bound(n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, delta)
 
@@ -84,7 +85,7 @@ def vapnik_bound_pruning_objective_factory(n_features,
         
     if complexity_logprob_prior is None:
         s = 2
-        complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx + 1)
+        complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
         
     def vapnik_bound_pruning_objective(subtree):
         copy_of_tree = copy(subtree.root)
@@ -96,7 +97,7 @@ def vapnik_bound_pruning_objective_factory(n_features,
         n_examples = copy_of_tree.n_examples
         n_errors = copy_of_tree.n_errors
         errors_logprob = errors_logprob_prior(n_errors)
-        complexity_logprob = complexity_logprob_prior(copy_of_tree.hash_value)
+        complexity_logprob = complexity_logprob_prior(copy_of_tree.n_leaves)
         
         return vapnik_bound(n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, delta)
     return vapnik_bound_pruning_objective
