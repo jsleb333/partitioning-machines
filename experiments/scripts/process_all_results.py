@@ -41,23 +41,26 @@ if __name__ == "__main__":
     table[0,1:] = 'Model'
     table[1,1:] = ['Original tree', 'Ours', 'Breiman', 'Modified Breiman']
     table[0,1:].add_rule()
-    table[2:,0] = [d.name.replace('_', ' ').title() for d in dataset_list]
+    table[2:,0] = [d.name.replace('_', ' ').title() + f' ({d.load().n_examples})' for d in dataset_list]
     table[1].add_rule()
 
     for d, dataset in enumerate(dataset_list):
         for i, model in enumerate(model_names):
             ts_acc = []
             path = './experiments/results/' + dataset.name + '/' + exp_name + '/'
-            with open(path + model + '.csv', 'r', newline='') as file:
-                reader = csv.reader(file)
-                header = next(reader)
-                for row in reader:
-                    ts_acc.append(row[3])
-
+            try:
+                with open(path + model + '.csv', 'r', newline='') as file:
+                    reader = csv.reader(file)
+                    header = next(reader)
+                    for row in reader:
+                        ts_acc.append(row[3])
+            except FileNotFoundError:
+                ts_acc.append(np.nan)
+            
             table[d+2, i+1] = MeanWithStd(np.array(ts_acc, dtype=float))
 
-        table[d+2,1:].highlight_best(highlight=lambda content: '$\\mathbf{' + content[1:-1] + '}$')
+        table[d+2,1:].highlight_best(highlight=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=0.0025, rtol=0)
 
-    table.caption = """Mean test accuracy on 25 random splits of the datasets. The column ``Original tree'' presents the result of the full unpruned tree, the ``Ours'' column is the original tree pruned with Vapnik's bound with our results, the ``Breiman'' column is the original tree pruned with the CART pruning algorithm and ``Modified Breiman'' is the original tree pruned with the same algorithm as CART, but the complexity term is changed to reflect the dependencies found in our work."""
+    table.caption = """Mean test accuracy on 25 random splits of 19 selected datasets taken from the UCI Machine Learning Repository. The train-test split ratio was $75\\%$ - $25\\%$. The total number of examples of each dataset is in parenthesis. The column ``Original tree'' presents the result of the full unpruned tree, the ``Ours'' column is the original tree pruned with Vapnik's bound with our results, the ``Breiman'' column is the original tree pruned with the CART pruning algorithm and ``Modified Breiman'' is the original tree pruned with the same algorithm as CART, but the complexity term is changed to reflect the dependencies found in our work. For Breiman and Modified Breiman, the number of folds in the cross-validation was 10."""
 
     doc.build()
