@@ -36,8 +36,8 @@ def launch_experiment(dataset,
     
     X, y = dataset.data, dataset.target
 
-    exp_path = f'./experiments/results/{dataset.name}/test_date/'
-    # exp_path = f'./experiments/results/{dataset.name}/{exp_name}/'
+    # exp_path = f'./experiments/results/{dataset.name}/test_date/'
+    exp_path = f'./experiments/results/{dataset.name}/{exp_name}/'
 
     os.makedirs(exp_path, exist_ok=True)
 
@@ -91,8 +91,13 @@ def launch_experiment(dataset,
 
 
 if __name__ == "__main__":
+    
+    exp_name = 'new_complexity_idx'
+    
     # datasets = list(load_datasets())
     # for dataset in datasets[4:]:
-    for dataset in dataset_list[10:]:
+    for dataset in load_datasets(['iris', 'wine']):
         with Timer(f'Dataset {dataset.name}'):
-            launch_experiment(dataset.load())
+            launch_experiment(dataset,
+                              error_prior_exponent=13.7,
+                              exp_name=exp_name)
