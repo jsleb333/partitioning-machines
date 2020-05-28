@@ -255,17 +255,6 @@ class Spambase(Dataset):
         return df
 dataset_list.append(Spambase)
 
-class WallFollowingRobot24(Dataset):
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00194/sensor_readings_24.data"
-    name = "wall_following_robot_24"
-    @classmethod
-    def create_dataframe(cls):
-        with open(cls.path_to_raw_file, 'r') as file:
-            df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
-        return df
-dataset_list.append(WallFollowingRobot24)
-
 class VertebralColumn3C(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00212/vertebral_column_data.zip"
     name = "vertebral_column_3c"
@@ -277,6 +266,17 @@ class VertebralColumn3C(Dataset):
                 df.rename(columns={list(df)[-1]:'class'}, inplace=True)
         return df
 dataset_list.append(VertebralColumn3C)
+
+class WallFollowingRobot24(Dataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00194/sensor_readings_24.data"
+    name = "wall_following_robot_24"
+    @classmethod
+    def create_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            df = pd.read_csv(file, header=None)
+            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+        return df
+dataset_list.append(WallFollowingRobot24)
 
 class Wine(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
