@@ -69,12 +69,10 @@ def launch_experiment(dataset,
         bound = shawe_taylor_bound_pruning_objective_factory(n_features, errors_logprob_prior=errors_logprob_prior)
     
         decision_tree.fit(X_tr, y_tr)
-        print(decision_tree.tree.n_leaves)
 
         t_start = time()
         decision_tree.bound_value = prune_with_bound(decision_tree, bound)
         elapsed_time = time() - t_start
-        print(decision_tree.tree.n_leaves)
         
         acc_tr = accuracy_score(y_tr, decision_tree.predict(X_tr))
         acc_ts = accuracy_score(y_ts, decision_tree.predict(X_ts))
@@ -89,7 +87,7 @@ def launch_experiment(dataset,
 
 if __name__ == "__main__":
     
-    exp_name = 'debug'
+    exp_name = 'shawe-taylor_bound'
     
     # for dataset in load_datasets(['iris', 'wine']):
     datasets = list(load_datasets())
