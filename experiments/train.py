@@ -11,28 +11,32 @@ from graal_utils import Timer, timed
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from partitioning_machines import vapnik_bound_pruning_objective_factory, shawe_taylor_bound_pruning_objective_factory
-from pruning import *
-from datasets.datasets import load_datasets
+from experiments.pruning import *
+from experiments.datasets.datasets import load_datasets
 
 
-def train(X, y, n_folds, max_n_leaves, error_prior_exponent):
+def train(X, y, n_folds, max_n_leaves, error_prior_exponent, debug=False):
+    if not debug:
+        exec("timed = lambda func: func")
+        
     decision_tree = DecisionTreeClassifier(gini_impurity_criterion, max_n_leaves=max_n_leaves)
     n_examples, n_features = X.shape
     r = 1/2**error_prior_exponent
     errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
     bound = shawe_taylor_bound_pruning_objective_factory(n_features, errors_logprob_prior=errors_logprob_prior)
     
-    decision_tree.fit(X, y)
+    timed(decision_tree.fit)(X, y)
+    print('n leaves', decision_tree.tree.n_leaves)
     
     pruned_with_bound_tree = deepcopy(decision_tree)
-    pruned_with_bound_tree.bound_value = prune_with_bound(pruned_with_bound_tree, bound)
+    pruned_with_bound_tree.bound_value = timed(prune_with_bound)(pruned_with_bound_tree, bound)
 
     pruned_with_breiman_tree = deepcopy(decision_tree)
-    prune_with_cv(pruned_with_breiman_tree, X, y, n_folds=n_folds)
+    timed(prune_with_cv)(pruned_with_breiman_tree, X, y, n_folds=n_folds)
 
     pruned_with_modified_breiman_tree = deepcopy(decision_tree)
     modified_breiman_pruning_objective = modified_breiman_pruning_objective_factory(n_features)
-    prune_with_cv(pruned_with_modified_breiman_tree, X, y, n_folds=n_folds, pruning_objective=modified_breiman_pruning_objective)
+    timed(prune_with_cv)(pruned_with_modified_breiman_tree, X, y, n_folds=n_folds, pruning_objective=modified_breiman_pruning_objective)
     
     return decision_tree, pruned_with_bound_tree, pruned_with_breiman_tree, pruned_with_modified_breiman_tree
 
@@ -44,7 +48,7 @@ if __name__ == "__main__":
         n_folds = 10
         n_models = 4
         max_n_leaves = 40
-        error_prior_exponent = 13.1
+        error_prior_exponent = 12.88
         
         datasets = {'iris':dataset_loader.load_iris(),
                     # 'digits':dataset_loader.load_digits(),
@@ -52,7 +56,7 @@ if __name__ == "__main__":
                     'breast_cancer':dataset_loader.load_breast_cancer(),
         }
         
-        for dataset in load_datasets('image_segmentation'):
+        for dataset in load_datasets('climate_model_simulation_crashes'):
             name = dataset.name
             with Timer(f'dataset {name}, n_examples {dataset.n_examples}, n_features {dataset.n_features}'):
                 X = dataset.data
@@ -71,7 +75,8 @@ if __name__ == "__main__":
                     trees = train(X_tr, y_tr,
                                   n_folds=n_folds,
                                   max_n_leaves=max_n_leaves,
-                                  error_prior_exponent=error_prior_exponent)
+                                  error_prior_exponent=error_prior_exponent,
+                                  debug=True)
                     for i, tree in enumerate(trees):
                         acc_tr[i][draw] = accuracy_score(y_tr, tree.predict(X_tr))
                         acc_ts[i][draw] = accuracy_score(y_ts, tree.predict(X_ts))
