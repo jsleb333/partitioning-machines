@@ -92,7 +92,7 @@ if __name__ == "__main__":
     
     # for dataset in load_datasets(['iris', 'wine']):
     datasets = list(load_datasets())
-    for dataset in datasets:
+    for dataset in datasets[1:]:
         with Timer(f'Dataset {dataset.name}'):
             launch_experiment(dataset,
                               error_prior_exponent=12.88,
