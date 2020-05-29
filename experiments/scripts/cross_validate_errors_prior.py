@@ -15,7 +15,7 @@ from experiments.pruning import prune_with_bound
 from experiments.datasets.datasets import dataset_list, load_datasets
 
 
-n_draws = 25
+n_draws = 10
 exponents = [i for i in range(1, 20+1)]
 n_folds = 5
 
@@ -68,4 +68,4 @@ with Timer():
         print(f'\nBest exponent: {optimal_exponent} (1/radius = {2**optimal_exponent}).')
         best_exponents[draw] = optimal_exponent
     
-    print(best_exponents, best_exponents.mean()) # Outputs 12.88
+    print(best_exponents, best_exponents.mean()) # Outputs 13.7
