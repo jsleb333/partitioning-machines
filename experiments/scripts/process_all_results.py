@@ -5,7 +5,7 @@ from datetime import datetime
 import csv
 import numpy as np
 
-from experiments.datasets.datasets import dataset_list
+from experiments.datasets.datasets import dataset_list, load_datasets
 
 
 class MeanWithStd(float, p2l.TexObject):
@@ -29,22 +29,24 @@ if __name__ == "__main__":
     doc = p2l.Document(exp_name + '_results', '.')
 
 
-    model_names = ['original_tree',
-                'ours',
-                'breiman_tree',
-                'modified_breiman_tree',
-                ]
+    model_names = [
+        'original_tree',
+        'breiman_tree',
+        'modified_breiman_tree',
+        'ours',
+        ]
 
     table = doc.new(p2l.Table((len(dataset_list)+2, 5), float_format='.3f', alignment='lcccc'))
+    table.body.insert(0, '\\small')
 
     table[0:2,0].multicell('Dataset', v_shift='-3pt')
     table[0,1:] = 'Model'
-    table[1,1:] = ['Original tree', 'Ours', 'Breiman', 'Modified Breiman']
+    table[1,1:] = ['Original', 'CART', 'M-CART', 'Ours']
     table[0,1:].add_rule()
     table[2:,0] = [d.name.replace('_', ' ').title() + f' ({d.load().n_examples})' for d in dataset_list]
     table[1].add_rule()
     
-    models_exp_name = ['test_date', 'shawe-taylor_bound', 'test_date', 'test_date']
+    models_exp_name = ['test_date', 'test_date', 'test_date', 'shawe-taylor_bound']
 
     for d, dataset in enumerate(dataset_list):
         for i, (model, model_exp_name) in enumerate(zip(model_names, models_exp_name)):
@@ -63,6 +65,12 @@ if __name__ == "__main__":
 
         table[d+2,1:].highlight_best(highlight=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=0.0025, rtol=0)
 
-    table.caption = """Mean test accuracy and its standard deviation on 25 random splits of 19 selected datasets taken from the UCI Machine Learning Repository. The train-test split ratio was $75\\%$ - $25\\%$. The total number of examples of each dataset is in parenthesis. The column ``Original tree'' presents the result of the full unpruned tree, the ``Ours'' column is the original tree pruned with Shawe-Taylor's bound with our results, the ``Breiman'' column is the original tree pruned with the CART pruning algorithm and ``Modified Breiman'' is the original tree pruned with the same algorithm as CART, but the complexity term is changed to reflect the dependencies found in our work. For Breiman and Modified Breiman, the number of folds in the cross-validation was 10."""
+    table.caption = """Mean test accuracy and its standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository. The train-test split ratio was $75\\%$ - $25\\%$. The total number of examples of each dataset is in parenthesis. The column ``Original'' presents the result of the full unpruned tree, the ``CART'' column is the original tree pruned with the CART pruning algorithm, ``M-CART'' is the modified CART algorithm with the complexity dependencies changed to reflect our findings and the ``Ours'' column is the original tree pruned with Shawe-Taylor's bound with our results."""
 
-    doc.build()
+    table[2,0] = f'BCWD ({dataset_list[0].load().n_examples})'
+    table[4,0] = f'CMDC ({dataset_list[2].load().n_examples})'
+    table[5,0] = f'CBS ({dataset_list[3].load().n_examples})'
+    table[6,0] = f'DRD ({dataset_list[4].load().n_examples})'
+    table[18,0] = f'WFR24 ({dataset_list[16].load().n_examples})'
+
+    print(doc.build())
