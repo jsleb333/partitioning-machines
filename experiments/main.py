@@ -28,6 +28,12 @@ def launch_experiment(dataset,
     Args:
         dataset (Dataset object): The dataset object used in the experiment.
         model_name (str): Valid model names are 'original', 'cart', 'm-cart' and 'ours'.
+        test_split_ratio (float): Ratio of examples that will be kept for test,
+        n_draws (int): Number of times the experiments will be run with a new random state.
+        n_folds (int): Number of folds used by the pruning algorithms of CART and M-CART. (Ignored by 'ours' algorithm).
+        max_n_leaves (int): Maximum number of leaves the original tree is allowed to have.
+        error_prior_exponent (int): The distribution q_k will be of the form (1-r) * r**k, where r = 2**(-error_prior_exponent). (Ignored by 'cart' and 'm-cart' algorithms).
+        exp_name (str): Name of the experiment. Will be used to save the results on disk.
     """
     exp_name = exp_name if exp_name is not None else datetime.now().strftime("%Y-%m-%d_%Hh%Mm")
     
