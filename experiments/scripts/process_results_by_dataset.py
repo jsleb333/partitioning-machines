@@ -118,4 +118,7 @@ if __name__ == "__main__":
 
     doc.body.extend(tables)
 
-    doc.build()
+    try:
+        doc.build()
+    except:
+        print(doc.build(save_to_disk=False))

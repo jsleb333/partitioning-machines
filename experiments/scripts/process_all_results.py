@@ -73,4 +73,7 @@ if __name__ == "__main__":
     table[6,0] = f'DRD ({dataset_list[4].load().n_examples})'
     table[18,0] = f'WFR24 ({dataset_list[16].load().n_examples})'
 
-    print(doc.build())
+    try:
+        doc.build()
+    except:
+        print(doc.build(save_to_disk=False))
