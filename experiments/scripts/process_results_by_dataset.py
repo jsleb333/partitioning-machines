@@ -87,7 +87,7 @@ def build_table(dataset):
         except FileNotFoundError:
             pass
 
-    table.caption = dataset_name.replace('_', ' ').title() + f' Dataset ({dataset.n_examples} examples), {len(tr_acc)} runs'
+    table.caption = dataset_name.replace('_', ' ').title() + f' Dataset ({dataset.n_examples} examples, {dataset.n_features} features, {dataset.n_classes} classes)'
     table[2,1:].highlight_best(highlight=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=.0025, rtol=0)
     table[3:,1:].change_format('.1f')
 

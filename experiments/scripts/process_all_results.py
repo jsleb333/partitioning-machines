@@ -35,15 +35,24 @@ if __name__ == "__main__":
         'modified_breiman_tree',
         'ours',
         ]
+    
+    dataset_list = [d.load() for d in dataset_list]
+    
+    caption = """Mean test accuracy and standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository \\citep{Dua:2019}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a $0.0025$ accuracy gap are highlighted in bold."""
+    
+    label = "results"
 
-    table = doc.new(p2l.Table((len(dataset_list)+2, 5), float_format='.3f', alignment='lcccc'))
+    alignement = r'l@{\hspace{6pt}}c@{\hspace{6pt}}c@{\hspace{6pt}}c@{\hspace{6pt}}c'
+    table = doc.new(p2l.Table((len(dataset_list)+2, 5), float_format='.3f', alignment=alignement,
+                              caption=caption,
+                              label=label))
     table.body.insert(0, '\\small')
-
+    
     table[0:2,0].multicell('Dataset', v_shift='-3pt')
     table[0,1:] = 'Model'
     table[1,1:] = ['Original', 'CART', 'M-CART', 'Ours']
     table[0,1:].add_rule()
-    table[2:,0] = [d.name.replace('_', ' ').title() + f' ({d.load().n_examples})' for d in dataset_list]
+    table[2:,0] = [d.name.replace('_', ' ').title() + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
     table[1].add_rule()
     
     models_exp_name = ['test_date', 'test_date', 'test_date', 'shawe-taylor_bound']
@@ -65,15 +74,16 @@ if __name__ == "__main__":
 
         table[d+2,1:].highlight_best(highlight=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=0.0025, rtol=0)
 
-    table.caption = """Mean test accuracy and its standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository. The train-test split ratio was $75\\%$ - $25\\%$. The total number of examples of each dataset is in parenthesis. The column ``Original'' presents the result of the full unpruned tree, the ``CART'' column is the original tree pruned with the CART pruning algorithm, ``M-CART'' is the modified CART algorithm with the complexity dependencies changed to reflect our findings and the ``Ours'' column is the original tree pruned with Shawe-Taylor's bound with our results."""
+    d = [dataset_list[i].load() for i in [0, 2, 3, 4, 16]]
 
-    table[2,0] = f'BCWD ({dataset_list[0].load().n_examples})'
-    table[4,0] = f'CMDC ({dataset_list[2].load().n_examples})'
-    table[5,0] = f'CBS ({dataset_list[3].load().n_examples})'
-    table[6,0] = f'DRD ({dataset_list[4].load().n_examples})'
-    table[18,0] = f'WFR24 ({dataset_list[16].load().n_examples})'
+    table[2,0] = f'BCWD\\textsuperscript{{a}} ({d[0].n_examples}, {d[0].n_classes})'
+    table[4,0] = f'CMSC\\textsuperscript{{b}} ({d[1].n_examples}, {d[1].n_classes})'
+    table[5,0] = f'CBS\\textsuperscript{{c}} ({d[2].n_examples}, {d[2].n_classes})'
+    table[6,0] = f'DRD\\textsuperscript{{d}} ({d[3].n_examples}, {d[3].n_classes})'
+    table[18,0] = f'WFR24\\textsuperscript{{e}} ({d[4].n_examples}, {d[4].n_classes})'
 
-    try:
-        doc.build()
-    except:
-        print(doc.build(save_to_disk=False))
+    table += """\n\\footnotesize \\textsuperscript{a}Breast Cancer Wisconsin Diagnostic, \\textsuperscript{b}Climate Model Simulation Crashes, \\textsuperscript{c}Connectionist Bench Sonar,\n\n\\textsuperscript{d}Diabetic Retinopathy Debrecen, \\textsuperscript{e}Wall Following Robot 24"""
+    
+    doc.add_package('natbib')
+    
+    doc.build()
