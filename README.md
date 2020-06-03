@@ -18,6 +18,7 @@ python "./experiments/main.py"
 ```
 The datasets should be downloaded automatically and will be stored in the `./experiments/datasets/raw/` folder.
 The results will be saved automatically in the files `./experiments/results/<datasetname>/<experiment_name>/<model_name>.csv`.
+Running experiments on all 19 datasets took about 1 to 2 hours for each model on my Intel Core i5-750 CPU.
 
 ### Run a specific experiment
 
