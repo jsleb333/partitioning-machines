@@ -14,7 +14,6 @@ from experiments.pruning import prune_with_bound, prune_with_cv
 from partitioning_machines import func_to_cmd
 
 from datasets.datasets import load_datasets, dataset_list
-from train import train
 
 
 def launch_single_experiment(dataset,
