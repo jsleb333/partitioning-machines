@@ -109,7 +109,7 @@ def process_results(exp_name='first_exp'):
     Prints in the console some compiled statistics used in the paper and the tex string used to produce the tables, and will compile it if possible.
     """
     
-    doc = p2l.Document(exp_name + '_results', '.')
+    doc = p2l.Document(exp_name + '_results_by_dataset', '.')
     doc.add_package('natbib')
 
     tables = [build_table(dataset) for dataset in dataset_list]

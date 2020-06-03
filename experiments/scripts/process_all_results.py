@@ -7,6 +7,8 @@ import numpy as np
 
 from experiments.datasets.datasets import dataset_list, load_datasets
 
+from partitioning_machines import func_to_cmd
+
 
 class MeanWithStd(float, p2l.TexObject):
     def __new__(cls, array):
@@ -20,23 +22,26 @@ class MeanWithStd(float, p2l.TexObject):
         return f'${format(self.mean, format_spec)} \pm {format(self.std, format_spec)}$'
 
 
-if __name__ == "__main__":
-
-    exp_name = 'shawe-taylor_bound'
-    # exp_files = os.listdir(exp_dir)
-    # datetime_format = "%Y-%m-%d_%Hh%Mm"
-    # exp_name = max(exp_files, key=lambda exp_date: datetime.strptime(exp_date, datetime_format))
-    doc = p2l.Document(exp_name + '_results', '.')
-
+@func_to_cmd
+def process_results(exp_name='first_exp'):
+    """
+    Produces Table 1 from the paper (Appendix E). Will try to call pdflatex if installed.
+    
+    Args:
+        exp_name (str): Name of the experiment used when the experiments were run. If no experiments by that name are found, entries are set to 'nan'.
+    
+    Prints in the console the tex string used to produce the tables, and will compile it if possible.
+    """
+    doc = p2l.Document(exp_name + '_all_results', '.')
 
     model_names = [
-        'original_tree',
-        'breiman_tree',
-        'modified_breiman_tree',
+        'original',
+        'cart',
+        'm-cart',
         'ours',
         ]
     
-    dataset_list = [d.load() for d in dataset_list]
+    dataset_list = list(load_datasets())
     
     caption = """Mean test accuracy and standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository \\citep{Dua:2019}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a $0.0025$ accuracy gap are highlighted in bold."""
     
@@ -55,7 +60,7 @@ if __name__ == "__main__":
     table[2:,0] = [d.name.replace('_', ' ').title() + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
     table[1].add_rule()
     
-    models_exp_name = ['test_date', 'test_date', 'test_date', 'shawe-taylor_bound']
+    models_exp_name = [exp_name]*4
 
     for d, dataset in enumerate(dataset_list):
         for i, (model, model_exp_name) in enumerate(zip(model_names, models_exp_name)):
@@ -86,4 +91,13 @@ if __name__ == "__main__":
     
     doc.add_package('natbib')
     
-    doc.build()
+    print(doc.build(save_to_disk=False))
+    
+    try:
+        doc.build()
+    except:
+        pass
+    
+
+if __name__ == "__main__":
+    process_results()
