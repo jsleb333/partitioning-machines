@@ -87,7 +87,9 @@ def build_table(dataset):
         except FileNotFoundError:
             pass
 
-    table.caption = dataset_name.replace('_', ' ').title() + f' Dataset ({dataset.n_examples} examples, {dataset.n_features} features, {dataset.n_classes} classes)'
+    dataset_name = dataset_name.replace('_', ' ').title()
+    dataset_citation = '' if dataset.bibtex_label is None else f'\\citep{{{dataset.bibtex_label}}}'
+    table.caption = f'{dataset_name} Dataset {dataset_citation} ({dataset.n_examples} examples, {dataset.n_features} features, {dataset.n_classes} classes)'
     table[2,1:].highlight_best(highlight=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=.0025, rtol=0)
     table[3:,1:].change_format('.1f')
 
@@ -101,6 +103,7 @@ if __name__ == "__main__":
     # datetime_format = "%Y-%m-%d_%Hh%Mm"
     # exp_name = max(exp_files, key=lambda exp_date: datetime.strptime(exp_date, datetime_format))
     doc = p2l.Document(exp_name + '_results', '.')
+    doc.add_package('natbib')
 
     tables = [build_table(dataset) for dataset in dataset_list]
 
@@ -111,10 +114,10 @@ if __name__ == "__main__":
     time_ours_vs_cart = [table[5,2].data[0][0] / table[5,4].data[0][0] for table in tables]
     print('time ours vs cart', sum(time_ours_vs_cart)/len(time_ours_vs_cart))
 
-    # times_leaves_mcart = [table[3,3].data[0][0] / table[3,2].data[0][0] for table in tables]
-    # print('mcart leaves', sum(times_leaves_mcart)/len(times_leaves_mcart))
-    # acc_gain_vs_mcart = [table[2,3].data[0][0] - table[2,2].data[0][0] for table in tables]
-    # print('acc gain cart vs m-cart', sum(acc_gain_vs_mcart)/len(acc_gain_vs_mcart))
+    times_leaves_mcart = [table[3,3].data[0][0] / table[3,2].data[0][0] for table in tables]
+    print('mcart leaves', sum(times_leaves_mcart)/len(times_leaves_mcart))
+    acc_gain_vs_mcart = [table[2,3].data[0][0] - table[2,2].data[0][0] for table in tables]
+    print('acc gain cart vs m-cart', sum(acc_gain_vs_mcart)/len(acc_gain_vs_mcart))
 
     doc.body.extend(tables)
 
