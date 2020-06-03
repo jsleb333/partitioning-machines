@@ -13,8 +13,11 @@ def func_to_cmd(func):
         signature_kwargs = {k:v.default for k, v in inspect.signature(func).parameters.items()}
         # Update default values with values of caller
         signature_kwargs.update(kwargs)
+        
         # Parse kwargs
         parser = argparse.ArgumentParser()
+        parser.format_help = help_formatter(func)
+        
         for key, value in signature_kwargs.items():
             value_type = type(value)
             if isinstance(value, bool):
@@ -47,3 +50,20 @@ def list_parse(list_type):
         arg = arg.split(',')
         return [list_type(value) for value in arg]
     return _list_parse
+
+
+def help_formatter(func):
+    def format_help():
+        return inspect.cleandoc(
+f"""
+This help message was automatically generated from the function docstring. To set a parameter, simply type 
+
+\t--<variable_name>=<value>
+
+In the case of lists, use the syntax
+
+\t--<list_variable_name>=[<value1>,<value2>,...]
+
+Docstring of function '{func.__name__}':
+""" + func.__doc__)
+    return format_help
