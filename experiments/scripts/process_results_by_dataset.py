@@ -100,6 +100,14 @@ def build_table(dataset):
 
 @func_to_cmd
 def process_results(exp_name='first_exp'):
+    """
+    Produces Tables 2 to 20 from the paper (Appendix E). Will try to call pdflatex if installed.
+    
+    Args:
+        exp_name (str): Name of the experiment used when the experiments were run. If no experiments by that name are found, entries are set to 'nan'.
+    
+    Prints in the console some compiled statistics used in the paper and the tex string used to produce the tables, and will compile it if possible.
+    """
     
     doc = p2l.Document(exp_name + '_results', '.')
     doc.add_package('natbib')
