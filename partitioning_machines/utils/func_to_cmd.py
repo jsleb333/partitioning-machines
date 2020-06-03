@@ -16,7 +16,8 @@ def func_to_cmd(func):
         
         # Parse kwargs
         parser = argparse.ArgumentParser()
-        parser.format_help = help_formatter(func)
+        if func.__doc__:
+            parser.format_help = help_formatter(func)
         
         for key, value in signature_kwargs.items():
             value_type = type(value)
