@@ -6,9 +6,9 @@ from copy import copy
 
 class PartitioningFunctionUpperBound:
     """
-    This class computes the partioning function upper bound of Theorem 14 of the paper of Leboeuf et al. (2020).
+    This class computes the partioning function upper bound of Theorem 14 of the paper 'Decision trees as partitioning machines to characterize their generalization properties'.
 
-    It implements an optimized version of the algorithm 1 of Appendix E by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
+    It implements an optimized version of the algorithm 1 of Appendix D by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
     def __init__(self, tree, n_features, pre_computed_tables=None, loose=False):
         """
@@ -28,7 +28,7 @@ class PartitioningFunctionUpperBound:
 
     def _compute_upper_bound_tight(self, tree, n_parts, n_examples, n_features):
         """
-        Optimized implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        Optimized implementation of Algorithm 1 of Appendix D of 'Decision trees as partitioning machines to characterize their generalization properties'.
         """
         c, m, l = n_parts, n_examples, n_features
 
@@ -74,7 +74,7 @@ class PartitioningFunctionUpperBound:
     
     def _compute_upper_bound_loose(self, tree, n_parts, n_examples, n_features):
         """
-        Looser but faster implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        Looser but faster implementation of Algorithm 1 of Appendix D of 'Decision trees as partitioning machines to characterize their generalization properties'.
         """
         c, m, l = n_parts, n_examples, n_features
 
