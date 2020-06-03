@@ -7,6 +7,8 @@ import numpy as np
 
 from experiments.datasets.datasets import dataset_list
 
+from partitioning_machines import func_to_cmd
+
 
 class MeanWithStd(float, p2l.TexObject):
     def __new__(cls, array):
@@ -96,32 +98,41 @@ def build_table(dataset):
     return table
 
 
-if __name__ == "__main__":
-
-    exp_name = 'shawe-taylor_bound'
-    # exp_files = os.listdir(exp_dir)
-    # datetime_format = "%Y-%m-%d_%Hh%Mm"
-    # exp_name = max(exp_files, key=lambda exp_date: datetime.strptime(exp_date, datetime_format))
+@func_to_cmd
+def process_results(exp_name='first_exp'):
+    
+    # exp_name = '2020-06-03_14h25m'
     doc = p2l.Document(exp_name + '_results', '.')
     doc.add_package('natbib')
 
     tables = [build_table(dataset) for dataset in dataset_list]
 
+    # Other stats
+    print('Some compiled statistics used in the paper:\n')
+
     times_leaves_cart = [table[3,4].data[0][0] / table[3,2].data[0][0] for table in tables]
-    print('cart leaves', sum(times_leaves_cart)/len(times_leaves_cart))
+    print('CART tree has', sum(times_leaves_cart)/len(times_leaves_cart), 'times less leaves than our model.')
     acc_gain_vs_cart = [table[2,4].data[0][0] - table[2,2].data[0][0] for table in tables]
-    print('acc gain ours vs cart', sum(acc_gain_vs_cart)/len(acc_gain_vs_cart))
+    print('Our model has a mean accuracy gain of', sum(acc_gain_vs_cart)/len(acc_gain_vs_cart), 'over the CART algorithm.')
     time_ours_vs_cart = [table[5,2].data[0][0] / table[5,4].data[0][0] for table in tables]
-    print('time ours vs cart', sum(time_ours_vs_cart)/len(time_ours_vs_cart))
+    print('It took in average', sum(time_ours_vs_cart)/len(time_ours_vs_cart), 'less time to prune the tree with our model than with the CART algorithm.')
 
     times_leaves_mcart = [table[3,3].data[0][0] / table[3,2].data[0][0] for table in tables]
-    print('mcart leaves', sum(times_leaves_mcart)/len(times_leaves_mcart))
+    print('CART tree has', sum(times_leaves_mcart)/len(times_leaves_mcart), 'times less leaves than the modified CART algorithm.')
     acc_gain_vs_mcart = [table[2,3].data[0][0] - table[2,2].data[0][0] for table in tables]
-    print('acc gain cart vs m-cart', sum(acc_gain_vs_mcart)/len(acc_gain_vs_mcart))
+    print('The modified CART algorithm has a mean accuracy gain of', sum(acc_gain_vs_mcart)/len(acc_gain_vs_mcart), 'over the CART algorithm.')
+    
+    print('\n')
 
     doc.body.extend(tables)
+
+    print(doc.build(save_to_disk=False))
 
     try:
         doc.build()
     except:
-        print(doc.build(save_to_disk=False))
+        pass
+
+
+if __name__ == "__main__":
+    process_results()
