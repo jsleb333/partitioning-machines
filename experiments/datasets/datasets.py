@@ -74,6 +74,7 @@ class Dataset:
 class BreastCancerWisconsinDiagnostic(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data"
     name = "breast_cancer_wisconsin_diagnostic"
+    bibtex_label = "street1993nuclear"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -86,6 +87,7 @@ dataset_list.append(BreastCancerWisconsinDiagnostic)
 class Cardiotocography10(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00193/CTG.xls"
     name = "cardiotocography_10"
+    bibtex_label = "ayres2000sisporto"
     @classmethod
     def create_dataframe(cls):
         with pd.ExcelFile(cls.path_to_raw_file) as file:
@@ -100,6 +102,7 @@ dataset_list.append(Cardiotocography10)
 class ClimateModelSimulationCrashes(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
     name = "climate_model_simulation_crashes"
+    bibtex_label = "lucas2013failure"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -112,6 +115,7 @@ dataset_list.append(ClimateModelSimulationCrashes)
 class ConnectionistBenchSonar(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"
     name = "connectionist_bench_sonar"
+    bibtex_label = "gorman1988analysis"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -123,6 +127,7 @@ dataset_list.append(ConnectionistBenchSonar)
 class DiabeticRetinopathyDebrecen(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00329/messidor_features.arff"
     name = "diabetic_retinopathy_debrecen"
+    bibtex_label = "antal2014ensemble"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -134,6 +139,7 @@ dataset_list.append(DiabeticRetinopathyDebrecen)
 class Fertility(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00244/fertility_Diagnosis.txt"
     name = "fertility"
+    bibtex_label = "gil2012predicting"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -145,6 +151,7 @@ dataset_list.append(Fertility)
 class HabermansSurvival(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data"
     name = "habermans_survival"
+    bibtex_label = "haberman1976generalized"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -156,6 +163,7 @@ dataset_list.append(HabermansSurvival)
 class ImageSegmentation(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/image/segmentation.data"
     name = "image_segmentation"
+    bibtex_label = None
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -167,6 +175,7 @@ dataset_list.append(ImageSegmentation)
 class Ionosphere(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/ionosphere/ionosphere.data"
     name = "ionosphere"
+    bibtex_label = "sigillito1989classification"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -178,6 +187,7 @@ dataset_list.append(Ionosphere)
 class Iris(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     name = "iris"
+    bibtex_label = "fisher1936use"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -185,22 +195,10 @@ class Iris(Dataset):
         return df
 dataset_list.append(Iris)
 
-# class Leaf(Dataset):
-#     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00288/leaf.zip"
-#     name = "leaf"
-#     @classmethod
-#     def create_dataframe(cls):
-#         with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
-#             with zipfile.open('leaf.csv') as file:
-#                 df = pd.read_csv(file, header=None)
-#                 df.rename(columns={list(df)[0]:'class'}, inplace=True)
-#                 df.drop(columns=list(df)[1], inplace=True)
-#         return df
-# dataset_list.append(Leaf)
-
 class Parkinson(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data"
     name = "parkinson"
+    bibtex_label = "little2007exploiting"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -213,6 +211,7 @@ dataset_list.append(Parkinson)
 class PlanningRelax(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00230/plrx.txt"
     name = "planning_relax"
+    bibtex_label = "bhatt2012planning"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -225,6 +224,7 @@ dataset_list.append(PlanningRelax)
 class QSARBiodegradation(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00254/biodeg.csv"
     name = "qsar_biodegradation"
+    bibtex_label = "mansouri2013quantitative"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -236,6 +236,7 @@ dataset_list.append(QSARBiodegradation)
 class Seeds(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt"
     name = "seeds"
+    bibtex_label = "charytanowicz2010complete"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -247,6 +248,7 @@ dataset_list.append(Seeds)
 class Spambase(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
     name = "spambase"
+    bibtex_label = None
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -258,6 +260,7 @@ dataset_list.append(Spambase)
 class VertebralColumn3C(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00212/vertebral_column_data.zip"
     name = "vertebral_column_3c"
+    bibtex_label = "berthonnaud2005analysis"
     @classmethod
     def create_dataframe(cls):
         with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
@@ -270,6 +273,7 @@ dataset_list.append(VertebralColumn3C)
 class WallFollowingRobot24(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00194/sensor_readings_24.data"
     name = "wall_following_robot_24"
+    bibtex_label = "freire2009short"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -281,6 +285,7 @@ dataset_list.append(WallFollowingRobot24)
 class Wine(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
     name = "wine"
+    bibtex_label = "aeberhard1994comparative"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -307,6 +312,7 @@ dataset_list.append(Wine)
 class Yeast(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data"
     name = "yeast"
+    bibtex_label = "horton1996probabilistic"
     @classmethod
     def create_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
@@ -318,17 +324,6 @@ dataset_list.append(Yeast)
 
 
 if __name__ == "__main__":
-
-    # dataset = Cardiotocography10
-    # # dataset.download_dataset()
-    # df = dataset.create_dataframe()
-    # print(df)
-    # d = dataset.load()
-    # print(d.n_examples, d.n_features, d.target)
-    # assert not np.isnan(d.data.sum())
-    # print(list(set(d.target)))
-    # print(len(list(set(d.target))))
-
     for i, d in enumerate(load_datasets()):
         assert not np.isnan(d.data.sum())
         print(i, d.name, d.n_examples, d.n_classes)
