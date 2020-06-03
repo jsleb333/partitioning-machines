@@ -14,14 +14,24 @@ pip install -r requirements.txt
 
 To run the experiments, navigate from the command line to the directory root directory of the project and run the command
 ```
-python "experiments/main.py"
+python "./experiments/main.py"
 ```
 The datasets should be downloaded automatically and will be stored in the `./experiments/datasets/raw/` folder.
 The results will be saved automatically in the files `./experiments/results/<datasetname>/<experiment_name>/<model_name>.csv`.
+
+### Run a specific experiment
+
+To run a specific experiment and not all of them, one can pass arguments to the `main.py` file.
+For example, to run the experiment of our model on the Iris and Wine datasets, one would use the command
+```
+python "./experiments/main.py" --model_name=ours --datasets=[iris,wine] --exp_name=first_exp
+```
+and the experiments on these datasets would be saved under the name `first_exp`. Other acceptable arguments are: `--n_draws`, `--n_folds`, `--max_n_leaves` and `--error_prior_exponent`. Run the `--help` command for more details, or checkout directly the documention of the function `launch_experiment` in the file `./experiments/main.py`.
+
+### Reproducing the tables
+
 To reproduce the tables of the paper, simply run the scripts `process_all_results.py` or `process_results_by_dataset.py`, present in the folder `./experiments/scripts/`.
 These scripts will generate the LaTeX code to produce the tables and will try to call `pdflatex` on the tex file created, if installed. Otherwise, they will simply output to the console the TeX string that generated the tables.
-
-
 
 ## Content
 
