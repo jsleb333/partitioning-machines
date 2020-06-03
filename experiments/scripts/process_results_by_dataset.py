@@ -101,7 +101,6 @@ def build_table(dataset):
 @func_to_cmd
 def process_results(exp_name='first_exp'):
     
-    # exp_name = '2020-06-03_14h25m'
     doc = p2l.Document(exp_name + '_results', '.')
     doc.add_package('natbib')
 
