@@ -1,7 +1,7 @@
-# Partitioning Machines: A framework to characterize the VC dimension of decision trees
+# Partitioning Machines: A framework to characterize the generalization properties of decision trees
 
 ## Preface
-This package provides an implementation of the algorithms presented in the paper "Decision trees as partitioning machines to characterize their VC dimension".
+This package provides an implementation of the algorithms presented in the paper "Decision trees as partitioning machines to characterize their generalization properties".
 
 ## Requirements
 

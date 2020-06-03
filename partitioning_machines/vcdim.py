@@ -26,7 +26,7 @@ def vcdim_lower_bound(tree, n_features):
 
     Args:
         tree (Tree object): Tree structure for which to compute the bound.
-        n_features (int): Number of real-valued features.. Corresponds to the variable '\ell' in the paper.
+        n_features (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
     """
     if tree.is_leaf():
         return 1
