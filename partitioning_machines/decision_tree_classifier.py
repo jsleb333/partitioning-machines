@@ -156,6 +156,8 @@ class DecisionTreeClassifier:
         """
         Prunes the tree by replacing each subtree that have a pruning coefficient less than or equal to 'pruning_coef_threshold' by a leaf. Does so by inspecting each subtree to find the 'pruning_coef' attribute and comparing to the threshold. The 'pruning_coef' attribute is set beforehand when 'pruning_objective' is an appropriate callable, or by calling beforehand the method 'compute_pruning_coefficients'.
 
+        Comparing to Algorithm 3 in Appendix E of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020), the current method only implements the 'for' loop inside the 'while' loop. The rest of the algorithm must be implemented by the user. This separation was needed so that the current method can also be used with other types of pruning algorithms.
+
         Args:
             pruning_coef_threshold (float): Threshold the pruning coefficient must satisfy.
             pruning_objective (callable): Will be used to compute the pruning coefficients if provided. Used by the 'compute_pruning_coefficients' method. If None, it assumes the 'compute_pruning_coefficients' method has already been called and subtrees possesses the 'pruning_coef' attribute.
