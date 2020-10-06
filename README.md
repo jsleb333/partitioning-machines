@@ -1,4 +1,4 @@
-# Partitioning Machines: A framework to characterize the generalization properties of decision trees
+# Decision trees as partitioning machines to characterize their generalization properties
 
 ## Preface
 This package provides an implementation of the algorithms presented in the NeurIPS 2020 paper "Decision trees as partitioning machines to characterize their generalization properties" by Leboeuf, LeBland and Marchand.
