@@ -182,6 +182,9 @@ class DecisionTreeClassifier:
 
 
 class Splitter:
+    """
+    Class that stores important data necessary to make an actual Split object. Its main purpose is to unclutter the 'fit' method of the 'DecisionTreeClassifier' class and to provide by the same token a "lazy evaluation" scheme for the splitting algorithm.
+    """
     def __init__(self, X, y, impurity_criterion, optimization_mode, min_examples_per_leaf=1, verbose=False):
         self.X = X
         self.y = y
@@ -195,6 +198,9 @@ class Splitter:
         return Split(leaf, X_idx_sorted, self, self.verbose)
 
 class Split:
+    """
+    Class that examines all possible split of a node and chooses the best one. Does not apply the split and does not preorder the data except if explicitely called by the appropriate methods. Also maintains useful information on the split, such as the number of examples sent to the left and to the right, as well as the gain made by the split.
+    """
     def __init__(self, leaf, X_idx_sorted, splitter, verbose=False):
         self.leaf = leaf
         self.X_idx_sorted = X_idx_sorted
@@ -212,6 +218,9 @@ class Split:
         self.validity = self._find_best_split()
 
     def _find_best_split(self):
+        """
+        Finds the best split according to the impurity criterion and respecting the minimum number of examples per leaf. This is done by sorting the examples by the values of their features (in a matrix 'X_idx_sorted'), and by examining the gain made by moving the split exactly one examples at the time simultaneously for all features (using vectorized operations).
+        """
         n_examples_by_label = self.leaf.n_examples_by_label
 
         if self.verbose:
