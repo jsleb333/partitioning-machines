@@ -85,13 +85,13 @@ class DecisionTreeClassifier:
         self._init_tree(encoded_y, self.n_examples)
 
         splitter = Splitter(X, encoded_y, self.impurity_criterion, self.optimization_mode, self.min_examples_per_leaf, verbose=verbose)
-        
+
         possible_splits = [] # List of splits that can be produced.
 
         first_split = splitter.split(self.tree, X_idx_sorted)
         if first_split:
             possible_splits.append(first_split)
-            
+
         while possible_splits and self.tree.n_leaves < self.max_n_leaves:
             best_split = possible_splits[0]
             for split in possible_splits:
@@ -154,11 +154,11 @@ class DecisionTreeClassifier:
 
     def prune_tree(self, pruning_coef_threshold, pruning_objective=None):
         """
-        Prunes the tree by replacing each subtree that have a pruning coefficient less than or equal to 'pruning_coef_threshold' by a leaf. Returns the number of internal nodes pruned.
+        Prunes the tree by replacing each subtree that have a pruning coefficient less than or equal to 'pruning_coef_threshold' by a leaf. Does so by inspecting each subtree to find the 'pruning_coef' attribute and comparing to the threshold. The 'pruning_coef' attribute is set beforehand when 'pruning_objective' is an appropriate callable, or by calling beforehand the method 'compute_pruning_coefficients'.
 
         Args:
             pruning_coef_threshold (float): Threshold the pruning coefficient must satisfy.
-            pruning_objective (callable): Will be used to compute the pruning coefficients if provided. Used by the 'compute_pruning_coefficients' method. If None, it assumes the 'compute_pruning_coefficients' method has already been called and subtrees possesses the 'pruning_coef' attributes.
+            pruning_objective (callable): Will be used to compute the pruning coefficients if provided. Used by the 'compute_pruning_coefficients' method. If None, it assumes the 'compute_pruning_coefficients' method has already been called and subtrees possesses the 'pruning_coef' attribute.
 
         Returns: (int) the number of internal nodes pruned.
         """
@@ -216,7 +216,7 @@ class Split:
 
         if self.verbose:
             print(f'\nSplitting node with {self.n_examples} examples.')
-        
+
         if self.leaf.is_pure():
             if self.verbose:
                 print(f'No split because leaf is pure: {n_examples_by_label}')
@@ -237,7 +237,7 @@ class Split:
 
         sign = 1 if self.optimization_mode == 'min' else -1
         self.impurity_score = sign * np.infty
-        
+
         a_rule_has_been_found = False
 
         for x_idx in self.X_idx_sorted[n_examples_left:-self.min_examples_per_leaf]:
@@ -252,7 +252,7 @@ class Split:
             forbidden_features_mask = self._find_forbideen_features(x_idx, x_idx_right)
             tmp_impurity_score_by_feature[forbidden_features_mask] = sign * np.infty
             tmp_feature, tmp_impurity_score = self.argext(tmp_impurity_score_by_feature)
-            
+
             if (sign*tmp_impurity_score < sign*self.impurity_score):
                 rule_threshold_idx_left = x_idx[tmp_feature]
                 rule_threshold_idx_right = x_idx_right[tmp_feature]
@@ -269,7 +269,7 @@ class Split:
                 print(f'Rule found with feature {self.rule_feature} and threshold {self.rule_threshold}.')
             else:
                 print('No rule has been found.')
-        
+
         return a_rule_has_been_found
 
     def _find_forbideen_features(self, x_idx_left, x_idx_right):
