@@ -6,7 +6,7 @@ from copy import copy
 
 class PartitioningFunctionUpperBound:
     """
-    This class computes the partioning function upper bound of Theorem 14 of the paper 'Decision trees as partitioning machines to characterize their generalization properties'.
+    This class computes the partioning function upper bound of Theorem 9 of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020).
 
     It implements an optimized version of the algorithm 1 of Appendix D by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
@@ -14,12 +14,12 @@ class PartitioningFunctionUpperBound:
         """
         Args:
             tree (Tree object): Tree structure for which to compute the bound.
-            
+
             n_features (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
-            
+
             pre_computed_tables (Union[dict, None]): If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. The transfered table will be updated with any new value computed. If None, a table will be created from scratch. One can get the computed table by accessing the 'pfub_table' attribute.
-            
-            loose (bool): If loose is True, a looser but *much more* computationally efficient version of the bound is computed. In that case, no table is needed.
+
+            loose (bool): If loose is True, a looser but *much more* computationally efficient version of the bound is computed. In that case, no table is needed. This is the bound used in the experiments, as explained in section 6.2.
         """
         self.tree = tree
         self.n_features = n_features
@@ -28,7 +28,7 @@ class PartitioningFunctionUpperBound:
 
     def _compute_upper_bound_tight(self, tree, n_parts, n_examples, n_features):
         """
-        Optimized implementation of Algorithm 1 of Appendix D of 'Decision trees as partitioning machines to characterize their generalization properties'.
+        Optimized implementation of Algorithm 1 of Appendix D of the paper.
         """
         c, m, l = n_parts, n_examples, n_features
 
@@ -71,10 +71,10 @@ class PartitioningFunctionUpperBound:
             self.pfub_table[tree][n_parts, n_examples, n_features] = min(N, stirling(n_examples, n_parts))
 
         return self.pfub_table[tree][n_parts, n_examples, n_features]
-    
+
     def _compute_upper_bound_loose(self, tree, n_parts, n_examples, n_features):
         """
-        Looser but faster implementation of Algorithm 1 of Appendix D of 'Decision trees as partitioning machines to characterize their generalization properties'.
+        Looser but faster implementation of Algorithm 1 of Appendix D of the paper. The corresponding equation can be found at the end of section 6.2.
         """
         c, m, l = n_parts, n_examples, n_features
 
@@ -108,7 +108,7 @@ class PartitioningFunctionUpperBound:
                     for a in range(1, c+1)
                 )
             N *= m - tree.n_leaves
-            
+
             if tree.left_subtree == tree.right_subtree:
                 N /= 2
 
@@ -125,7 +125,7 @@ class PartitioningFunctionUpperBound:
             return self._compute_upper_bound_loose(self.tree, n_parts, n_examples, self.n_features)
         else:
             return self._compute_upper_bound_tight(self.tree, n_parts, n_examples, self.n_features)
-            
+
 
 
 def partitioning_function_upper_bound(tree, n_parts, n_examples, n_features):
