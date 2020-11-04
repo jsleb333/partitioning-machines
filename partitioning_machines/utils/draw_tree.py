@@ -130,7 +130,7 @@ def decision_tree_to_tikz(decision_tree,
             style = 'internal'
             node_label = []
             if show_rule:
-                feat = f"x_{{{subtree.rule_feature}}}" if feature_names is None else f"\textrm{{{feature_names[subtree.rule_feature]}}}"
+                feat = f"x_{{{subtree.rule_feature}}}" if feature_names is None else f"\\textrm{{{feature_names[subtree.rule_feature]}}}"
                 node_label.append(f'${feat} \le {subtree.rule_threshold:.2f}$')
             if show_impurity:
                 node_label.append(f'Impurity: ${subtree.impurity_score:.2f}$')
