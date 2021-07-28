@@ -313,13 +313,12 @@ class Split:
             np.array([x[idx] for x, idx in zip(self.X.T, x_idx_right)])
         )
 
-        # n_examples_by_feat_left = np.sum(n_examples_by_label_left, axis=1)
-        # min_n_examples_per_leaf_mask = (
-        #     (n_examples_by_feat_left > self.min_examples_per_leaf)*
-        #     (self.n_examples - n_examples_by_feat_left > self.min_examples_per_leaf)
-        # )
-        # return ~(~rule_exists_mask * min_n_examples_per_leaf_mask)
-        return rule_exists_mask
+        n_examples_by_feat_left = np.sum(n_examples_by_label_left, axis=1)
+        min_n_examples_per_leaf_mask = (
+            (n_examples_by_feat_left >= self.min_examples_per_leaf)*
+            (self.n_examples - n_examples_by_feat_left >= self.min_examples_per_leaf)
+        )
+        return np.logical_or(rule_exists_mask, ~min_n_examples_per_leaf_mask)
 
     def __bool__(self):
         return self.validity

@@ -194,15 +194,26 @@ class TestDecisionTreeClassifier:
         assert dtc.tree.right_subtree.impurity_score == 0
         assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
 
+    def test_no_split_if_not_enough_examples_per_leaf(self):
+        dtc = DecisionTreeClassifier(gini_impurity_criterion, min_examples_per_leaf=3)
+        dtc.fit(X, y)
+        assert dtc.tree.height == 0
+        assert dtc.tree.n_leaves == 1
+
     def test_fit_min_2_examples_per_leaf(self):
+        y = np.array([0,1,1,1,1]) # Best split puts a single example in a leaf
+
+        # Assert that no constraints yields two leaves
+        dtc = DecisionTreeClassifier(gini_impurity_criterion, min_examples_per_leaf=1)
+        dtc.fit(X, y)
+        assert dtc.tree.left_subtree.n_examples_by_label.sum() == 1
+        assert dtc.tree.right_subtree.n_examples_by_label.sum() == 4
+
+        # Assert that the constraints yields no split
         dtc = DecisionTreeClassifier(gini_impurity_criterion, min_examples_per_leaf=2)
         dtc.fit(X, y)
-        assert dtc.tree.height == 1
-        assert dtc.tree.n_leaves == 2
-        assert np.isclose(dtc.tree.left_subtree.impurity_score, 4/9)
-        assert (dtc.tree.left_subtree.label == np.array([1,0,0])).all()
-        assert dtc.tree.right_subtree.impurity_score == 0
-        assert (dtc.tree.right_subtree.label == np.array([0,0,1])).all()
+        assert dtc.tree.left_subtree.n_examples_by_label.sum() == 2
+        assert dtc.tree.right_subtree.n_examples_by_label.sum() == 3
 
     def test_predict(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
