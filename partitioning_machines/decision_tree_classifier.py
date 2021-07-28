@@ -10,6 +10,7 @@ class _DecisionTree(Tree):
                  n_examples_by_label,
                  rule_threshold=None,
                  rule_feature=None,
+                 rule_type=None,
                  left_subtree=None,
                  right_subtree=None,
                  parent=None):
@@ -23,6 +24,7 @@ class _DecisionTree(Tree):
         self.label[np.argmax(n_examples_by_label)] = 1
         self.rule_threshold = rule_threshold
         self.rule_feature = rule_feature
+        self.rule_type = rule_type
 
     @property
     def n_examples(self):
@@ -41,8 +43,13 @@ class _DecisionTree(Tree):
     def predict(self, x):
         if self.is_leaf():
             return self.label
-        else:
+        elif self.rule_type == 'ordinal':
             if x[self.rule_feature] < self.rule_threshold:
+                return self.left_subtree.predict(x)
+            else:
+                return self.right_subtree.predict(x)
+        elif self.rule_type == 'nominal':
+            if x[self.rule_feature] == self.rule_threshold:
                 return self.left_subtree.predict(x)
             else:
                 return self.right_subtree.predict(x)
@@ -50,8 +57,13 @@ class _DecisionTree(Tree):
     def predict_proba(self, x):
         if self.is_leaf():
             return self.n_examples_by_label / self.n_examples
-        else:
+        elif self.rule_type == 'ordinal':
             if x[self.rule_feature] < self.rule_threshold:
+                return self.left_subtree.predict_proba(x)
+            else:
+                return self.right_subtree.predict_proba(x)
+        elif self.rule_type == 'nominal':
+            if x[self.rule_feature] == self.rule_threshold:
                 return self.left_subtree.predict_proba(x)
             else:
                 return self.right_subtree.predict_proba(x)
@@ -96,6 +108,8 @@ class DecisionTreeClassifier:
 
         if nominal_mask is None:
             nominal_mask = np.array([False]*self.n_features)
+
+        assert nominal_mask.shape[0] == self.n_features
 
         self._init_tree(encoded_y, self.n_examples)
 
@@ -261,6 +275,7 @@ class Split:
         n_examples_by_label_right = n_examples_by_label - n_examples_by_label_left
 
         for row, x_idx in enumerate(self.X_idx_sorted[:-1]):
+            print(f'{row=}')
 
             # Transfer an example from the right leaf to the left one
             transfered_labels = self.y[x_idx]
@@ -270,8 +285,9 @@ class Split:
 
             # Check if the rule is acceptable or forbidden
             x_idx_right = self.X_idx_sorted[row+1]
-            forbidden_features_mask = self._find_forbideen_features(x_idx, x_idx_right, n_examples_by_label_left) # 1 if a split after x_idx is forbidden
-
+            rule_exists_mask = self._compute_rule_exists_mask(x_idx, x_idx_right) # 1 if a split after x_idx cannot be produced
+            min_examples_per_leaf_mask = self._compute_min_examples_per_leaf_mask(n_examples_by_label_left)
+            forbidden_features_mask = np.logical_or(rule_exists_mask, min_examples_per_leaf_mask)
             tmp_impurity_score_by_feature[forbidden_features_mask] = sign * np.infty
             tmp_feature, tmp_impurity_score = self.argext(tmp_impurity_score_by_feature)
 
@@ -295,9 +311,9 @@ class Split:
                 a_rule_has_been_found = True
 
             # For nominal features, send back all examples from the left leaf to the right one when an acceptable rule is found
-            # reset_leaves_mask = self.nominal_mask*(~forbidden_features_mask)
-            # n_examples_by_label_left[~reset_leaves_mask] = 0
-            # n_examples_by_label_right[~reset_leaves_mask] = n_examples_by_label.reshape(1,-1)
+            reset_leaves_mask = self.nominal_mask * ~rule_exists_mask
+            n_examples_by_label_left[reset_leaves_mask] = 0
+            n_examples_by_label_right[reset_leaves_mask] = n_examples_by_label.reshape(1,-1)
 
         if self.verbose:
             if a_rule_has_been_found:
@@ -307,18 +323,20 @@ class Split:
 
         return a_rule_has_been_found
 
-    def _find_forbideen_features(self, x_idx_left, x_idx_right, n_examples_by_label_left):
+    def _compute_rule_exists_mask(self, x_idx_left, x_idx_right):
         rule_exists_mask = np.isclose(
             np.array([x[idx] for x, idx in zip(self.X.T, x_idx_left)]),
             np.array([x[idx] for x, idx in zip(self.X.T, x_idx_right)])
         )
+        return rule_exists_mask
 
+    def _compute_min_examples_per_leaf_mask(self, n_examples_by_label_left):
         n_examples_by_feat_left = np.sum(n_examples_by_label_left, axis=1)
-        min_n_examples_per_leaf_mask = (
+        min_n_examples_per_leaf_mask = ~(
             (n_examples_by_feat_left >= self.min_examples_per_leaf)*
             (self.n_examples - n_examples_by_feat_left >= self.min_examples_per_leaf)
         )
-        return np.logical_or(rule_exists_mask, ~min_n_examples_per_leaf_mask)
+        return min_n_examples_per_leaf_mask
 
     def __bool__(self):
         return self.validity
@@ -369,6 +387,7 @@ class Split:
         self.leaf.right_subtree = right_leaf
         self.leaf.rule_threshold = self.rule_threshold
         self.leaf.rule_feature = self.rule_feature
+        self.leaf.rule_type = self.rule_type
         self.leaf.update_tree()
 
     def compute_split_X_idx_sorted(self):
@@ -380,12 +399,20 @@ class Split:
 
         for x_idx in self.X_idx_sorted:
             for feat, idx in enumerate(x_idx):
-                if self.X[idx, self.rule_feature] < self.rule_threshold:
-                    X_idx_sorted_left[left_x_pos[feat], feat] = idx
-                    left_x_pos[feat] += 1
-                else:
-                    X_idx_sorted_right[right_x_pos[feat], feat] = idx
-                    right_x_pos[feat] += 1
+                if self.rule_type == 'ordinal':
+                    if self.X[idx, self.rule_feature] < self.rule_threshold:
+                        X_idx_sorted_left[left_x_pos[feat], feat] = idx
+                        left_x_pos[feat] += 1
+                    else:
+                        X_idx_sorted_right[right_x_pos[feat], feat] = idx
+                        right_x_pos[feat] += 1
+                elif self.rule_type == 'nominal':
+                    if self.X[idx, self.rule_feature] == self.rule_threshold:
+                        X_idx_sorted_left[left_x_pos[feat], feat] = idx
+                        left_x_pos[feat] += 1
+                    else:
+                        X_idx_sorted_right[right_x_pos[feat], feat] = idx
+                        right_x_pos[feat] += 1
 
         return X_idx_sorted_left, X_idx_sorted_right
 

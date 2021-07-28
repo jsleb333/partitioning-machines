@@ -1,6 +1,5 @@
 """Implementation of a binary tree"""
 from copy import copy, deepcopy
-from inspect import signature, Parameter
 
 
 class Tree:
@@ -107,7 +106,7 @@ class Tree:
             self.left_subtree._update_hash_value()
             self.right_subtree._update_hash_value()
             self.hash_value = self.n_leaves + self.left_subtree.hash_value + self.right_subtree.hash_value
-            
+
     def __repr__(self):
         if self.is_leaf():
             return 'Tree()'
@@ -166,7 +165,7 @@ class Tree:
         copy_of_dict['parent'] = None
         copy_of_dict['left_subtree'] = None
         copy_of_dict['right_subtree'] = None
-        
+
         # Creating new instances
         copy_of_tree = type(self).__new__(type(self))
         copy_of_tree.__dict__.update(copy_of_dict)
@@ -178,21 +177,21 @@ class Tree:
             right_subtree = copy(self.right_subtree)
             right_subtree.parent = copy_of_tree
             copy_of_tree.right_subtree = right_subtree
-        
+
         return copy_of_tree
 
     def __deepcopy__(self, memo):
         # Shallow copy to have access to references
         copy_of_dict = copy(self.__dict__)
-        
+
         # Delete critical references
         copy_of_dict['parent'] = None
         copy_of_dict['left_subtree'] = None
         copy_of_dict['right_subtree'] = None
-        
+
         # Deepcopy of other references
         deepcopy_of_dict = deepcopy(copy_of_dict, memo)
-        
+
         # Creating new instances
         deepcopy_of_tree = type(self).__new__(type(self))
         deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
@@ -204,7 +203,7 @@ class Tree:
             right_subtree = deepcopy(self.right_subtree, memo)
             right_subtree.parent = deepcopy_of_tree
             deepcopy_of_tree.right_subtree = right_subtree
-        
+
 
         return deepcopy_of_tree
 
@@ -261,10 +260,10 @@ class Tree:
                 path.append('right')
             child = parent
             parent = parent.parent
-        
+
         path.reverse()
         return path
-    
+
     def follow_path(self, path):
         """
         Given a path (list of 'left' and 'right' strings), returns the corresponding node.
@@ -275,7 +274,6 @@ class Tree:
                 subtree = subtree.left_subtree
             else:
                 subtree = subtree.right_subtree
-        
+
         return subtree
-            
-        
+

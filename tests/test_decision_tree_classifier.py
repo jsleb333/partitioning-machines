@@ -162,6 +162,40 @@ class TestDecisionTreeClassifier:
         assert dtc.tree.impurity_score == gini_impurity_criterion(frac_examples_by_label)
         assert all(dtc.tree.n_examples_by_label == n_examples_by_label)
 
+    def test_fit_with_nominal_features(self):
+        X = np.array([
+            [1,1],
+            [2,1],
+            [3,4],
+            [1,4],
+            [2,3],
+            [3,2]
+        ])
+        y = np.array([1,1,2,2,2,1])
+
+        # No nominal feature for control
+        nominal_mask = np.array([False]*2)
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y, None, nominal_mask)
+        assert dtc.tree.n_leaves == 2
+
+        # Only nominal features
+        nominal_mask = np.array([True]*2)
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y, None, nominal_mask)
+        assert dtc.tree.n_leaves == 3
+
+        # Mix of ordinal and nominal
+        y[1] = 2
+        nominal_mask = np.array([False, True])
+        dtc = DecisionTreeClassifier(gini_impurity_criterion)
+        dtc.fit(X, y, None, nominal_mask)
+        types_of_rules = {tree.rule_type for tree in dtc.tree}
+        assert 'ordinal' in types_of_rules
+        assert 'nominal' in types_of_rules
+        assert dtc.tree.n_leaves == 4
+        assert dtc.predict(X)
+
     def test_fit_no_constraint(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(X, y)
