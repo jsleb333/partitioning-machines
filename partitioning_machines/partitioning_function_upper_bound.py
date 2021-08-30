@@ -90,7 +90,7 @@ class PartitioningFunctionUpperBound:
                     omega_k = omega
 
                 # Modification 2: Since c = 2 is the most common use case, we give an optimized version, writing explicitely the sum over a and b.
-                if c == 2:
+                if False:#c == 2:
                     N +=  min(2*l + omega_k, binom(m, k)) * (1
                             + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, n)
                             + 2 * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, n)
@@ -109,15 +109,37 @@ class PartitioningFunctionUpperBound:
                                 )
 
                 else:
-                    N += min(2*l + omega_k, binom(m, k)) * sum(
-                        sum(
-                            binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
-                            self._compute_upper_bound_tight(tree.left_subtree, a, k, n) *
-                            self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
-                            for b in range(max(1,c-a), c+1)
-                        )
-                        for a in range(1, c+1)
-                    )
+                    # N += min(2*l + omega_k, binom(m, k)) * sum(
+                    #     sum(
+                    #         binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
+                    #         self._compute_upper_bound_tight(tree.left_subtree, a, k, n) *
+                    #         self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                    #         for b in range(max(1,c-a), c+1)
+                    #     )
+                    #     for a in range(1, c+1)
+                    # )
+                    print(f'{k=}')
+                    tmp = 0
+                    for a in range(1, c+1):
+                        for b in range(max(1, c-a), c+1):
+                            print(f'{a=}, {b=}')
+                            if a == 1 and b == 1:
+                                tmp += 1
+                            elif a == 1 and b == c-1:
+                                tmp += self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                            elif a == 1 and b == c:
+                                tmp += c*self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                            elif b == 1 and a == c-1:
+                                tmp += self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
+                            elif b == 1 and a == c:
+                                tmp += c*self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
+                            else:
+                                print(f'{tmp=} before')
+                                coef = binom(a, c - b) * binom(b, c - a) * factorial(a + b - c)
+                                tmp += coef * self._compute_upper_bound_tight(tree.left_subtree, a, k, n) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                                print(f'{tmp=} after\n')
+
+                    N += min(2*l + omega_k, binom(m, k)) * tmp
 
                     for C in range(1, len(n)-1):
                         if n[C] > 0:
@@ -216,3 +238,19 @@ def growth_function_upper_bound(tree, n_rl_feat, n_classes=2, pre_computed_table
         max_range = min(n_classes, tree.n_leaves, n_examples)
         return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))
     return upper_bound
+
+
+
+if __name__ == '__main__':
+    import os, sys
+    sys.path.append(os.getcwd())
+    from partitioning_machines import Tree
+    from graal_utils import Timer
+
+    leaf = Tree()
+    stump = Tree(leaf, leaf)
+    tree = Tree(stump, leaf)
+    c = 2
+    for m in Timer(range(1)):
+        pfub = PartitioningFunctionUpperBound(tree, 50)
+        print(pfub(5, c))
