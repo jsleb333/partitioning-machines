@@ -1,4 +1,5 @@
 numpy
 scipy
 sympy
-sklearn
+scikitlearn
+python2latex

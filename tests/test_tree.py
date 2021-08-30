@@ -156,7 +156,7 @@ class TestTree:
         tree = trees[-1]
         subtree = tree.left_subtree.right_subtree
         assert subtree.path_from_root() == ['left', 'right']
-        
+
     def test_follow_path(self, trees):
         assert trees[9].left_subtree.left_subtree is trees[9].follow_path(['left', 'left'])
         assert trees[9].left_subtree.right_subtree is trees[9].follow_path(['left', 'right'])
