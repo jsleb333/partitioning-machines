@@ -1,4 +1,5 @@
 from math import floor
+from numpy import pi
 from scipy.special import binom, factorial
 from sympy.functions.combinatorial.numbers import stirling
 from sympy.functions.combinatorial.factorials import ff
@@ -56,23 +57,38 @@ class PartitioningFunctionUpperBound:
 
         return nominal_feat_dist
 
+    def _update_nominal_feat_dist(self, nominal_feat_dist, C):
+        new_dist = copy(nominal_feat_dist)
+        new_dist[C] -= 1
+        new_dist[C-1] += 1
+        return new_dist
+
+    def _check_trivial_cases(self, n_examples, n_parts, n_leaves):
+        if n_parts > n_examples or n_parts > n_leaves:
+            return 0
+        elif n_parts == n_examples or n_parts == 1 or n_examples == 1:
+            return 1
+        elif n_examples <= n_leaves:
+            return stirling(n_examples, n_parts)
+        else:
+            return None
+
     def _compute_upper_bound_tight(self,
                                    tree,
                                    n_parts,
                                    n_examples,
-                                   nominal_feat_dist):
+                                   nominal_feat_dist,
+                                   depth=0):
         """
         Optimized implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
         """
         c, m, l, o = n_parts, n_examples, self.n_rl_feat, self.ordinal_feat_dist
         n = self._truncate_nominal_feat_dist(nominal_feat_dist, m)
 
-        if c > m or c > tree.n_leaves:
-            return 0
-        elif c == m or c == 1 or m == 1:
-            return 1
-        elif m <= tree.n_leaves:
-            return stirling(m, c)
+        trivial_case = self._check_trivial_cases(m, c, tree.n_leaves)
+        if trivial_case is not None:
+            return trivial_case
+
         # Modification 1: Check first in the table if value is already computed.
         if tree not in self.pfub_table:
             self.pfub_table[tree] = {}
@@ -89,72 +105,82 @@ class PartitioningFunctionUpperBound:
                 else:
                     omega_k = omega
 
-                # Modification 2: Since c = 2 is the most common use case, we give an optimized version, writing explicitely the sum over a and b.
-                if False:#c == 2:
-                    N +=  min(2*l + omega_k, binom(m, k)) * (1
-                            + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, n)
-                            + 2 * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, n)
-                            + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, n) * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, n)
+                coef_ord = min(2*l + omega_k, binom(m, k))
+                coef_nom = lambda nC, C: nC * min(C, floor(m/min(k, m-k)))
+
+
+                # if c == 2: # Algo simplified for c = 2 (is faster)
+                #     N +=  min(2*l + omega_k, binom(m, k)) * (1
+                #             + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, n)
+                #             + 2 * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, n)
+                #             + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, n) * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, n)
+                #             )
+
+                # Modification 2: To avoid making useless calls, we expand some cases of a and b that can be simplified
+                tmp_ord = 0
+                tmp_nom = 0
+                for a in range(1, c+1):
+                    for b in range(max(1, c-a), c+1):
+                        if a == 1 and b == 1:
+                            tmp_ord += 1
+                            tmp_nom += sum(
+                                coef_nom(n[C], C) for C in range(1, len(n)-1) if n[C] > 0
                             )
+                        elif a == 1 and b == c-1:
+                            tmp_ord += self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                            tmp_nom += sum(
+                                coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, self._update_nominal_feat_dist(n, C))
+                                for C in range(1, len(n)-1) if n[C] > 0
+                            )
+                        elif a == 1 and b == c:
+                            tmp_ord += c*self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                            tmp_nom += c*sum(
+                                coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, self._update_nominal_feat_dist(n, C))
+                                for C in range(1, len(n)-1) if n[C] > 0
+                            )
+                        elif b == 1 and a == c-1:
+                            tmp_ord += self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
+                            tmp_nom += sum(
+                                coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.left_subtree, a, k, self._update_nominal_feat_dist(n, C))
+                                for C in range(1, len(n)-1) if n[C] > 0
+                            )
+                        elif b == 1 and a == c:
+                            tmp_ord += c*self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
+                            tmp_nom += c*sum(
+                                coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.left_subtree, a, k, self._update_nominal_feat_dist(n, C))
+                                for C in range(1, len(n)-1) if n[C] > 0
+                            )
+                        else:
+                            pi_left = self._check_trivial_cases(k, a, tree.left_subtree.n_leaves)
+                            pi_right = self._check_trivial_cases(m-k, b, tree.right_subtree.n_leaves)
 
-                    for C in range(1, len(n)-1):
-                        if n[C] > 0:
-                            new_dist = copy(n)
-                            new_dist[C] -= 1
-                            new_dist[C-1] += 1
-                            N += n[C] * min(C, floor(m/min(k, m-k))) * (1
-                                + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, new_dist)
-                                + 2 * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, new_dist)
-                                + 2 * self._compute_upper_bound_tight(tree.left_subtree, 2, k, new_dist) * self._compute_upper_bound_tight(tree.right_subtree, 2, m-k, new_dist)
+                            if pi_left == 0 or pi_right == 0:
+                                continue
+
+                            if pi_left is None:
+                                pi_left_ord = self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
+                                pi_left_nom = sum(
+                                    coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.left_subtree, a, k, self._update_nominal_feat_dist(n, C))
+                                    for C in range(1, len(n)-1) if n[C] > 0
                                 )
-
-                else:
-                    # N += min(2*l + omega_k, binom(m, k)) * sum(
-                    #     sum(
-                    #         binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
-                    #         self._compute_upper_bound_tight(tree.left_subtree, a, k, n) *
-                    #         self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
-                    #         for b in range(max(1,c-a), c+1)
-                    #     )
-                    #     for a in range(1, c+1)
-                    # )
-                    print(f'{k=}')
-                    tmp = 0
-                    for a in range(1, c+1):
-                        for b in range(max(1, c-a), c+1):
-                            print(f'{a=}, {b=}')
-                            if a == 1 and b == 1:
-                                tmp += 1
-                            elif a == 1 and b == c-1:
-                                tmp += self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
-                            elif a == 1 and b == c:
-                                tmp += c*self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
-                            elif b == 1 and a == c-1:
-                                tmp += self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
-                            elif b == 1 and a == c:
-                                tmp += c*self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
                             else:
-                                print(f'{tmp=} before')
-                                coef = binom(a, c - b) * binom(b, c - a) * factorial(a + b - c)
-                                tmp += coef * self._compute_upper_bound_tight(tree.left_subtree, a, k, n) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
-                                print(f'{tmp=} after\n')
-
-                    N += min(2*l + omega_k, binom(m, k)) * tmp
-
-                    for C in range(1, len(n)-1):
-                        if n[C] > 0:
-                            new_dist = copy(n)
-                            new_dist[C] -= 1
-                            new_dist[C-1] += 1
-                            N += n[C] * min(C, floor(m/min(k, m-k))) * sum(
-                                sum(
-                                    binom(a, c - b) * binom(b, c - a) * factorial(a + b - c) *
-                                    self._compute_upper_bound_tight(tree.left_subtree, a, k, new_dist) *
-                                    self._compute_upper_bound_tight(tree.right_subtree, b, m-k, new_dist)
-                                    for b in range(max(1,c-a), c+1)
+                                pi_left_ord = pi_left
+                                pi_left_nom = pi_left
+                            if pi_right is None:
+                                pi_right_ord = self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
+                                pi_right_nom = sum(
+                                    coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, self._update_nominal_feat_dist(n, C))
+                                    for C in range(1, len(n)-1) if n[C] > 0
                                 )
-                                for a in range(1, c+1)
-                            )
+                            else:
+                                pi_right_ord = pi_right
+                                pi_right_nom = pi_right
+
+                            coef = binom(a, c - b) * binom(b, c - a) * factorial(a + b - c)
+                            tmp_ord += coef * pi_left_ord * pi_right_ord
+                            tmp_nom += coef * pi_left_nom * pi_right_nom
+
+                N += coef_ord * tmp_ord + tmp_nom
 
             if tree.left_subtree == tree.right_subtree:
                 N /= 2
@@ -249,8 +275,9 @@ if __name__ == '__main__':
 
     leaf = Tree()
     stump = Tree(leaf, leaf)
-    tree = Tree(stump, leaf)
+    tree = Tree(stump, stump)
     c = 2
-    for m in Timer(range(1)):
+    m = 100
+    for _ in Timer(range(3)):
         pfub = PartitioningFunctionUpperBound(tree, 50)
-        print(pfub(5, c))
+        print(pfub(m, c))
