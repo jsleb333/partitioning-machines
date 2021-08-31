@@ -42,20 +42,21 @@ class PartitioningFunctionUpperBound:
 
     def _truncate_nominal_feat_dist(self, nominal_feat_dist, n_examples):
         # Remove trailing zeros
-        while nominal_feat_dist[-1] == 0 and len(nominal_feat_dist) > 2:
-            del nominal_feat_dist[-1]
+        n = copy(nominal_feat_dist)
+        while n[-1] == 0 and len(n) > 2:
+            del n[-1]
 
-        if n_examples > len(nominal_feat_dist) or len(nominal_feat_dist) == 2:
-            return nominal_feat_dist
+        if n_examples > len(n) or len(n) == 2:
+            return n
 
         cumul = 0
-        for n_C in nominal_feat_dist[n_examples:]:
+        for n_C in n[n_examples:]:
             cumul += n_C
 
-        nominal_feat_dist[n_examples-1] += cumul
-        del nominal_feat_dist[n_examples:]
+        n[n_examples-1] += cumul
+        del n[n_examples:]
 
-        return nominal_feat_dist
+        return n
 
     def _update_nominal_feat_dist(self, nominal_feat_dist, C):
         new_dist = copy(nominal_feat_dist)
@@ -124,31 +125,31 @@ class PartitioningFunctionUpperBound:
                         if a == 1 and b == 1:
                             tmp_ord += 1
                             tmp_nom += sum(
-                                coef_nom(n[C], C) for C in range(1, len(n)-1) if n[C] > 0
+                                coef_nom(n[C], C) for C in range(1, len(n)) if n[C] > 0
                             )
                         elif a == 1 and b == c-1:
                             tmp_ord += self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
                             tmp_nom += sum(
                                 coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, self._update_nominal_feat_dist(n, C))
-                                for C in range(1, len(n)-1) if n[C] > 0
+                                for C in range(1, len(n)) if n[C] > 0
                             )
                         elif a == 1 and b == c:
                             tmp_ord += c*self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
                             tmp_nom += c*sum(
                                 coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, self._update_nominal_feat_dist(n, C))
-                                for C in range(1, len(n)-1) if n[C] > 0
+                                for C in range(1, len(n)) if n[C] > 0
                             )
                         elif b == 1 and a == c-1:
                             tmp_ord += self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
                             tmp_nom += sum(
                                 coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.left_subtree, a, k, self._update_nominal_feat_dist(n, C))
-                                for C in range(1, len(n)-1) if n[C] > 0
+                                for C in range(1, len(n)) if n[C] > 0
                             )
                         elif b == 1 and a == c:
                             tmp_ord += c*self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
                             tmp_nom += c*sum(
                                 coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.left_subtree, a, k, self._update_nominal_feat_dist(n, C))
-                                for C in range(1, len(n)-1) if n[C] > 0
+                                for C in range(1, len(n)) if n[C] > 0
                             )
                         else:
                             pi_left = self._check_trivial_cases(k, a, tree.left_subtree.n_leaves)
@@ -161,7 +162,7 @@ class PartitioningFunctionUpperBound:
                                 pi_left_ord = self._compute_upper_bound_tight(tree.left_subtree, a, k, n)
                                 pi_left_nom = sum(
                                     coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.left_subtree, a, k, self._update_nominal_feat_dist(n, C))
-                                    for C in range(1, len(n)-1) if n[C] > 0
+                                    for C in range(1, len(n)) if n[C] > 0
                                 )
                             else:
                                 pi_left_ord = pi_left
@@ -170,7 +171,7 @@ class PartitioningFunctionUpperBound:
                                 pi_right_ord = self._compute_upper_bound_tight(tree.right_subtree, b, m-k, n)
                                 pi_right_nom = sum(
                                     coef_nom(n[C], C) * self._compute_upper_bound_tight(tree.right_subtree, b, m-k, self._update_nominal_feat_dist(n, C))
-                                    for C in range(1, len(n)-1) if n[C] > 0
+                                    for C in range(1, len(n)) if n[C] > 0
                                 )
                             else:
                                 pi_right_ord = pi_right
@@ -277,7 +278,8 @@ if __name__ == '__main__':
     stump = Tree(leaf, leaf)
     tree = Tree(stump, stump)
     c = 2
-    m = 100
+    m = 25
     for _ in Timer(range(3)):
-        pfub = PartitioningFunctionUpperBound(tree, 50)
+        pfub = PartitioningFunctionUpperBound(tree, 10, nominal_feat_dist=[0,0,10])
+        print(stirling(m, c))
         print(pfub(m, c))
