@@ -25,13 +25,13 @@ class TestPatitioninFunctionUpperBound:
         output = pfub._truncate_nominal_feat_dist(nominal_feat_dist, n_examples)
         assert answer[:5] == output
 
-    def test_compute_upper_bound_leaf(self):
+    def test_compute_upper_bound_leaf_rl_feat(self):
         leaf = Tree()
         pfub = PartitioningFunctionUpperBound(leaf, 10)
         assert pfub(4,1) == 1
         assert pfub(4,2) == 0
 
-    def test_compute_upper_bound_stump(self):
+    def test_compute_upper_bound_stump_rl_feat(self):
         stump = Tree(Tree(), Tree())
         pfub = PartitioningFunctionUpperBound(stump, 10)
         assert pfub(4,1) == 1
@@ -40,7 +40,16 @@ class TestPatitioninFunctionUpperBound:
         assert pfub(6,2) == 2**5-1
         assert pfub(7,2) < 2**6-1
 
-    def test_compute_upper_bound_other_trees(self):
+    def test_compute_upper_bound_stump_nominal_feat(self):
+        stump = Tree(Tree(), Tree())
+        pfub = PartitioningFunctionUpperBound(stump, 0, nominal_feat_dist=[0, 3])
+        assert pfub(4,1) == 1
+        assert pfub(50,1) == 1
+        assert pfub(1,2) == 0
+        assert pfub(3,2) == 3
+        assert pfub(4,2) == 6
+
+    def test_compute_upper_bound_other_trees_rl_feat(self):
         leaf = Tree()
         stump = Tree(leaf, leaf)
         tree = Tree(stump, leaf)
@@ -50,7 +59,15 @@ class TestPatitioninFunctionUpperBound:
         m = 17
         assert pfub(m,2) < 2**(m-1)-1
 
-    def test_compute_bound_with_nominal_features(self):
+    def test_compute_upper_bound_other_trees_nominal_feat(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree = Tree(stump, stump)
+        pfub = PartitioningFunctionUpperBound(tree, 0, nominal_feat_dist=[0, 4])
+        m = 6
+        assert pfub(m,2) == 2**(m-1)-1
+
+    def test_compute_bound_with_rl_and_nominal_features(self):
         leaf = Tree()
         stump = Tree(leaf, leaf)
         tree = Tree(stump, leaf)
@@ -59,7 +76,7 @@ class TestPatitioninFunctionUpperBound:
         m = 16
         assert pfub(m, 3)
 
-    def test_compute_bound_with_ordinal_features(self):
+    def test_compute_bound_with_rl_and_ordinal_features(self):
         leaf = Tree()
         stump = Tree(leaf, leaf)
         tree = Tree(stump, leaf)
