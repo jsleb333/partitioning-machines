@@ -100,6 +100,7 @@ def decision_tree_to_tikz(decision_tree,
                           label_color_palette=None,
                           node_size=.6,
                           show_rule=True,
+                          feature_names=None,
                           show_impurity=False,
                           show_n_examples_by_label=False):
     pic = p2l.TexEnvironment('tikzpicture')
@@ -125,12 +126,12 @@ def decision_tree_to_tikz(decision_tree,
             if colors:
                 style += f', fill={colors[leaf_label]}'
             node_label = str(subtree.n_examples)
-            # node_label = str(int(np.max(subtree.n_examples_by_label)))
         else:
             style = 'internal'
             node_label = []
             if show_rule:
-                node_label.append(f'$x_{{{subtree.rule_feature}}} \le {subtree.rule_threshold:.2f}$')
+                feat = f"x_{{{subtree.rule_feature}}}" if feature_names is None else f"\\textrm{{{feature_names[subtree.rule_feature]}}}"
+                node_label.append(f'${feat} \le {subtree.rule_threshold:.2f}$')
             if show_impurity:
                 node_label.append(f'Impurity: ${subtree.impurity_score:.2f}$')
             if show_n_examples_by_label:
