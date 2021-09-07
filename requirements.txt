@@ -1,10 +1,10 @@
 numpy
 scipy
 sympy
-python2latex==0.4.0
+python2latex>=0.4.0
 xlrd
 git+https://github.com/GRAAL-Research/graal-utils
 pandas
 seaborn
 colorama
-scikitlearn
+sklearn
