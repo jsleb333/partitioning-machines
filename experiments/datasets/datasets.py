@@ -1,6 +1,6 @@
 import os, sys
 
-from pandas.core.indexes import category
+from pandas.core.dtypes.dtypes import CategoricalDtype
 sys.path.append(os.getcwd())
 from urllib import request
 import pandas as pd
@@ -27,6 +27,23 @@ def camel_to_snake(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
 
+class Nominal(pd.CategoricalDtype):
+    def __init__(self, categories=None):
+        super().__init__(categories=categories, ordered=False)
+    def __repr__(self):
+        return 'nominal'
+
+class Ordinal(pd.CategoricalDtype):
+    def __init__(self, categories=None):
+        super().__init__(categories=categories, ordered=True)
+    def __repr__(self):
+        return 'ordinal'
+
+class Label(pd.CategoricalDtype):
+    def __init__(self, categories=None):
+        super().__init__(categories=categories, ordered=False)
+
+
 class LazyDataset(type):
     """Dataset metaclass which makes every datasets implemented 'lazy' in the sense that it will be loaded in memory only when its attributes are accessed. Each dataset is a singleton and can be unloaded from memory using the 'unload' method.
     """
@@ -39,24 +56,35 @@ class LazyDataset(type):
 
     def load(cls):
         cls._is_loaded == True
-        cls.nominal_features = []
         if not os.path.exists(cls.path_to_raw_file):
             cls.download_dataset()
         cls.dataframe = cls.build_dataframe(cls)
-        cls.data = cls.dataframe.loc[:, cls.dataframe.columns != 'class'].to_numpy()
-        cls.target = cls.dataframe.loc[:, 'class'].to_numpy()
+        cls._convert_categorical_str_to_int(cls.dataframe)
+
+        cls.data = cls.examples = cls.dataframe.loc[:, cls.dataframe.columns != 'label'].to_numpy()
+        cls.target = cls.label = cls.dataframe.loc[:, 'label'].to_numpy()
         cls.n_examples = cls.data.shape[0]
         cls.n_features = cls.data.shape[1]
         cls.n_classes = len(set(cls.target))
-        cls.nominal_feat_dist = cls._compute_nominal_feature_distribution()
+
+        cls.nominal_features, cls.ordinal_features = [], []
+        for i, (col_name, col) in enumerate(cls.dataframe.items()):
+            if isinstance(col.dtype, pd.CategoricalDtype) and col_name != 'label':
+                if col.dtype.ordered: cls.ordinal_features.append(i)
+                else: cls.nominal_features.append(i)
+        cls.nominal_feat_dist = cls._compute_feature_distribution(cls.nominal_features)
+        cls.ordinal_feat_dist = cls._compute_feature_distribution(cls.ordinal_features)
+
         return cls
 
-    def _compute_nominal_feature_distribution(cls):
-        tmp_cat_dist = [len(cls.dataframe.iloc[:,i].cat.categories) for i in cls.nominal_features]
-        nominal_feat_dist = [0]*max(tmp_cat_dist)
-        for n_nom_feat in tmp_cat_dist:
-            nominal_feat_dist[n_nom_feat-1] += 1
-        return nominal_feat_dist
+    def _compute_feature_distribution(cls, features):
+        tmp_cat_dist = [len(cls.dataframe.iloc[:,i].cat.categories) for i in features]
+        if not tmp_cat_dist:
+            return [0, 0]
+        feat_dist = [0]*max(tmp_cat_dist)
+        for n_feat in tmp_cat_dist:
+            feat_dist[n_feat-1] += 1
+        return feat_dist
 
     def unload(cls):
         del cls.dataframe
@@ -88,6 +116,31 @@ class LazyDataset(type):
     def build_dataframe(cls) -> pd.DataFrame:
         raise NotImplementedError
 
+    def _convert_categorical_str_to_int(cls, df):
+        for col_name, col in df.items():
+            if isinstance(col.dtype, pd.CategoricalDtype):
+                print(col_name, col.cat.categories)
+                col.cat.categories = range(len(col.cat.categories))
+
+
+class AcuteInflammation(metaclass=LazyDataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/acute/diagnosis.data"
+    bibtex_label = "czerniak2003application"
+    def build_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r', encoding='utf-16') as file:
+            features = {
+                'Temperature' : float,
+                'Occurrence' : Nominal(),
+                'Lumbar pain' : Nominal(),
+                'Urine pushing' : Nominal(),
+                'Micturition pains' : Nominal(),
+                'Burning' : Nominal(),
+                'Inflammation' : Label(),
+                'label' : Label(), #'Nephritis' : Label(),
+            }
+            df = pd.read_csv(file, names=features.keys(), header=None, dtype=features, delimiter='\t', decimal=',', encoding='utf-16le')
+            df.drop(columns=['Inflammation'])
+        return df
 
 class Adult(metaclass=LazyDataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
@@ -96,26 +149,56 @@ class Adult(metaclass=LazyDataset):
         with open(cls.path_to_raw_file, 'r') as file:
             features = {
                 'age': float,
-                'workclass': 'category',
+                'workclass': Nominal(),
                 'fnlwgt': float,
-                'education': 'category',
+                'education': Nominal(),
                 'education-num': float,
-                'marital-status': 'category',
-                'occupation': 'category',
-                'relationship': 'category',
-                'race': 'category',
-                'sex': 'category',
+                'marital-status': Nominal(),
+                'occupation': Nominal(),
+                'relationship': Nominal(),
+                'race': Nominal(),
+                'sex': Nominal(),
                 'capital-gain': float,
                 'capital-loss': float,
                 'hours-per-week': float,
-                'native-country': 'category',
-                'class': 'category'
+                'native-country': Nominal(),
+                'label': Nominal()
             }
-            cls.nominal_features = [i for i, v in enumerate(features.values()) if v == 'category']
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
-            for col_name, dtype in features.items():
-                if dtype == 'category':
-                    df[col_name].cat.categories = list(i for i, _ in enumerate(set(df[col_name])))
+        return df
+
+class Amphibians(metaclass=LazyDataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00528/dataset.csv"
+    bibtex_label = "blachnik2019predicting"
+    def build_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            features = {
+                'ID': float,
+                'MV': Nominal(),
+                'SR': float,
+                'NR': float,
+                'TR': Nominal(),
+                'VR': Ordinal(),
+                'SUR1': Nominal(),
+                'SUR2': Nominal(),
+                'SUR3': Nominal(),
+                'UR': Nominal(),
+                'FR': Nominal(),
+                'OR': Ordinal([25, 50, 75, 80, 99, 100]),
+                'RR': Ordinal([0, 1, 2, 5, 9, 10]),
+                'BR': Ordinal([0, 1, 2, 5, 9, 10]),
+                'MR': Ordinal(),
+                'CR': Nominal(),
+                'label': Label(), # 'Green frogs': Nominal(),
+                'Brown frogs': Nominal(),
+                'Common toad': Nominal(),
+                'Fire-bellied toad': Nominal(),
+                'Tree frog': Nominal(),
+                'Common newt': Nominal(),
+                'Great crested newt': Nominal()
+            }
+            df = pd.read_csv(file, names=features.keys(), skiprows=[0,1], dtype=features, delimiter=';')
+            df.drop(columns=['ID', 'MV', 'Brown frogs', 'Common toad', 'Fire-bellied toad', 'Tree frog', 'Common newt', 'Great crested newt'], inplace=True)
         return df
 
 class BreastCancerWisconsinDiagnostic(metaclass=LazyDataset):
@@ -123,7 +206,7 @@ class BreastCancerWisconsinDiagnostic(metaclass=LazyDataset):
     bibtex_label = "street1993nuclear"
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
-            col_names = ['id', 'class'] + [f'attr {i}' for i in range(30)]
+            col_names = ['id', 'label'] + [f'attr {i}' for i in range(30)]
             df = pd.read_csv(file, names=col_names, header=None)
             df.drop(columns=col_names[0], inplace=True)
         return df
@@ -137,7 +220,7 @@ class Cardiotocography10(metaclass=LazyDataset):
             cols = list(df)
             cols_to_drop = cols[:10] + cols[31:43] + cols[-2:]
             df.drop(columns=cols_to_drop, inplace=True)
-            df.rename(columns={'CLASS':'class'}, inplace=True)
+            df.rename(columns={'CLASS':'label'}, inplace=True)
         return df
 
 class ClimateModelSimulationCrashes(metaclass=LazyDataset):
@@ -147,7 +230,7 @@ class ClimateModelSimulationCrashes(metaclass=LazyDataset):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=0, delim_whitespace=True)
             df.drop(columns=list(df)[:2], inplace=True)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class ConnectionistBenchSonar(metaclass=LazyDataset):
@@ -156,7 +239,7 @@ class ConnectionistBenchSonar(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class DiabeticRetinopathyDebrecen(metaclass=LazyDataset):
@@ -165,7 +248,7 @@ class DiabeticRetinopathyDebrecen(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, skiprows=list(range(24)))
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class Fertility(metaclass=LazyDataset):
@@ -174,7 +257,7 @@ class Fertility(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class HabermansSurvival(metaclass=LazyDataset):
@@ -183,7 +266,7 @@ class HabermansSurvival(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class HeartDiseaseClevelandProcessed(metaclass=LazyDataset):
@@ -193,25 +276,21 @@ class HeartDiseaseClevelandProcessed(metaclass=LazyDataset):
         with open(cls.path_to_raw_file, 'r') as file:
             features = {
                 'age': float,
-                'sex': 'category',
-                'cp': 'category',
+                'sex': Nominal(),
+                'cp': Nominal(),
                 'trestbps': float,
                 'chol': float,
                 'fbs': float,
-                'restecg': 'category',
+                'restecg': Nominal(),
                 'thalach': float,
-                'exang': 'category',
+                'exang': Nominal(),
                 'oldpeak': float,
-                'slope': 'category',
-                'ca': 'category',
-                'thal': 'category',
-                'class': 'category'
+                'slope': Nominal(),
+                'ca': Nominal(),
+                'thal': Nominal(),
+                'label': Nominal()
             }
-            cls.nominal_features = [i for i, v in enumerate(features.values()) if v == 'category']
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
-            for col_name, dtype in features.items():
-                if dtype == 'category':
-                    df[col_name].cat.categories = list(i for i, _ in enumerate(set(df[col_name])))
         return df
 
 class ImageSegmentation(metaclass=LazyDataset):
@@ -220,7 +299,7 @@ class ImageSegmentation(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, skiprows=list(range(4)))
-            df.rename(columns={list(df)[0]:'class'}, inplace=True)
+            df.rename(columns={list(df)[0]:'label'}, inplace=True)
         return df
 
 class Ionosphere(metaclass=LazyDataset):
@@ -229,7 +308,7 @@ class Ionosphere(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class Iris(metaclass=LazyDataset):
@@ -237,7 +316,40 @@ class Iris(metaclass=LazyDataset):
     bibtex_label = "fisher1936use"
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
-            df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'class'])
+            df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'label'])
+        return df
+
+class Mushroom(metaclass=LazyDataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"
+    bibtex_label = "lincoff1997field"
+    def build_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            features = { f: Nominal() for f in [
+                'label',
+                'cap-shape',
+                'cap-surface',
+                'cap-color',
+                'bruises',
+                'odor',
+                'gill-attachment',
+                'gill-spacing',
+                'gill-size',
+                'gill-color',
+                'stalk-shape',
+                'stalk-root',
+                'stalk-surface-above-ring',
+                'stalk-surface-below-ring',
+                'stalk-color-above-ring',
+                'stalk-color-below-ring',
+                'veil-type',
+                'veil-color',
+                'ring-number',
+                'ring-type',
+                'spore-print-color',
+                'population',
+                'habitat',
+            ]}
+            df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
 class Parkinson(metaclass=LazyDataset):
@@ -246,7 +358,7 @@ class Parkinson(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=0)
-            df.rename(columns={'status':'class'}, inplace=True)
+            df.rename(columns={'status':'label'}, inplace=True)
             df.drop(columns='name', inplace=True)
         return df
 
@@ -257,7 +369,7 @@ class PlanningRelax(metaclass=LazyDataset):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, sep='\t', )
             df.drop(columns=list(df)[-1], inplace=True)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class QSARBiodegradation(metaclass=LazyDataset):
@@ -266,7 +378,7 @@ class QSARBiodegradation(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, sep=';')
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class Seeds(metaclass=LazyDataset):
@@ -275,7 +387,7 @@ class Seeds(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, delim_whitespace=True)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class Spambase(metaclass=LazyDataset):
@@ -284,7 +396,37 @@ class Spambase(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
+        return df
+
+class StatlogGerman(metaclass=LazyDataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
+    bibtex_label = "hofmann94statloggerman"
+    def build_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            features = {i+1 : dtype for i, dtype in enumerate([
+                Ordinal(['A14', 'A11', 'A12', 'A13']),
+                float,
+                Nominal(),
+                Nominal(),
+                float, #5
+                Ordinal(['A65'] + [f'A{i}' for i in range(61, 65)]),
+                Ordinal(),
+                float,
+                Nominal(),
+                Nominal(), #10
+                float,
+                Nominal(),
+                float,
+                Nominal(),
+                Nominal(), #15
+                float,
+                Ordinal(),
+                Ordinal(),
+                Nominal(),
+                Nominal(), #20
+            ])} | {'label': Label()}
+            df = pd.read_csv(file, names=features.keys(), header=None, dtype=features, delim_whitespace=True)
         return df
 
 class VertebralColumn3C(metaclass=LazyDataset):
@@ -294,7 +436,7 @@ class VertebralColumn3C(metaclass=LazyDataset):
         with ZipFile(cls.path_to_raw_file, 'r') as zipfile:
             with zipfile.open('column_3C.dat') as file:
                 df = pd.read_csv(file, header=None, delim_whitespace=True)
-                df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+                df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class WallFollowingRobot24(metaclass=LazyDataset):
@@ -303,7 +445,7 @@ class WallFollowingRobot24(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
 class Wine(metaclass=LazyDataset):
@@ -312,7 +454,7 @@ class Wine(metaclass=LazyDataset):
     def build_dataframe(cls):
         with open(cls.path_to_raw_file, 'r') as file:
             col_names = [
-                'class',
+                'label',
                 'Alcohol',
                 'Malic acid',
                 'Ash',
@@ -337,12 +479,42 @@ class Yeast(metaclass=LazyDataset):
         with open(cls.path_to_raw_file, 'r') as file:
             df = pd.read_csv(file, header=None, delim_whitespace=True)
             df.drop(columns=list(df)[0], inplace=True)
-            df.rename(columns={list(df)[-1]:'class'}, inplace=True)
+            df.rename(columns={list(df)[-1]:'label'}, inplace=True)
+        return df
+
+class Zoo(metaclass=LazyDataset):
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data"
+    bibtex_label = "forsyth90zoo"
+    def build_dataframe(cls):
+        with open(cls.path_to_raw_file, 'r') as file:
+            features = {
+                'animal': Nominal(),
+                'hair': Nominal(),
+                'feathers': Nominal(),
+                'eggs': Nominal(),
+                'milk': Nominal(),
+                'airborne': Nominal(),
+                'aquatic': Nominal(),
+                'predator': Nominal(),
+                'toothed': Nominal(),
+                'backbone': Nominal(),
+                'breathes': Nominal(),
+                'venomous': Nominal(),
+                'fins': Nominal(),
+                'legs': Ordinal([0,2,4,5,6,8]),
+                'tail': Nominal(),
+                'domestic': Nominal(),
+                'catsize': Nominal(),
+                'label': Label()
+            }
+            df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
+            df.drop(columns=['animal'], inplace=True)
         return df
 
 
+
 if __name__ == "__main__":
-    for i, d in enumerate(load_datasets(['heart_disease_cleveland_processed'])):
+    for i, d in enumerate(load_datasets(['acute_inflammation'])):
         print(d)
         assert not np.isnan(d.data.sum())
         print(i, d.name, d.nominal_features, d.nominal_feat_dist)
