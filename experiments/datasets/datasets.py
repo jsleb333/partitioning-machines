@@ -44,7 +44,7 @@ class Label(pd.CategoricalDtype):
         super().__init__(categories=categories, ordered=False)
 
 
-class LazyDataset(type):
+class Dataset(type):
     """Dataset metaclass which makes every datasets implemented 'lazy' in the sense that it will be loaded in memory only when its attributes are accessed. Each dataset is a singleton and can be unloaded from memory using the 'unload' method.
     """
     def __init__(cls, cls_name, bases, attrs):
@@ -62,7 +62,7 @@ class LazyDataset(type):
         cls._convert_categorical_str_to_int(cls.dataframe)
 
         cls.data = cls.examples = cls.dataframe.loc[:, cls.dataframe.columns != 'label'].to_numpy()
-        cls.target = cls.label = cls.dataframe.loc[:, 'label'].to_numpy()
+        cls.target = cls.labels = cls.dataframe.loc[:, 'label'].to_numpy()
         cls.n_examples = cls.data.shape[0]
         cls.n_features = cls.data.shape[1]
         cls.n_classes = len(set(cls.target))
@@ -106,6 +106,11 @@ class LazyDataset(type):
     def __repr__(cls):
         return f'Dataset {cls.name} with {cls.n_examples} examples and {cls.n_features} features'
 
+    def _convert_categorical_str_to_int(cls, df):
+        for col_name, col in df.items():
+            if isinstance(col.dtype, pd.CategoricalDtype):
+                col.cat.categories = range(len(col.cat.categories))
+
     def download_dataset(cls):
         content = request.urlopen(cls.url)
         os.makedirs(os.path.dirname(__file__) + '/raw/', exist_ok=True)
@@ -116,14 +121,8 @@ class LazyDataset(type):
     def build_dataframe(cls) -> pd.DataFrame:
         raise NotImplementedError
 
-    def _convert_categorical_str_to_int(cls, df):
-        for col_name, col in df.items():
-            if isinstance(col.dtype, pd.CategoricalDtype):
-                print(col_name, col.cat.categories)
-                col.cat.categories = range(len(col.cat.categories))
 
-
-class AcuteInflammation(metaclass=LazyDataset):
+class AcuteInflammation(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/acute/diagnosis.data"
     bibtex_label = "czerniak2003application"
     def build_dataframe(cls):
@@ -142,7 +141,7 @@ class AcuteInflammation(metaclass=LazyDataset):
             df.drop(columns=['Inflammation'])
         return df
 
-class Adult(metaclass=LazyDataset):
+class Adult(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
     bibtex_label = "kohavi1996scaling"
     def build_dataframe(cls):
@@ -167,7 +166,7 @@ class Adult(metaclass=LazyDataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
-class Amphibians(metaclass=LazyDataset):
+class Amphibians(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00528/dataset.csv"
     bibtex_label = "blachnik2019predicting"
     def build_dataframe(cls):
@@ -201,7 +200,7 @@ class Amphibians(metaclass=LazyDataset):
             df.drop(columns=['ID', 'MV', 'Brown frogs', 'Common toad', 'Fire-bellied toad', 'Tree frog', 'Common newt', 'Great crested newt'], inplace=True)
         return df
 
-class BreastCancerWisconsinDiagnostic(metaclass=LazyDataset):
+class BreastCancerWisconsinDiagnostic(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data"
     bibtex_label = "street1993nuclear"
     def build_dataframe(cls):
@@ -211,7 +210,7 @@ class BreastCancerWisconsinDiagnostic(metaclass=LazyDataset):
             df.drop(columns=col_names[0], inplace=True)
         return df
 
-class Cardiotocography10(metaclass=LazyDataset):
+class Cardiotocography10(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00193/CTG.xls"
     bibtex_label = "ayres2000sisporto"
     def build_dataframe(cls):
@@ -223,7 +222,7 @@ class Cardiotocography10(metaclass=LazyDataset):
             df.rename(columns={'CLASS':'label'}, inplace=True)
         return df
 
-class ClimateModelSimulationCrashes(metaclass=LazyDataset):
+class ClimateModelSimulationCrashes(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
     bibtex_label = "lucas2013failure"
     def build_dataframe(cls):
@@ -233,7 +232,7 @@ class ClimateModelSimulationCrashes(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class ConnectionistBenchSonar(metaclass=LazyDataset):
+class ConnectionistBenchSonar(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"
     bibtex_label = "gorman1988analysis"
     def build_dataframe(cls):
@@ -242,7 +241,7 @@ class ConnectionistBenchSonar(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class DiabeticRetinopathyDebrecen(metaclass=LazyDataset):
+class DiabeticRetinopathyDebrecen(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00329/messidor_features.arff"
     bibtex_label = "antal2014ensemble"
     def build_dataframe(cls):
@@ -251,7 +250,7 @@ class DiabeticRetinopathyDebrecen(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Fertility(metaclass=LazyDataset):
+class Fertility(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00244/fertility_Diagnosis.txt"
     bibtex_label = "gil2012predicting"
     def build_dataframe(cls):
@@ -260,7 +259,7 @@ class Fertility(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class HabermansSurvival(metaclass=LazyDataset):
+class HabermansSurvival(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data"
     bibtex_label = "haberman1976generalized"
     def build_dataframe(cls):
@@ -269,7 +268,7 @@ class HabermansSurvival(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class HeartDiseaseClevelandProcessed(metaclass=LazyDataset):
+class HeartDiseaseClevelandProcessed(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
     bibtex_label = "detrano1989international"
     def build_dataframe(cls):
@@ -293,7 +292,7 @@ class HeartDiseaseClevelandProcessed(metaclass=LazyDataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
-class ImageSegmentation(metaclass=LazyDataset):
+class ImageSegmentation(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/image/segmentation.data"
     bibtex_label = None
     def build_dataframe(cls):
@@ -302,7 +301,7 @@ class ImageSegmentation(metaclass=LazyDataset):
             df.rename(columns={list(df)[0]:'label'}, inplace=True)
         return df
 
-class Ionosphere(metaclass=LazyDataset):
+class Ionosphere(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/ionosphere/ionosphere.data"
     bibtex_label = "sigillito1989classification"
     def build_dataframe(cls):
@@ -311,7 +310,7 @@ class Ionosphere(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Iris(metaclass=LazyDataset):
+class Iris(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     bibtex_label = "fisher1936use"
     def build_dataframe(cls):
@@ -319,7 +318,7 @@ class Iris(metaclass=LazyDataset):
             df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'label'])
         return df
 
-class Mushroom(metaclass=LazyDataset):
+class Mushroom(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"
     bibtex_label = "lincoff1997field"
     def build_dataframe(cls):
@@ -352,7 +351,7 @@ class Mushroom(metaclass=LazyDataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
-class Parkinson(metaclass=LazyDataset):
+class Parkinson(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data"
     bibtex_label = "little2007exploiting"
     def build_dataframe(cls):
@@ -362,7 +361,7 @@ class Parkinson(metaclass=LazyDataset):
             df.drop(columns='name', inplace=True)
         return df
 
-class PlanningRelax(metaclass=LazyDataset):
+class PlanningRelax(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00230/plrx.txt"
     bibtex_label = "bhatt2012planning"
     def build_dataframe(cls):
@@ -372,7 +371,7 @@ class PlanningRelax(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class QSARBiodegradation(metaclass=LazyDataset):
+class QSARBiodegradation(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00254/biodeg.csv"
     bibtex_label = "mansouri2013quantitative"
     def build_dataframe(cls):
@@ -381,7 +380,7 @@ class QSARBiodegradation(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Seeds(metaclass=LazyDataset):
+class Seeds(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt"
     bibtex_label = "charytanowicz2010complete"
     def build_dataframe(cls):
@@ -390,7 +389,7 @@ class Seeds(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Spambase(metaclass=LazyDataset):
+class Spambase(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
     bibtex_label = None
     def build_dataframe(cls):
@@ -399,7 +398,7 @@ class Spambase(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class StatlogGerman(metaclass=LazyDataset):
+class StatlogGerman(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
     bibtex_label = "hofmann94statloggerman"
     def build_dataframe(cls):
@@ -429,7 +428,7 @@ class StatlogGerman(metaclass=LazyDataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features, delim_whitespace=True)
         return df
 
-class VertebralColumn3C(metaclass=LazyDataset):
+class VertebralColumn3C(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00212/vertebral_column_data.zip"
     bibtex_label = "berthonnaud2005analysis"
     def build_dataframe(cls):
@@ -439,7 +438,7 @@ class VertebralColumn3C(metaclass=LazyDataset):
                 df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class WallFollowingRobot24(metaclass=LazyDataset):
+class WallFollowingRobot24(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00194/sensor_readings_24.data"
     bibtex_label = "freire2009short"
     def build_dataframe(cls):
@@ -448,7 +447,7 @@ class WallFollowingRobot24(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Wine(metaclass=LazyDataset):
+class Wine(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
     bibtex_label = "aeberhard1994comparative"
     def build_dataframe(cls):
@@ -472,7 +471,7 @@ class Wine(metaclass=LazyDataset):
             df = pd.read_csv(file, names=col_names, header=None)
         return df
 
-class Yeast(metaclass=LazyDataset):
+class Yeast(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data"
     bibtex_label = "horton1996probabilistic"
     def build_dataframe(cls):
@@ -482,7 +481,7 @@ class Yeast(metaclass=LazyDataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Zoo(metaclass=LazyDataset):
+class Zoo(metaclass=Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data"
     bibtex_label = "forsyth90zoo"
     def build_dataframe(cls):

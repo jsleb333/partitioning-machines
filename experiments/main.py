@@ -17,7 +17,97 @@ from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterio
 from experiments.pruning import prune_with_bound, prune_with_cv
 from partitioning_machines import func_to_cmd
 
-from datasets.datasets import load_datasets, dataset_list
+from datasets.datasets import load_datasets, Dataset
+
+
+class Experiment:
+    def __init__(self,
+                 model_name: str,
+                 exp_name: str,
+                 dataset: Dataset,
+                 test_split_ratio: float = .25,
+                 n_draws: int = 25,
+                 n_folds: int = 10,
+                 max_n_leaves: int = 40,
+                 exp_path: str = '') -> None:
+        self.model_name = model_name
+        self.exp_name = exp_name
+        self.dataset = dataset
+        self.test_split_ratio = test_split_ratio
+        self.n_draws = n_draws
+        self.n_folds = n_folds
+        self.max_n_leaves = max_n_leaves
+
+        self.exp_params = {
+            'exp_name':exp_name,
+            'test_split_ratio':test_split_ratio,
+            'n_draws':n_draws,
+            'n_folds':n_folds,
+            'max_n_leaves':max_n_leaves,
+        }
+
+        self.exp_path = exp_path or f'./experiments/results/{dataset.name}/{exp_name}/'
+
+    def _fit_tree(self, X_tr, y_tr, seed) -> None:
+        tree = DecisionTreeClassifier(gini_impurity_criterion,
+                                      max_n_leaves=self.max_n_leaves)
+
+        nominal_mask = [1 if i in self.dataset.nominal_features else 0
+                        for i in range(self.dataset.n_features)]
+        tree.fit(X_tr, y_tr, nominal_mask=nominal_mask)
+        tree.bound_value = 'NA'
+        return tree
+
+    def _prune_tree(self, tree) -> None:
+        raise NotImplementedError
+
+    def _evaluate_tree(self, X_tr, X_ts, y_tr, y_ts, tree=tree):
+        acc_tr = accuracy_score(y_tr, tree.predict(X_tr))
+        acc_ts = accuracy_score(y_ts, tree.predict(X_ts))
+        return acc_tr, acc_ts
+
+    def run(self, *args, **kwargs) -> None:
+        os.makedirs(self.exp_path, exist_ok=True)
+
+        with open(self.exp_path + f'{self.model_name}_exp_params.py', 'w') as file:
+            file.write(f"exp_params = {self.exp_params}")
+
+        file = open(self.exp_path + self.model_name + '.csv', 'w', newline='')
+        csv_writer = csv.writer(file)
+
+        header = ['draw', 'seed', 'train_accuracy', 'test_accuracy', 'n_leaves', 'height', 'bound', 'time']
+
+        csv_writer.writerow(header)
+        file.flush()
+
+        times_per_draw = []
+
+        for draw in range(self.n_draws):
+            time_str = f'\tMean time per draw: {sum(times_per_draw)/len(times_per_draw):.3f}s.' if times_per_draw else ''
+            print(f'Running draw #{draw:02d}...' + time_str, end='\r')
+            draw_start = time()
+
+            seed = draw*10 + 1
+            X_tr, X_ts, y_tr, y_ts = train_test_split(self.dataset.examples, self.dataset.labels,
+                                                      test_size=self.test_split_ratio,
+                                                      random_state=seed)
+            tree = self._fit_tree(X_tr, y_tr, *args, seed=seed, **kwargs)
+            t_start = time()
+            self._prune_tree(*args, tree=tree, **kwargs)
+            elapsed_time = time() - t_start
+            acc_tr, acc_ts = self._evaluate_tree(X_ts, y_ts, *args, tree=tree, **kwargs)
+
+
+            leaves = tree.tree.n_leaves
+            height = tree.tree.height
+            bound = tree.bound_value
+            csv_writer.writerow([draw, seed, acc_tr, acc_ts, leaves, height, bound, elapsed_time])
+            file.flush()
+
+            times_per_draw.append(time() - draw_start)
+
+        print(f'\rCompleted all {draw+1} draws.')
+        file.close()
 
 
 def launch_single_experiment(dataset,
@@ -38,7 +128,8 @@ def launch_single_experiment(dataset,
         'error_prior_exponent':error_prior_exponent,
         }
 
-    X, y = dataset.data, dataset.target
+    X, y = dataset.examples, dataset.labels
+    nominal_mask = [1 if i in dataset.nominal_features else 0 for i in range(dataset.n_features)]
 
     exp_path = f'./experiments/results/{dataset.name}/{exp_name}/'
 
@@ -70,7 +161,7 @@ def launch_single_experiment(dataset,
         decision_tree = DecisionTreeClassifier(gini_impurity_criterion, max_n_leaves=max_n_leaves)
         n_examples, n_features = X.shape
 
-        decision_tree.fit(X_tr, y_tr)
+        decision_tree.fit(X_tr, y_tr, nominal_mask=nominal_mask)
         decision_tree.bound_value = 'NA'
         t_start = time()
 
@@ -163,4 +254,6 @@ def launch_experiment(dataset=list(),
                                          )
 
 if __name__ == "__main__":
-    launch_experiment()
+    # launch_experiment()
+    e = Experiment('test', load_datasets(['iris']))
+
