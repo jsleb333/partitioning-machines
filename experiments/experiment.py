@@ -5,7 +5,7 @@ import sys, os
 sys.path.append(os.getcwd())
 import csv
 from time import time
-import datetime
+from datetime import datetime
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion, shawe_taylor_bound_pruning_objective_factory, breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from experiments.pruning import prune_with_bound, prune_with_cv
@@ -71,7 +71,7 @@ class Experiment:
                  test_split_ratio: float = .2,
                  n_draws: int = 25,
                  max_n_leaves: int = 40) -> None:
-        self.model_name = camel_to_snake(str(type(self)))
+        self.model_name = camel_to_snake(type(self).__name__)
         self.dataset = dataset
         self.test_split_ratio = test_split_ratio
         self.n_draws = n_draws
@@ -151,12 +151,16 @@ class PruneOursShaweTaylor(Experiment):
     def _prune_tree(self, tree) -> None:
         r = 1/2**self.error_prior_exponent
         errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
-        bound = shawe_taylor_bound_pruning_objective_factory(self.dataset.n_features, errors_logprob_prior=errors_logprob_prior)
+        bound = shawe_taylor_bound_pruning_objective_factory(
+            self.dataset.n_features,
+            self.dataset.nominal_feat_dist,
+            self.dataset.ordinal_feat_dist,
+            errors_logprob_prior=errors_logprob_prior)
 
         tree.bound_value = prune_with_bound(tree, bound)
 
 
 if __name__ == '__main__':
-    from datasets.datasets import Iris
-    e = NoPruning(model_name='no_pruning', exp_name='test', dataset=Iris, n_draws=2)
+    from datasets.datasets import Iris, Wine
+    e = PruneOursShaweTaylor(dataset=Wine, n_draws=2)
     e.run(tracker=Tracker(), logger=Logger(exp_path='./test/'))

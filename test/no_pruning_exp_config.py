@@ -1,1 +1,0 @@
-exp_config = {'model_name': 'no_pruning', 'exp_name': 'test', 'dataset': 'iris', 'n_draws': '2'}
