@@ -21,13 +21,17 @@ from datasets.datasets import load_datasets, Dataset
 
 
 class Experiment:
-    def __init__(self,
+    def __new__(cls, *args, **kwargs):
+        new_exp = super().__new__(cls, *args, **kwargs)
+        new_exp.config = kwargs
+        return new_exp
+
+    def __init__(self, *,
                  model_name: str,
                  exp_name: str,
                  dataset: Dataset,
-                 test_split_ratio: float = .25,
+                 test_split_ratio: float = .2,
                  n_draws: int = 25,
-                 n_folds: int = 10,
                  max_n_leaves: int = 40,
                  exp_path: str = '') -> None:
         self.model_name = model_name
@@ -35,16 +39,7 @@ class Experiment:
         self.dataset = dataset
         self.test_split_ratio = test_split_ratio
         self.n_draws = n_draws
-        self.n_folds = n_folds
         self.max_n_leaves = max_n_leaves
-
-        self.exp_params = {
-            'exp_name':exp_name,
-            'test_split_ratio':test_split_ratio,
-            'n_draws':n_draws,
-            'n_folds':n_folds,
-            'max_n_leaves':max_n_leaves,
-        }
 
         self.exp_path = exp_path or f'./experiments/results/{dataset.name}/{exp_name}/'
 
@@ -61,53 +56,106 @@ class Experiment:
     def _prune_tree(self, tree) -> None:
         raise NotImplementedError
 
-    def _evaluate_tree(self, X_tr, X_ts, y_tr, y_ts, tree=tree):
+    def _evaluate_tree(self, X_tr, X_ts, y_tr, y_ts, tree):
         acc_tr = accuracy_score(y_tr, tree.predict(X_tr))
         acc_ts = accuracy_score(y_ts, tree.predict(X_ts))
         return acc_tr, acc_ts
 
-    def run(self, *args, **kwargs) -> None:
-        os.makedirs(self.exp_path, exist_ok=True)
+    def _run(self, draw: int, *args, **kwargs) -> dict:
+        seed = draw*10 + 1
+        X_tr, X_ts, y_tr, y_ts = train_test_split(self.dataset.examples, self.dataset.labels,
+                                                  test_size=self.test_split_ratio,
+                                                  random_state=seed)
+        tree = self._fit_tree(X_tr, y_tr, *args, seed=seed, **kwargs)
+        t_start = time()
+        self._prune_tree(*args, tree=tree, **kwargs)
+        elapsed_time = time() - t_start
+        acc_tr, acc_ts = self._evaluate_tree(X_ts, y_ts, *args, tree=tree, **kwargs)
 
-        with open(self.exp_path + f'{self.model_name}_exp_params.py', 'w') as file:
-            file.write(f"exp_params = {self.exp_params}")
+        leaves = tree.tree.n_leaves
+        height = tree.tree.height
+        bound = tree.bound_value
 
-        file = open(self.exp_path + self.model_name + '.csv', 'w', newline='')
-        csv_writer = csv.writer(file)
+        metrics = {'draw': draw,
+                   'seed': seed,
+                   'train_accuracy': acc_tr,
+                   'test_accuracy': acc_ts,
+                   'n_leaves': leaves,
+                   'height': height,
+                   'bound': bound,
+                   'time': elapsed_time}
+        return metrics
 
-        header = ['draw', 'seed', 'train_accuracy', 'test_accuracy', 'n_leaves', 'height', 'bound', 'time']
+    def run(self, *args, logger=None, tracker=None, **kwargs) -> None:
 
-        csv_writer.writerow(header)
-        file.flush()
+        if logger:
+            logger.dump_exp_config(self)
 
-        times_per_draw = []
+        if tracker:
+            tracker.start()
 
         for draw in range(self.n_draws):
-            time_str = f'\tMean time per draw: {sum(times_per_draw)/len(times_per_draw):.3f}s.' if times_per_draw else ''
-            print(f'Running draw #{draw:02d}...' + time_str, end='\r')
-            draw_start = time()
+            metrics = self._run(draw, *args, **kwargs)
 
-            seed = draw*10 + 1
-            X_tr, X_ts, y_tr, y_ts = train_test_split(self.dataset.examples, self.dataset.labels,
-                                                      test_size=self.test_split_ratio,
-                                                      random_state=seed)
-            tree = self._fit_tree(X_tr, y_tr, *args, seed=seed, **kwargs)
-            t_start = time()
-            self._prune_tree(*args, tree=tree, **kwargs)
-            elapsed_time = time() - t_start
-            acc_tr, acc_ts = self._evaluate_tree(X_ts, y_ts, *args, tree=tree, **kwargs)
+            if logger:
+                logger.dump_row(metrics, self)
+
+            if tracker:
+                tracker.display_mean_time(draw)
+
+        if tracker:
+            tracker.end()
+
+        if logger:
+            logger.close()
 
 
-            leaves = tree.tree.n_leaves
-            height = tree.tree.height
-            bound = tree.bound_value
-            csv_writer.writerow([draw, seed, acc_tr, acc_ts, leaves, height, bound, elapsed_time])
-            file.flush()
+class Logger:
+    def __init__(self, exp_path) -> None:
+        self.exp_path = exp_path
+        os.makedirs(self.exp_path, exist_ok=True)
+        self.is_closed = True
 
-            times_per_draw.append(time() - draw_start)
+    def dump_exp_config(self, exp: Experiment) -> None:
+        with open(self.exp_path + f'{self.model_name}_exp_config.py', 'w') as file:
+            file.write(f"exp_config = {self.config}")
 
+    def prepare_csv_file(self, exp: Experiment) -> None:
+        self.file = open(self.exp_path + exp.model_name + '.csv', 'w', newline='')
+        self.csv_writer = csv.writer(self.file)
+        self.is_closed = False
+
+    def dump_row(self, row: dict, exp: Experiment) -> None:
+        if self.is_closed:
+            self.prepare_csv_file(exp)
+            self._dump_row(row.keys())
+        self._dump_row(row.values())
+
+    def _dump_row(self, row: list) -> None:
+        self.csv_writer.writerow(row)
+        self.file.flush()
+
+    def close(self):
+        self.file.close()
+        self.is_closed = True
+
+
+class Tracker:
+    def start(self):
+        self.times = []
+        self.draw_start = time()
+
+    def display_mean_time(self, draw: int) -> None:
+        self.times.append(time() - self.draw_start)
+        time_str = f'\tMean time per draw: {sum(self.times)/len(self.times):.3f}s.' if self.times else ''
+        print(f'Running draw #{draw:02d}...' + time_str, end='\r')
+
+        self.draw_start = time()
+
+    def end(self, draw: int) -> None:
         print(f'\rCompleted all {draw+1} draws.')
-        file.close()
+
+
 
 
 def launch_single_experiment(dataset,
