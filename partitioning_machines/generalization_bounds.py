@@ -23,6 +23,8 @@ def shawe_taylor_bound(n_examples,
     return epsilon / n_examples
 
 def shawe_taylor_bound_pruning_objective_factory(n_features,
+                                                 nominal_feat_dist,
+                                                 ordinal_feat_dist,
                                                  table={},
                                                  loose_pfub=True,
                                                  errors_logprob_prior=None,
@@ -31,23 +33,29 @@ def shawe_taylor_bound_pruning_objective_factory(n_features,
     if errors_logprob_prior is None:
         r = 1/2
         errors_logprob_prior = lambda n_errors: np.log(1-r) + n_errors*np.log(r)
-        
+
     if complexity_logprob_prior is None:
         s = 2
         complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
-        
+
     def shawe_taylor_bound_pruning_objective(subtree):
         copy_of_tree = copy(subtree.root)
         copy_of_subtree = copy_of_tree.follow_path(subtree.path_from_root())
         copy_of_subtree.remove_subtree()
-        
+
         n_classes = copy_of_tree.n_examples_by_label.shape[0]
-        growth_function = growth_function_upper_bound(copy_of_tree, n_features, n_classes, table, loose_pfub)
+        growth_function = growth_function_upper_bound(copy_of_tree,
+                                                      n_features,
+                                                      nominal_feat_dist=nominal_feat_dist,
+                                                      ordinal_feat_dist=ordinal_feat_dist,
+                                                      n_classes=n_classes,
+                                                      pre_computed_tables=table,
+                                                      loose=loose_pfub)
         n_examples = copy_of_tree.n_examples
         n_errors = copy_of_tree.n_errors
         errors_logprob = errors_logprob_prior(n_errors)
         complexity_logprob = complexity_logprob_prior(copy_of_tree.n_leaves)
-        
+
         return shawe_taylor_bound(n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, delta)
 
     return shawe_taylor_bound_pruning_objective
@@ -68,12 +76,14 @@ def vapnik_bound(n_examples,
                                 - np.log(delta)
                                 - errors_logprob
                                 - complexity_logprob)
-    
+
     empirical_risk = n_errors / n_examples
-    
+
     return empirical_risk + epsilon/2 * (1 + np.sqrt(1 + 4*empirical_risk/epsilon))
 
 def vapnik_bound_pruning_objective_factory(n_features,
+                                           nominal_feat_dist,
+                                           ordinal_feat_dist,
                                            table={},
                                            loose_pfub=True,
                                            errors_logprob_prior=None,
@@ -82,22 +92,28 @@ def vapnik_bound_pruning_objective_factory(n_features,
     if errors_logprob_prior is None:
         r = 1/2
         errors_logprob_prior = lambda n_errors: np.log(1-r) + n_errors*np.log(r)
-        
+
     if complexity_logprob_prior is None:
         s = 2
         complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
-        
+
     def vapnik_bound_pruning_objective(subtree):
         copy_of_tree = copy(subtree.root)
         copy_of_subtree = copy_of_tree.follow_path(subtree.path_from_root())
         copy_of_subtree.remove_subtree()
-        
+
         n_classes = copy_of_tree.n_examples_by_label.shape[0]
-        growth_function = growth_function_upper_bound(copy_of_tree, n_features, n_classes, table, loose_pfub)
+        growth_function = growth_function_upper_bound(copy_of_tree,
+                                                      n_features,
+                                                      nominal_feat_dist=nominal_feat_dist,
+                                                      ordinal_feat_dist=ordinal_feat_dist,
+                                                      n_classes=n_classes,
+                                                      pre_computed_tables=table,
+                                                      loose=loose_pfub)
         n_examples = copy_of_tree.n_examples
         n_errors = copy_of_tree.n_errors
         errors_logprob = errors_logprob_prior(n_errors)
         complexity_logprob = complexity_logprob_prior(copy_of_tree.n_leaves)
-        
+
         return vapnik_bound(n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, delta)
     return vapnik_bound_pruning_objective

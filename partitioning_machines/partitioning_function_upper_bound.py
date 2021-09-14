@@ -278,20 +278,47 @@ class PartitioningFunctionUpperBound:
             return self._compute_upper_bound_tight(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
 
 
-def partitioning_function_upper_bound(tree, n_parts, n_examples, n_rl_feat):
+def partitioning_function_upper_bound(tree,
+                                      n_parts,
+                                      n_examples,
+                                      n_rl_feat,
+                                      ordinal_feat_dist=None,
+                                      nominal_feat_dist=None,
+                                      pre_computed_tables=None,
+                                      loose=False):
     r"""
     Args:
-        tree (Tree object): Tree structure for which to compute the bound.
-        n_parts (int): Number of parts in the partitions. Corresponds to the variable 'c' in the paper.
-        n_examples (int): Number of examples. Corresponds to the variable 'm' in the paper.
-        n_rl_feat (int): Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        tree (Tree object):
+            Tree structure for which to compute the bound.
+        n_parts (int):
+            Number of parts in the partitions. Corresponds to the variable 'c' in the paper.
+        n_examples (int):
+            Number of examples. Corresponds to the variable 'm' in the paper.
+        n_rl_feat (int):
+            Number of real-valued features. Corresponds to the variable '\ell' in the paper.
     """
-    pfub = PartitioningFunctionUpperBound(tree, n_rl_feat)
+    pfub = PartitioningFunctionUpperBound(tree,
+                                          n_rl_feat,
+                                          ordinal_feat_dist=ordinal_feat_dist,
+                                          nominal_feat_dist=nominal_feat_dist,
+                                          pre_computed_tables=pre_computed_tables,
+                                          loose=loose)
     return pfub(n_examples, n_parts)
 
 
-def growth_function_upper_bound(tree, n_rl_feat, n_classes=2, pre_computed_tables=None, loose=False):
-    pfub = PartitioningFunctionUpperBound(tree, n_rl_feat, pre_computed_tables=pre_computed_tables, loose=loose)
+def growth_function_upper_bound(tree,
+                                n_rl_feat,
+                                ordinal_feat_dist=None,
+                                nominal_feat_dist=None,
+                                n_classes=2,
+                                pre_computed_tables=None,
+                                loose=False):
+    pfub = PartitioningFunctionUpperBound(tree,
+                                          n_rl_feat,
+                                          ordinal_feat_dist=ordinal_feat_dist,
+                                          nominal_feat_dist=nominal_feat_dist,
+                                          pre_computed_tables=pre_computed_tables,
+                                          loose=loose)
     def upper_bound(n_examples):
         max_range = min(n_classes, tree.n_leaves, n_examples)
         return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))

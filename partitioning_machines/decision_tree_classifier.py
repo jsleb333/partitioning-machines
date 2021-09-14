@@ -108,8 +108,7 @@ class DecisionTreeClassifier:
 
         if nominal_mask is None:
             nominal_mask = np.array([False]*self.n_features)
-
-        assert nominal_mask.shape[0] == self.n_features
+        nominal_mask = np.array(nominal_mask, dtype=bool)
 
         self._init_tree(encoded_y, self.n_examples)
 

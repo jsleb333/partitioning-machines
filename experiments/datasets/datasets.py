@@ -106,6 +106,9 @@ class Dataset(type):
     def __repr__(cls):
         return f'Dataset {cls.name} with {cls.n_examples} examples and {cls.n_features} features'
 
+    def __str__(cls):
+        return cls.name
+
     def _convert_categorical_str_to_int(cls, df):
         for col_name, col in df.items():
             if isinstance(col.dtype, pd.CategoricalDtype):
