@@ -206,14 +206,9 @@ class DecisionTreeClassifier:
         for subtree in self.tree:
             if not subtree.is_leaf():
                 if subtree.pruning_coef <= pruning_coef_threshold:
-                    self._prune_subtree(subtree)
+                    subtree.remove_subtree()
 
         return n_nodes_before - self.tree.n_nodes
-
-    def _prune_subtree(self, subtree):
-        subtree.left_subtree = None
-        subtree.right_subtree = None
-        self.tree.update_tree()
 
 
 class Splitter:
