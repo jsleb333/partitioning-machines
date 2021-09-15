@@ -1,12 +1,12 @@
 import os, sys
 
-from pandas.core.dtypes.dtypes import CategoricalDtype
 sys.path.append(os.getcwd())
 from urllib import request
 import pandas as pd
 import numpy as np
 from zipfile import ZipFile
-import re
+
+from utils import camel_to_snake
 
 
 dataset_list = []
@@ -20,12 +20,6 @@ def load_datasets(datasets=None):
         if datasets is not None and dataset.name in datasets:
             yield dataset
             dataset.unload()
-
-
-def camel_to_snake(name):
-    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
-
 
 class Nominal(pd.CategoricalDtype):
     def __init__(self, categories=None):
