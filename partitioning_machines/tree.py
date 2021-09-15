@@ -221,17 +221,29 @@ class Tree:
             raise RuntimeError('Cannot split internal node.')
         return self.replace_subtree(Tree(Tree(), Tree()), update_tree=update_tree)
 
-    def remove_subtree(self, update_tree=True):
+    def remove_subtree(self, update_tree: bool = True, inplace: bool = True):
         """
         Transforms the subtree into a leaf.
 
-        Returns self.
+        Args:
+            update_tree (bool):
+                If True, will automatically update the attributes of the tree (height, lenght, n_leaves, etc.).
+            inplace (bool):
+                If True, will remove the subtree of the current tree. Otherwise, the current tree is (shallow) copied before the subtree is removed.
+
+        Returns self or a new tree.
         """
-        self.left_subtree = None
-        self.right_subtree = None
+        if inplace:
+            subtree = self
+        else:
+            copy_of_tree = copy(self.root)
+            subtree = copy_of_tree.follow_path(self.path_from_root())
+
+        subtree.left_subtree = None
+        subtree.right_subtree = None
         if update_tree:
-            self.update_tree()
-        return self
+            subtree.update_tree()
+        return subtree
 
     def path_from_root(self):
         """
