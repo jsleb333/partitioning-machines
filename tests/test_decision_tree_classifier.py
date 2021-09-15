@@ -273,13 +273,6 @@ class TestDecisionTreeClassifier:
         dtc.fit(X, y)
         assert dtc.predict_proba(X).shape == (5, 3)
 
-    def test_prune_subtree(self):
-        dtc = DecisionTreeClassifier(gini_impurity_criterion)
-        dtc.fit(X, y)
-        assert dtc.tree.n_leaves == 3
-        dtc._prune_subtree(dtc.tree.left_subtree) == 1
-        assert dtc.tree.n_leaves == 2
-
     def test_compute_pruning_coefficients(self):
         dtc = DecisionTreeClassifier(gini_impurity_criterion)
         dtc.fit(X, y)
