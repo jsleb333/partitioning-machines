@@ -1,16 +1,18 @@
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import numpy as np
 import sys, os
 sys.path.append(os.getcwd())
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from copy import deepcopy
 import csv
 from time import time
 from datetime import datetime
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion, shawe_taylor_bound_pruning_objective_factory, breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from experiments.pruning import prune_with_bound, prune_with_cv
+from experiments.pruning import prune_with_cv, prune_with_score
 
-from datasets.datasets import Dataset, camel_to_snake
+from datasets.datasets import Dataset
+from utils import camel_to_snake
 
 
 class Logger:
@@ -45,9 +47,10 @@ class Logger:
 
 
 class Tracker:
-    def start(self):
+    def start(self, model_name):
         self.times = []
         self.draw_start = time()
+        print(f'Running model {model_name.replace("_", " ")}')
 
     def display_mean_time(self, draw: int) -> None:
         self.times.append(time() - self.draw_start)
@@ -82,7 +85,7 @@ class Experiment:
         if logger:
             logger.dump_exp_config(self.model_name, self.config)
         if tracker:
-            tracker.start()
+            tracker.start(self.model_name)
 
         for draw in range(self.n_draws):
             metrics = self._run(draw, *args, **kwargs)
@@ -98,57 +101,62 @@ class Experiment:
 
     def _run(self, draw: int, *args, **kwargs) -> dict:
         seed = draw*10 + 1
-        X_tr, X_ts, y_tr, y_ts = train_test_split(self.dataset.examples, self.dataset.labels,
-                                                  test_size=self.test_split_ratio,
-                                                  random_state=seed)
-        tree = self._fit_tree(X_tr, y_tr, *args, **kwargs)
-        t_start = time()
-        self._prune_tree(*args, tree=tree, **kwargs)
-        elapsed_time = time() - t_start
-        acc_tr, acc_ts = self._evaluate_tree(X_tr, X_ts, y_tr, y_ts, tree=tree, **kwargs)
 
-        leaves = tree.tree.n_leaves
-        height = tree.tree.height
-        bound = tree.bound_value
+        self._prepare_data(seed)
+
+        self._fit_tree(*args, **kwargs)
+
+        t_start = time()
+        self._prune_tree(*args, **kwargs)
+        elapsed_time = time() - t_start
+
+        acc_tr, acc_ts = self._evaluate_tree(*args, **kwargs)
 
         metrics = {'draw': draw,
                    'seed': seed,
                    'train_accuracy': acc_tr,
                    'test_accuracy': acc_ts,
-                   'n_leaves': leaves,
-                   'height': height,
-                   'bound': bound,
+                   'n_leaves': self.dtc.tree.n_leaves,
+                   'height': self.dtc.tree.height,
+                   'bound': self.dtc.bound_value,
                    'time': elapsed_time}
         return metrics
 
-    def _fit_tree(self, X_tr, y_tr) -> None:
-        tree = DecisionTreeClassifier(gini_impurity_criterion,
+    def _prepare_data(self, seed, *args, **kwargs) -> None:
+        self.X_tr, self.X_ts, self.y_tr, self.y_ts = train_test_split(
+            self.dataset.examples, self.dataset.labels,
+            test_size=self.test_split_ratio,
+            random_state=seed
+        )
+
+    def _fit_tree(self, *args, **kwargs) -> None:
+        self.dtc = DecisionTreeClassifier(gini_impurity_criterion,
                                       max_n_leaves=self.max_n_leaves)
 
         nominal_mask = [i in self.dataset.nominal_features for i in range(self.dataset.n_features)]
-        tree.fit(X_tr, y_tr, nominal_mask=nominal_mask)
-        tree.bound_value = 'NA'
-        return tree
+        self.dtc.fit(self.X_tr, self.y_tr, nominal_mask=nominal_mask)
+        self.dtc.bound_value = 'NA'
 
-    def _prune_tree(self, tree) -> None:
+    def _prune_tree(self, *args, **kwargs) -> None:
         raise NotImplementedError
 
-    def _evaluate_tree(self, X_tr, X_ts, y_tr, y_ts, tree) -> tuple[float, float]:
-        acc_tr = accuracy_score(y_tr, tree.predict(X_tr))
-        acc_ts = accuracy_score(y_ts, tree.predict(X_ts))
+    def _evaluate_tree(self, *args, **kwargs) -> tuple[float, float]:
+        acc_tr = accuracy_score(self.y_tr, self.dtc.predict(self.X_tr))
+        acc_ts = accuracy_score(self.y_ts, self.dtc.predict(self.X_ts))
         return acc_tr, acc_ts
 
 
 class NoPruning(Experiment):
-    def _prune_tree(self, tree) -> None:
+    def _prune_tree(self, *args, **kwargs) -> None:
         pass
+
 
 class PruneOursShaweTaylor(Experiment):
     def __init__(self, *, error_prior_exponent: float = 13.1, **kwargs) -> None:
         super().__init__(**kwargs)
         self.error_prior_exponent = error_prior_exponent
 
-    def _prune_tree(self, tree) -> None:
+    def _prune_tree(self, *args, **kwargs) -> None:
         r = 1/2**self.error_prior_exponent
         errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
         bound = shawe_taylor_bound_pruning_objective_factory(
@@ -157,10 +165,68 @@ class PruneOursShaweTaylor(Experiment):
             self.dataset.ordinal_feat_dist,
             errors_logprob_prior=errors_logprob_prior)
 
-        tree.bound_value = prune_with_bound(tree, bound)
+        self.dtc.bound_value = prune_with_score(self.dtc.tree, bound)
+
+
+class PruneCART(Experiment):
+    def __init__(self, *,n_folds: int = 10, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.n_folds = n_folds
+
+    def _prune_tree(self, *args, **kwargs) -> None:
+        prune_with_cv(self.dtc, self.X_tr, self.y_tr, n_folds=self.n_folds, pruning_objective=breiman_alpha_pruning_objective)
+
+
+class PruneCARTModified(PruneCART):
+        def _prune_tree(self, *args, **kwargs) -> None:
+            pruning_objective = modified_breiman_pruning_objective_factory(self.dataset.n_features)
+            prune_with_cv(self.dtc,
+                          self.X_tr, self.y_tr,
+                          n_folds=self.n_folds,
+                          pruning_objective=pruning_objective)
+
+
+class ErrorScore:
+    def __init__(self, dtc, X, y) -> None:
+        self.dtc = deepcopy(dtc)
+        self.X, self.y = X, y
+
+    def __call__(self, pruned_tree, subtree) -> float:
+        self.dtc.tree = pruned_tree
+        return 1 - accuracy_score(y_true=self.y, y_pred=self.dtc.predict(self.X))
+
+
+class OraclePrune(Experiment):
+    def _prune_tree(self, *args, **kwargs) -> None:
+        test_error_score = ErrorScore(self.dtc, self.X_ts, self.y_ts)
+        prune_with_score(self.dtc.tree, test_error_score)
+
+
+class PruneError(Experiment):
+    def __init__(self, val_split_ratio: float = .2, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.val_split_ratio = val_split_ratio
+
+    def _prepare_data(self, seed, *args, **kwargs) -> None:
+        super()._prepare_data(seed, *args, **kwargs)
+        self.X_tr, self.X_val, self.y_tr, self.y_val = train_test_split(
+            self.X_tr, self.y_tr,
+            test_size=self.val_split_ratio,
+            random_state=seed+6
+        )
+
+    def _run(self, draw: int, *args, **kwargs) -> dict:
+        metrics = super()._run(draw, *args, **kwargs)
+        metrics |= {'validation_accuracy': accuracy_score(self.y_val, self.dtc.predict(self.X_val))}
+        return metrics
+
+    def _prune_tree(self, *args, **kwargs) -> None:
+        val_error_score = ErrorScore(self.dtc, self.X_val, self.y_val)
+        prune_with_score(self.dtc.tree, val_error_score)
 
 
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
-    e = PruneOursShaweTaylor(dataset=Wine, n_draws=2)
-    e.run(tracker=Tracker(), logger=Logger(exp_path='./test/'))
+    for exp in [NoPruning, PruneOursShaweTaylor, PruneCART, PruneCARTModified, PruneError, OraclePrune]:
+        e = exp(dataset=Iris, n_draws=2)
+        e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
