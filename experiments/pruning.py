@@ -1,29 +1,48 @@
+from re import sub
 from sklearn.model_selection import KFold
 from sklearn.metrics import zero_one_loss
 import numpy as np
 from copy import copy
+from typing import Callable
 
-from partitioning_machines import breiman_alpha_pruning_objective
+from partitioning_machines import breiman_alpha_pruning_objective, DecisionTree
 
 
-def prune_with_bound(decision_tree, bound):
+def prune_with_score(decision_tree: DecisionTree,
+                     score_fn: Callable[[DecisionTree, DecisionTree], float],
+                     minimize: bool = True) -> float:
+    """Prune a decision tree classifier using a score function to compare unpruned tree with pruned ones. This corresponds to Algorithm 3 in Appendix E of the paper of Leboeuf et al. (2020).
+
+    Args:
+        decision_tree (DecisionTree): The fully grown decision tree classifier trained on some dataset.
+        score_fn (Callable[[DecisionTree, DecisionTree], float]): A scoring function that characterizes the performance of the pruned tree. The function will receive as input the a pruned temporary copy of the original tree as well as a reference to the original subtree that was pruned.
+        minimize (bool, optional): Determines if the score function should be minimized or maximized. Defaults to True.
+
+    Returns the best score (a float).
     """
-    Prunes the tree as described by Algorithm 3 in Appendix E of the paper.
+    sign = 1 if minimize else -1
 
-    Only to the outside 'while' loop of the algorithm is implemented in here. The 'for' loop is implemented by the 'prune_tree' method of the decision tree classifier object (which is called here).
-    """
-    leaf = decision_tree.tree
-    while not leaf.is_leaf():
-        leaf = leaf.left_subtree
-    best_bound = bound(leaf)
-    bounds_value = decision_tree.compute_pruning_coefficients(bound)
+    best_score = tmp_best_score = score_fn(decision_tree, decision_tree)
 
-    while bounds_value and bounds_value[0] <= best_bound:
-        best_bound = bounds_value[0]
-        decision_tree.prune_tree(best_bound)
-        bounds_value = decision_tree.compute_pruning_coefficients(bound)
+    while not decision_tree.is_leaf():
+        new_best_found = False
+        for subtree in decision_tree:
+            if subtree.is_leaf():
+                continue
+            tmp_pruned_tree = subtree.remove_subtree(inplace=False).root
+            tmp_score = score_fn(tmp_pruned_tree, subtree)
+            if tmp_score*sign <= tmp_best_score*sign:
+                tmp_best_score = tmp_score
+                tmp_best_subtree = subtree
+                new_best_found = True
 
-    return best_bound
+        if new_best_found:
+            tmp_best_subtree.remove_subtree(inplace=True) # Prunes the original decision_tree
+            best_score = tmp_best_score
+        else:
+            break
+
+    return best_score
 
 
 def prune_with_cv(
