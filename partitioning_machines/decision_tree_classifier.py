@@ -4,7 +4,7 @@ from partitioning_machines import Tree
 from partitioning_machines import OneHotEncoder
 
 
-class _DecisionTree(Tree):
+class DecisionTree(Tree):
     def __init__(self,
                  impurity_score,
                  n_examples_by_label,
@@ -145,7 +145,7 @@ class DecisionTreeClassifier:
 
     def _init_tree(self, encoded_y, n_examples):
         n_examples_by_label = np.sum(encoded_y, axis=0)
-        self.tree = _DecisionTree(self.impurity_criterion(n_examples_by_label/n_examples),
+        self.tree = DecisionTree(self.impurity_criterion(n_examples_by_label/n_examples),
                          n_examples_by_label)
 
     def _select_best_split(self, possible_splits):
@@ -379,12 +379,12 @@ class Split:
 
     def apply_split(self):
         impurity_left = self.impurity_criterion(self.n_examples_by_label_left/self.n_examples_left)
-        left_leaf = _DecisionTree(impurity_left,
+        left_leaf = DecisionTree(impurity_left,
                                   self.n_examples_by_label_left.copy(),
                                   parent=self.leaf)
 
         impurity_right = self.impurity_criterion(self.n_examples_by_label_right/self.n_examples_right)
-        right_leaf = _DecisionTree(impurity_right,
+        right_leaf = DecisionTree(impurity_right,
                                   self.n_examples_by_label_right.copy(),
                                   parent=self.leaf)
         self.leaf.left_subtree = left_leaf
