@@ -1,22 +1,14 @@
 """
 This file contains the code necessary to run all experiments of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020). See the README for usage details.
 """
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import numpy as np
 import sys, os
 sys.path.append(os.getcwd())
 from datetime import datetime
-import csv
-from time import time
-
 from graal_utils import Timer
 
-from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion, shawe_taylor_bound_pruning_objective_factory, breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from experiments.pruning import prune_with_bound, prune_with_cv
+from experiment import NoPruning, PruneOursShaweTaylor, PruneCART, PruneCARTModified
+from datasets.datasets import load_datasets
 from partitioning_machines import func_to_cmd
-
-from datasets.datasets import load_datasets, Dataset
 
 
 
@@ -164,6 +156,5 @@ def launch_experiment(dataset=list(),
                                          )
 
 if __name__ == "__main__":
-    # launch_experiment()
-    e = Experiment('test', load_datasets(['iris']))
+    launch_experiment()
 
