@@ -38,23 +38,19 @@ def shawe_taylor_bound_pruning_objective_factory(n_features,
         s = 2
         complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
 
-    def shawe_taylor_bound_pruning_objective(subtree):
-        copy_of_tree = copy(subtree.root)
-        copy_of_subtree = copy_of_tree.follow_path(subtree.path_from_root())
-        copy_of_subtree.remove_subtree()
-
-        n_classes = copy_of_tree.n_examples_by_label.shape[0]
-        growth_function = growth_function_upper_bound(copy_of_tree,
+    def shawe_taylor_bound_pruning_objective(pruned_tree, subtree):
+        n_classes = pruned_tree.n_examples_by_label.shape[0]
+        growth_function = growth_function_upper_bound(pruned_tree,
                                                       n_features,
                                                       nominal_feat_dist=nominal_feat_dist,
                                                       ordinal_feat_dist=ordinal_feat_dist,
                                                       n_classes=n_classes,
                                                       pre_computed_tables=table,
                                                       loose=loose_pfub)
-        n_examples = copy_of_tree.n_examples
-        n_errors = copy_of_tree.n_errors
+        n_examples = pruned_tree.n_examples
+        n_errors = pruned_tree.n_errors
         errors_logprob = errors_logprob_prior(n_errors)
-        complexity_logprob = complexity_logprob_prior(copy_of_tree.n_leaves)
+        complexity_logprob = complexity_logprob_prior(pruned_tree.n_leaves)
 
         return shawe_taylor_bound(n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, delta)
 
