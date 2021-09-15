@@ -200,7 +200,6 @@ class DecisionTreeClassifier:
         if pruning_objective is not None:
             self.compute_pruning_coefficients(pruning_objective)
 
-        subtrees_to_remove = []
         n_nodes_before = self.tree.n_nodes
 
         for subtree in self.tree:
