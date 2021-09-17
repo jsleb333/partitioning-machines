@@ -6,7 +6,7 @@ sys.path.append(os.getcwd())
 from datetime import datetime
 from graal_utils import Timer
 
-from experiments.experiment import NoPruning, OursShaweTaylorPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning, experiments_list
+from experiments.experiment import experiments_list
 from experiments.experiment import Tracker, Logger
 from experiments.utils import camel_to_snake, filter_signature
 from datasets.datasets import load_datasets
@@ -18,11 +18,9 @@ def launch_experiment(datasets=list(),
                       model_names=list(),
                       exp_name='',
                       test_split_ratio=.25,
-                    #   n_draws=25,
-                      n_draws=1,
+                      n_draws=25,
                       n_folds=10,
-                      max_n_leaves=2,
-                    #   max_n_leaves=40,
+                      max_n_leaves=30,
                       error_prior_exponent=13.1,
                       ):
     """
