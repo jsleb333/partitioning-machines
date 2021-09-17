@@ -1,16 +1,18 @@
-import sys, os
-sys.path.append(os.getcwd())
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from copy import deepcopy
 import csv
 from time import time
 from datetime import datetime
 
-from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion, shawe_taylor_bound_pruning_objective_factory, breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from experiments.pruning import prune_with_cv, prune_with_score
+import sys, os
+sys.path.append(os.getcwd())
 
+from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
+from partitioning_machines import shawe_taylor_bound, vapnik_bound
+from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
+
+from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from datasets.datasets import Dataset
 from utils import camel_to_snake
 
@@ -151,24 +153,24 @@ class NoPruning(Experiment):
         pass
 
 
-class PruneOursShaweTaylor(Experiment):
+class OursShaweTaylorPruning(Experiment):
     def __init__(self, *, error_prior_exponent: float = 13.1, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.error_prior_exponent = error_prior_exponent
+        r = 1/2**error_prior_exponent
+        self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
 
     def _prune_tree(self, *args, **kwargs) -> None:
-        r = 1/2**self.error_prior_exponent
-        errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
-        bound = shawe_taylor_bound_pruning_objective_factory(
+        bound_score = BoundScore(
             self.dataset.n_features,
             self.dataset.nominal_feat_dist,
             self.dataset.ordinal_feat_dist,
-            errors_logprob_prior=errors_logprob_prior)
+            bound=shawe_taylor_bound,
+            errors_logprob_prior=self.errors_logprob_prior
+        )
+        self.dtc.bound_value = prune_with_score(self.dtc.tree, bound_score)
 
-        self.dtc.bound_value = prune_with_score(self.dtc.tree, bound)
 
-
-class PruneCART(Experiment):
+class CARTPruning(Experiment):
     def __init__(self, *,n_folds: int = 10, **kwargs) -> None:
         super().__init__(**kwargs)
         self.n_folds = n_folds
@@ -177,7 +179,7 @@ class PruneCART(Experiment):
         prune_with_cv(self.dtc, self.X_tr, self.y_tr, n_folds=self.n_folds, pruning_objective=breiman_alpha_pruning_objective)
 
 
-class PruneCARTModified(PruneCART):
+class CARTPruningModified(CARTPruning):
         def _prune_tree(self, *args, **kwargs) -> None:
             pruning_objective = modified_breiman_pruning_objective_factory(self.dataset.n_features)
             prune_with_cv(self.dtc,
@@ -186,23 +188,13 @@ class PruneCARTModified(PruneCART):
                           pruning_objective=pruning_objective)
 
 
-class ErrorScore:
-    def __init__(self, dtc, X, y) -> None:
-        self.dtc = deepcopy(dtc)
-        self.X, self.y = X, y
-
-    def __call__(self, pruned_tree, subtree) -> float:
-        self.dtc.tree = pruned_tree
-        return 1 - accuracy_score(y_true=self.y, y_pred=self.dtc.predict(self.X))
-
-
-class OraclePrune(Experiment):
+class OraclePruning(Experiment):
     def _prune_tree(self, *args, **kwargs) -> None:
         test_error_score = ErrorScore(self.dtc, self.X_ts, self.y_ts)
         prune_with_score(self.dtc.tree, test_error_score)
 
 
-class PruneError(Experiment):
+class ReducedErrorPruning(Experiment):
     def __init__(self, val_split_ratio: float = .2, **kwargs) -> None:
         super().__init__(**kwargs)
         self.val_split_ratio = val_split_ratio
@@ -225,8 +217,11 @@ class PruneError(Experiment):
         prune_with_score(self.dtc.tree, val_error_score)
 
 
+experiments_list = [NoPruning, OursShaweTaylorPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning]
+
+
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
-    for exp in [NoPruning, PruneOursShaweTaylor, PruneCART, PruneCARTModified, PruneError, OraclePrune]:
+    for exp in [NoPruning, OursShaweTaylorPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning]:
         e = exp(dataset=Iris, n_draws=2)
         e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
