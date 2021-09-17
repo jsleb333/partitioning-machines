@@ -17,7 +17,7 @@ def load_datasets(datasets=None):
         datasets (list of str): Lists of datasets to load by name. If None, all available datasets are loaded iteratively.
     """
     for dataset in dataset_list:
-        if datasets is not None and dataset.name in datasets:
+        if (not datasets) or (datasets and dataset.name in datasets):
             yield dataset
             dataset.unload()
 
@@ -81,10 +81,11 @@ class Dataset(type):
         return feat_dist
 
     def unload(cls):
-        del cls.dataframe
-        del cls.data
-        del cls.target
-        cls._is_loaded = False
+        if cls._is_loaded:
+            del cls.dataframe
+            del cls.data
+            del cls.target
+            cls._is_loaded = False
 
     def __call__(cls, *args, **kwds): # Makes the dataset a singleton
         if not cls._is_loaded:
