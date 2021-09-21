@@ -53,16 +53,23 @@ def launch_experiment(datasets=list(),
     for dataset in load_datasets(datasets):
         for model_name, model in models.items():
             with Timer(f'{model_name} model on dataset {dataset.name} with {dataset.n_examples} examples'):
-                exp_path = f'./experiments/results/{exp_name}/{dataset.name}/'
-                filter_signature(model)(
-                    dataset=dataset,
-                    exp_name=exp_name,
-                    test_split_ratio=test_split_ratio,
-                    n_draws=n_draws,
-                    n_folds=n_folds,
-                    max_n_leaves=max_n_leaves,
-                    error_prior_exponent=error_prior_exponent,
-                ).run(logger=Logger(exp_path), tracker=Tracker())
+                try:
+                    exp_path = f'./experiments/results/{exp_name}/{dataset.name}/'
+                    filter_signature(model)(
+                        dataset=dataset,
+                        exp_name=exp_name,
+                        test_split_ratio=test_split_ratio,
+                        n_draws=n_draws,
+                        n_folds=n_folds,
+                        max_n_leaves=max_n_leaves,
+                        error_prior_exponent=error_prior_exponent,
+                    ).run(logger=Logger(exp_path), tracker=Tracker())
+                except Exception as err:
+                    print(f'!!! Unable to complete experiment due to {err!r}!!!')
+
 
 if __name__ == "__main__":
-    launch_experiment()
+    launch_experiment(
+        model_names=['ours_hyp_inv_pruning'],
+        exp_name='exp01',
+    )

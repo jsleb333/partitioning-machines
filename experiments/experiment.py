@@ -5,12 +5,18 @@ import csv
 from time import time
 from datetime import datetime
 
+
+from graal_utils import timed, Timer
 import sys, os
+
 sys.path.append(os.getcwd())
+
+from hypergeo import hypinv_upperbound
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import shawe_taylor_bound, vapnik_bound
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
+from partitioning_machines import growth_function_upper_bound, wedderburn_etherington
 
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from datasets.datasets import Dataset
@@ -154,10 +160,14 @@ class NoPruning(Experiment):
 
 
 class OursShaweTaylorPruning(Experiment):
-    def __init__(self, *, error_prior_exponent: float = 13.1, **kwargs) -> None:
+    def __init__(self, *,
+                 error_prior_exponent: float = 13.1,
+                 delta: float = 0.05,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
         r = 1/2**error_prior_exponent
         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
+        self.delta = delta
 
     def _prune_tree(self, *args, **kwargs) -> None:
         bound_score = BoundScore(
@@ -165,8 +175,38 @@ class OursShaweTaylorPruning(Experiment):
             self.dataset.nominal_feat_dist,
             self.dataset.ordinal_feat_dist,
             bound=shawe_taylor_bound,
-            errors_logprob_prior=self.errors_logprob_prior
+            errors_logprob_prior=self.errors_logprob_prior,
+            delta=self.delta,
         )
+        self.dtc.bound_value = prune_with_score(self.dtc.tree, bound_score)
+
+
+class OursHypInvPruning(Experiment):
+    def __init__(self, *, delta: float = .05, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.delta = delta
+
+    def _prune_tree(self, *args, **kwargs) -> None:
+        def bound_score(pruned_tree, subtree):
+            growth_function = growth_function_upper_bound(
+                pruned_tree,
+                self.dataset.n_features,
+                nominal_feat_dist=self.dataset.nominal_feat_dist,
+                ordinal_feat_dist=self.dataset.ordinal_feat_dist,
+                n_classes=self.dataset.n_classes,
+                loose=True
+            )
+            n_leaves = pruned_tree.n_leaves
+            complexity_prob = 1/n_leaves * 1/wedderburn_etherington(n_leaves)
+
+            return hypinv_upperbound(
+                pruned_tree.n_errors,
+                pruned_tree.n_examples,
+                growth_function,
+                delta=self.delta * complexity_prob,
+                mprime=4*pruned_tree.n_examples,
+            )
+
         self.dtc.bound_value = prune_with_score(self.dtc.tree, bound_score)
 
 
@@ -217,11 +257,12 @@ class ReducedErrorPruning(Experiment):
         prune_with_score(self.dtc.tree, val_error_score)
 
 
-experiments_list = [NoPruning, OursShaweTaylorPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning]
+experiments_list = [NoPruning, OursShaweTaylorPruning, OursHypInvPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning]
 
 
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
-    for exp in [NoPruning, OursShaweTaylorPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning]:
+    # for exp in [OursShaweTaylorPruning]:
+    for exp in [OursHypInvPruning]:
         e = exp(dataset=Iris, n_draws=2)
         e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
