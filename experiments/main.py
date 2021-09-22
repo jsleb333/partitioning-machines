@@ -9,7 +9,7 @@ from graal_utils import Timer
 from experiments.experiment import experiments_list
 from experiments.experiment import Tracker, Logger
 from experiments.utils import camel_to_snake, filter_signature
-from datasets.datasets import load_datasets
+from experiments.datasets.datasets import load_datasets
 from partitioning_machines import func_to_cmd
 
 

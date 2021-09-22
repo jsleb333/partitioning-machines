@@ -515,5 +515,3 @@ if __name__ == "__main__":
         print(d)
         assert not np.isnan(d.data.sum())
         print(i, d.name, d.nominal_features, d.nominal_feat_dist)
-
-
