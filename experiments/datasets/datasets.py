@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from zipfile import ZipFile
 
-from utils import camel_to_snake
+from experiments.utils import camel_to_snake
 
 
 dataset_list = []

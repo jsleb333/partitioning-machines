@@ -19,8 +19,8 @@ from partitioning_machines import breiman_alpha_pruning_objective, modified_brei
 from partitioning_machines import growth_function_upper_bound, wedderburn_etherington
 
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
-from datasets.datasets import Dataset
-from utils import camel_to_snake
+from experiments.datasets.datasets import Dataset
+from experiments.utils import camel_to_snake
 
 
 class Logger:
