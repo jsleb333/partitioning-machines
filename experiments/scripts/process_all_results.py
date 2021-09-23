@@ -39,7 +39,9 @@ def process_results(exp_name='exp01'):
 
     model_names = [camel_to_snake(exp.__name__) for exp in experiments_list]
 
-    caption = """Mean test accuracy and standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository \\citep{Dua:2019}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a $0.5\%$ accuracy gap are highlighted in bold."""
+    significance = 0.25
+
+    caption = f"""Mean test accuracy and standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
 
     label = "results"
 
@@ -81,7 +83,7 @@ def process_results(exp_name='exp01'):
 
             table[d+2, i+1] = MeanWithStd(100*np.array(ts_acc, dtype=float))
 
-        table[d+2,1:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=0.01, rtol=0)
+        table[d+2,1:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=significance, rtol=0)
 
     d = [dataset_list[i] for i in [0, 2, 3, 4, 16]]
 

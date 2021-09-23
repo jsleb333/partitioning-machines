@@ -5,8 +5,6 @@ import csv
 from time import time
 from datetime import datetime
 
-
-from graal_utils import timed, Timer
 import sys, os
 
 sys.path.append(os.getcwd())
@@ -20,7 +18,7 @@ from partitioning_machines import growth_function_upper_bound, wedderburn_etheri
 
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from experiments.datasets.datasets import Dataset
-from experiments.utils import camel_to_snake
+from experiments.utils import camel_to_snake, Mock
 
 
 class Logger:
@@ -57,18 +55,21 @@ class Logger:
 class Tracker:
     def start(self, model_name):
         self.times = []
-        self.draw_start = time()
         print(f'Running model {model_name.replace("_", " ")}')
 
-    def display_mean_time(self, draw: int) -> None:
-        self.times.append(time() - self.draw_start)
-        time_str = f'\tMean time per draw: {sum(self.times)/len(self.times):.3f}s.' if self.times else ''
-        print(f'Running draw #{draw:02d}...' + time_str, end='\r')
-
+    def display_progress_before(self, draw: int) -> None:
+        print(f'Running draw #{draw:02d}...', end='\r')
         self.draw_start = time()
 
+    def display_progress_after(self, draw: int) -> None:
+        self.times.append(time() - self.draw_start)
+        print(f'Running draw #{draw:02d}...' + self._mean_time_per_draw(), end='\r')
+
+    def _mean_time_per_draw(self):
+        return f'\tMean time per draw: {sum(self.times)/len(self.times):.3f}s.' if self.times else ''
+
     def end(self, draw: int) -> None:
-        print(f'\rCompleted all {draw+1} draws.')
+        print(f'\rCompleted all {draw+1} draws.' + self._mean_time_per_draw())
 
 
 class Experiment:
@@ -88,24 +89,23 @@ class Experiment:
         self.n_draws = n_draws
         self.max_n_leaves = max_n_leaves
 
-    def run(self, *args, logger: Logger = None, tracker: Tracker = None, **kwargs) -> None:
+    def run(self,
+            *args,
+            logger: Logger = Mock(),
+            tracker: Tracker = Mock(),
+            **kwargs) -> None:
 
-        if logger:
-            logger.dump_exp_config(self.model_name, self.config)
-        if tracker:
-            tracker.start(self.model_name)
+        logger.dump_exp_config(self.model_name, self.config)
+        tracker.start(self.model_name)
 
         for draw in range(self.n_draws):
+            tracker.display_progress_before(draw)
             metrics = self._run(draw, *args, **kwargs)
-            if logger:
-                logger.dump_row(metrics, self.model_name)
-            if tracker:
-                tracker.display_mean_time(draw)
+            tracker.display_progress_after(draw)
+            logger.dump_row(metrics, self.model_name)
 
-        if tracker:
-            tracker.end(draw)
-        if logger:
-            logger.close()
+        tracker.end(draw)
+        logger.close()
 
     def _run(self, draw: int, *args, **kwargs) -> dict:
         seed = draw*10 + 1
@@ -235,7 +235,7 @@ class OraclePruning(Experiment):
 
 
 class ReducedErrorPruning(Experiment):
-    def __init__(self, val_split_ratio: float = .2, **kwargs) -> None:
+    def __init__(self, val_split_ratio: float = .25, **kwargs) -> None:
         super().__init__(**kwargs)
         self.val_split_ratio = val_split_ratio
 
@@ -264,5 +264,6 @@ if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
     # for exp in [OursShaweTaylorPruning]:
     for exp in [OursHypInvPruning]:
-        e = exp(dataset=Iris, n_draws=2)
-        e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
+        e = exp(dataset=Iris, n_draws=4)
+        # e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
+        e.run()

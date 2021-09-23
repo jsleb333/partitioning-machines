@@ -20,3 +20,11 @@ def filter_signature(cls):
         return cls(*args, **kwargs)
 
     return init_cls
+
+
+class Mock:
+    def __getattr__(self, attr):
+        return self
+
+    def __call__(self, *args, **kwds):
+        return self
