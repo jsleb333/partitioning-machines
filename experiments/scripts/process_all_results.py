@@ -48,7 +48,7 @@ def process_results(exp_name='exp01'):
     alignement = r'@{\hspace{6pt}}'.join('l'+'c'*len(model_names))
     table = doc.new(p2l.Table(
         (len(dataset_list)+2, len(model_names)+1),
-        float_format='.1f',
+        float_format='.2f',
         alignment=alignement,
         caption=caption,
         label=label

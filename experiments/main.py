@@ -70,6 +70,7 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['reduced_error_pruning'],
-        exp_name='exp01',
+        # model_names=['reduced_error_pruning'],
+        exp_name='exp02',
+        n_draws=100,
     )
