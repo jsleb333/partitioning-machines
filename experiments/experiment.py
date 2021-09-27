@@ -196,8 +196,7 @@ class OursHypInvPruning(Experiment):
                 n_classes=self.dataset.n_classes,
                 loose=True
             )
-            n_leaves = pruned_tree.n_leaves
-            complexity_prob = 1/n_leaves * 1/wedderburn_etherington(n_leaves)
+            complexity_prob = 1/self.max_n_leaves * 1/wedderburn_etherington(pruned_tree.n_leaves)
 
             return hypinv_upperbound(
                 pruned_tree.n_errors,
