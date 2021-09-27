@@ -4,6 +4,7 @@ sys.path.append(os.getcwd())
 from datetime import datetime
 import csv
 import numpy as np
+from scipy.stats import t as students_t
 
 from experiments.datasets.datasets import dataset_list
 from experiments.experiment import experiments_list
@@ -12,20 +13,24 @@ from experiments.utils import camel_to_snake
 from partitioning_machines import func_to_cmd
 
 
-class MeanWithStd(float, p2l.TexObject):
-    def __new__(cls, array):
+class MeanWithCI(float, p2l.TexObject):
+    def __new__(cls, array, confidence_level=.6827):
         mean = array.mean()
         instance = super().__new__(cls, mean)
         instance.mean = mean
-        instance.std = array.std()
+        instance.std = array.std(ddof=1)
+        instance.ci = MeanWithCI.confidence_interval(instance, confidence_level, len(array))
         return instance
 
+    def confidence_interval(self, confidence_level, n_samples):
+        return self.std * students_t.ppf((1+confidence_level)/2, n_samples-1)
+
     def __format__(self, format_spec):
-        return f'${format(self.mean, format_spec)} \pm {format(self.std, format_spec)}$'
+        return f'${format(self.mean, format_spec)} \pm {format(self.ci, format_spec)}$'
 
 
 @func_to_cmd
-def process_results(exp_name='exp01'):
+def process_results(exp_name='exp02'):
     """
     Produces Table 1 from the paper (Appendix E). Will try to call pdflatex if installed.
 
@@ -34,12 +39,12 @@ def process_results(exp_name='exp01'):
 
     Prints in the console the tex string used to produce the tables, and will compile it if possible.
     """
-    doc = p2l.Document(exp_name + '_all_results', '.')
+    doc = p2l.Document(exp_name + '_all_results', './experiments/results/' + exp_name)
     doc.packages['geometry'].options.append('landscape')
 
     model_names = [camel_to_snake(exp.__name__) for exp in experiments_list]
 
-    significance = 0.25
+    significance = 0.1
 
     caption = f"""Mean test accuracy and standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
 
@@ -64,7 +69,8 @@ def process_results(exp_name='exp01'):
                    .replace('Hyp Inv', 'HTI')
                    for name in model_names]
     table[0,1:].add_rule()
-    table[2:,0] = [d.name.replace('_', ' ').title() + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
+    is_nominal = lambda d: '*' if d.nominal_features else ''
+    table[2:,0] = [d.name.replace('_', ' ').title() + is_nominal(d) + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
     table[1].add_rule()
 
     for d, dataset in enumerate(dataset_list):
@@ -78,10 +84,11 @@ def process_results(exp_name='exp01'):
                     pos = header.index('test_accuracy')
                     for row in reader:
                         ts_acc.append(row[pos])
+                table[d+2, i+1] = MeanWithCI(100*np.array(ts_acc, dtype=float))
+
             except FileNotFoundError:
                 ts_acc.append(np.nan)
 
-            table[d+2, i+1] = MeanWithStd(100*np.array(ts_acc, dtype=float))
 
         table[d+2,1:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=significance, rtol=0)
 
@@ -97,10 +104,10 @@ def process_results(exp_name='exp01'):
 
     doc.add_package('natbib')
 
-    print(doc.build(save_to_disk=False))
+    # print(doc.build(save_to_disk=False, delete_files='all'))
 
     try:
-        doc.build()
+        doc.build(delete_files='all')
     except:
         pass
 
