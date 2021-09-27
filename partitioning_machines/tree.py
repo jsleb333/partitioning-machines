@@ -146,10 +146,30 @@ class Tree:
         """
         Iterates on every subtrees of the tree in a pre-order fashion.
         """
-        yield self
-        if not self.is_leaf():
-            yield from self.left_subtree
-            yield from self.right_subtree
+        yield from self.traverse()
+
+    def traverse(self, order='pre'):
+        """
+        Iterates on every subtrees of the tree in the specified order. Valid orders are 'pre', 'in' and 'post'.
+        """
+        if order == 'pre':
+            yield self
+            if not self.is_leaf():
+                yield from self.left_subtree
+                yield from self.right_subtree
+        elif order == 'in':
+            if not self.is_leaf():
+                yield from self.left_subtree
+            yield self
+            if not self.is_leaf():
+                yield from self.right_subtree
+        elif order == 'post':
+            if not self.is_leaf():
+                yield from self.left_subtree
+                yield from self.right_subtree
+            yield self
+        else:
+            raise ValueError('Unknown traversal order.')
 
     def __contains__(self, obj):
         if obj is self:
