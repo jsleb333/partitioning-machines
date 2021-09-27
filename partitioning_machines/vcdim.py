@@ -2,8 +2,8 @@ from partitioning_machines import PartitioningFunctionUpperBound
 
 
 def vcdim_upper_bound(tree, n_rl_feat, ordinal_feat_dist=None, nominal_feat_dist=None):
-    """
-    Computes an upper bound on the VC dimension of a tree knowing the number of available features. Implements Algorithm 2 of Appendix E of Leboeuf et al. (2020).
+    r"""
+    Computes an upper bound on the VC dimension of a tree knowing the number of available features. Implements Algorithm 2 of Appendix E of 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020).
 
     Args:
         tree (Tree object):
@@ -27,8 +27,8 @@ def vcdim_upper_bound(tree, n_rl_feat, ordinal_feat_dist=None, nominal_feat_dist
 
 
 def vcdim_lower_bound(tree, n_rl_feat):
-    """
-    Computes a lower bound on the VC dimension of a tree knowing the number of available features. Implements Algorithm 3 of Appendix E of Leboeuf et al. (2020).
+    r"""
+    Computes a lower bound on the VC dimension of a tree knowing the number of available features. Implements the algorithm of Figure 7 of Yildiz (2015) with the base case replaced by our exact value for stumps. Implements Algorithm 3 of Appendix E of Leboeuf et al. (2020).
 
     Args:
         tree (Tree object):
