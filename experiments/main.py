@@ -70,7 +70,7 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['ours_hyp_inv_pruning'],
-        exp_name='exp02-hti01',
+        model_names=['kearns_mansour_pruning'],
+        exp_name='exp02-km01',
         n_draws=100,
     )

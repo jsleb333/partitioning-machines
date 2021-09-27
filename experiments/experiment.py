@@ -4,9 +4,9 @@ from sklearn.metrics import accuracy_score
 import csv
 from time import time
 from datetime import datetime
+from copy import copy
 
 import sys, os
-
 sys.path.append(os.getcwd())
 
 from hypergeo import hypinv_upperbound
@@ -15,6 +15,7 @@ from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterio
 from partitioning_machines import shawe_taylor_bound, vapnik_bound
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from partitioning_machines import growth_function_upper_bound, wedderburn_etherington
+from partitioning_machines import Tree
 
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from experiments.datasets.datasets import Dataset
@@ -229,13 +230,62 @@ class CARTPruningModified(CARTPruning):
 
 
 class KearnsMansourPruning(Experiment):
+    def __init__(self, *, delta: float = .05, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.delta = delta
+
+    def alpha(self, subtree):
+        """
+        Equation (2) of the paper of Kearns and Mansour (1998) using our growth function upper bound.
+        """
+        tree_path = copy(subtree.root)
+        for direction in subtree.path_from_root():
+            if direction == 'left':
+                tree_path.right_subtree.remove_subtree()
+                tree_path = tree_path.left_subtree
+            else:
+                tree_path.left_subtree.remove_subtree()
+                tree_path = tree_path.right_subtree
+            tree_path.remove_subtree()
+            tree_path = tree_path.root
+
+        gf_tree_path = growth_function_upper_bound(
+            tree_path,
+            self.dataset.n_features,
+            nominal_feat_dist=self.dataset.nominal_feat_dist,
+            ordinal_feat_dist=self.dataset.ordinal_feat_dist,
+            n_classes=self.dataset.n_classes,
+            loose=True
+        )(subtree.n_examples)
+
+        gf_subtree = growth_function_upper_bound(
+            subtree,
+            self.dataset.n_features,
+            nominal_feat_dist=self.dataset.nominal_feat_dist,
+            ordinal_feat_dist=self.dataset.ordinal_feat_dist,
+            n_classes=self.dataset.n_classes,
+            loose=True
+        )(subtree.n_examples)
+
+        return np.sqrt(
+            (np.log(float(gf_tree_path))
+             + np.log(float(gf_subtree))
+             + np.log(self.dataset.n_examples/self.delta)
+            )/subtree.n_examples)
+
     def _prune_tree(self, *args, **kwargs) -> None:
-        def score_fn():
-            pass
-        prune_with_score(
-            decision_tree=self.dtc.tree,
-            score_fn=score_fn,
-        )
+        """
+        Equation (1) of the paper of Kearns and Mansour (1998).
+        """
+        for subtree in self.dtc.tree.traverse(order='post'):
+            if subtree.is_leaf():
+                continue
+            frac_errors_subtree = subtree.n_errors/subtree.n_examples
+            frac_errors_leaf = 1 - np.max(subtree.n_examples_by_label)/subtree.n_examples
+
+            subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree)
+
+        self.dtc.prune_tree(0)
 
 class OraclePruning(Experiment):
     def _prune_tree(self, *args, **kwargs) -> None:
@@ -266,13 +316,13 @@ class ReducedErrorPruning(Experiment):
         prune_with_score(self.dtc.tree, val_error_score)
 
 
-experiments_list = [NoPruning, OursShaweTaylorPruning, OursHypInvPruning, CARTPruning, CARTPruningModified, ReducedErrorPruning, OraclePruning]
+experiments_list = [NoPruning, OursShaweTaylorPruning, OursHypInvPruning, CARTPruning, CARTPruningModified, KearnsMansourPruning, ReducedErrorPruning, OraclePruning]
 
 
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
     # for exp in [OursShaweTaylorPruning]:
-    for exp in [OursHypInvPruning]:
-        e = exp(dataset=Iris, n_draws=4)
-        # e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
-        e.run()
+    # for exp in [OursHypInvPruning]:
+    for exp in [KearnsMansourPruning]:
+        e = exp(dataset=Iris, n_draws=2)
+        e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
