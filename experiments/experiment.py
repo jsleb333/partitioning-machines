@@ -220,13 +220,22 @@ class CARTPruning(Experiment):
 
 
 class CARTPruningModified(CARTPruning):
-        def _prune_tree(self, *args, **kwargs) -> None:
-            pruning_objective = modified_breiman_pruning_objective_factory(self.dataset.n_features)
-            prune_with_cv(self.dtc,
-                          self.X_tr, self.y_tr,
-                          n_folds=self.n_folds,
-                          pruning_objective=pruning_objective)
+    def _prune_tree(self, *args, **kwargs) -> None:
+        pruning_objective = modified_breiman_pruning_objective_factory(self.dataset.n_features)
+        prune_with_cv(self.dtc,
+                      self.X_tr, self.y_tr,
+                      n_folds=self.n_folds,
+                      pruning_objective=pruning_objective)
 
+
+class KearnsMansourPruning(Experiment):
+    def _prune_tree(self, *args, **kwargs) -> None:
+        def score_fn():
+            pass
+        prune_with_score(
+            decision_tree=self.dtc.tree,
+            score_fn=score_fn,
+        )
 
 class OraclePruning(Experiment):
     def _prune_tree(self, *args, **kwargs) -> None:
