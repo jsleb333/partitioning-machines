@@ -46,13 +46,13 @@ def process_results(exp_name='exp02'):
 
     significance = 0.1
 
-    caption = f"""Mean test accuracy and standard deviation on 25 random splits of 19 datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
+    caption = f"""Mean test accuracy and standard deviation on 25 random splits of {len(dataset_list)} datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
 
     label = "results"
 
     alignement = r'@{\hspace{6pt}}'.join('l'+'c'*len(model_names))
     table = doc.new(p2l.Table(
-        (len(dataset_list)+2, len(model_names)+1),
+        (len(dataset_list)+6, len(model_names)+1),
         float_format='.2f',
         alignment=alignement,
         caption=caption,
@@ -67,11 +67,15 @@ def process_results(exp_name='exp02'):
                    .replace(' Pruning', '')
                    .replace('Shawe Taylor', 'ST')
                    .replace('Hyp Inv', 'HTI')
+                   .replace('Kearns Mansour', 'KM')
                    for name in model_names]
     table[0,1:].add_rule()
     is_nominal = lambda d: '*' if d.nominal_features else ''
-    table[2:,0] = [d.name.replace('_', ' ').title() + is_nominal(d) + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
+    table[2:len(dataset_list)+2,0] = [d.name.replace('_', ' ').title() + is_nominal(d) + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
     table[1].add_rule()
+    table[-5].add_rule()
+
+    ts_accs = np.zeros((len(model_names), len(dataset_list)))
 
     for d, dataset in enumerate(dataset_list):
         for i, model_name in enumerate(model_names):
@@ -87,10 +91,29 @@ def process_results(exp_name='exp02'):
                 table[d+2, i+1] = MeanWithCI(100*np.array(ts_acc, dtype=float))
 
             except FileNotFoundError:
-                ts_acc.append(np.nan)
+                pass
 
+            ts_accs[i,d] = np.mean(np.array(ts_acc, dtype=float))
 
         table[d+2,1:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=significance, rtol=0)
+
+    table[-4,0] = r'Number of best'
+    bests = np.isclose(ts_accs, np.max(ts_accs[:-1,:], axis=0), rtol=0, atol=significance/100)
+    table[-4,1:] = np.sum(bests, axis=1)
+    table[-3,0] = r'Better than Ours ST'
+    bests = np.zeros_like(ts_accs, dtype=int)
+    for d in range(len(dataset_list)):
+        b = ts_accs[1,d]
+        for i in range(len(model_names)):
+            a = ts_accs[i,d]
+            if a > b and not np.isclose(a, b, rtol=0, atol=significance/100):
+                bests[i,d] = 1
+    table[-3,1:] = np.sum(bests, axis=1)
+
+    table[-2,0] = 'Mean'
+    table[-2,1:] = [MeanWithCI(ts_accs[i]*100) for i in range(len(model_names))]
+    table[-1,0] = 'Fraction of oracle'
+    table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_names))]
 
     d = [dataset_list[i] for i in [0, 2, 3, 4, 16]]
 
@@ -104,12 +127,12 @@ def process_results(exp_name='exp02'):
 
     doc.add_package('natbib')
 
-    # print(doc.build(save_to_disk=False, delete_files='all'))
 
-    try:
-        doc.build(delete_files='all')
-    except:
-        pass
+    doc.build(delete_files='all')
+    # try:
+    #     doc.build(delete_files='all')
+    # except:
+    #     pass
 
 
 if __name__ == "__main__":
