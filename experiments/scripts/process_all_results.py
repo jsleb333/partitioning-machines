@@ -26,7 +26,8 @@ class MeanWithCI(float, p2l.TexObject):
         return self.std * students_t.ppf((1+confidence_level)/2, n_samples-1)
 
     def __format__(self, format_spec):
-        return f'${format(self.mean, format_spec)} \pm {format(self.ci, format_spec)}$'
+        # return f'${format(self.mean, format_spec)} \pm {format(self.ci, format_spec)}$'
+        return f'${format(self.mean, format_spec)}$'
 
 
 @func_to_cmd
@@ -46,7 +47,7 @@ def process_results(exp_name='exp02'):
 
     significance = 0.1
 
-    caption = f"""Mean test accuracy and standard deviation on 25 random splits of {len(dataset_list)} datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
+    caption = f"""Mean test accuracy and standard deviation on 100 random splits of {len(dataset_list)} datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
 
     label = "results"
 
@@ -117,13 +118,13 @@ def process_results(exp_name='exp02'):
 
     d = [dataset_list[i] for i in [0, 2, 3, 4, 16]]
 
-    table[2,0] = f'BCWD\\textsuperscript{{a}} ({d[0].n_examples}, {d[0].n_classes})'
-    table[4,0] = f'CMSC\\textsuperscript{{b}} ({d[1].n_examples}, {d[1].n_classes})'
-    table[5,0] = f'CBS\\textsuperscript{{c}} ({d[2].n_examples}, {d[2].n_classes})'
-    table[6,0] = f'DRD\\textsuperscript{{d}} ({d[3].n_examples}, {d[3].n_classes})'
-    table[18,0] = f'WFR24\\textsuperscript{{e}} ({d[4].n_examples}, {d[4].n_classes})'
+    # table[2,0] = f'BCWD\\textsuperscript{{a}} ({d[0].n_examples}, {d[0].n_classes})'
+    # table[4,0] = f'CMSC\\textsuperscript{{b}} ({d[1].n_examples}, {d[1].n_classes})'
+    # table[5,0] = f'CBS\\textsuperscript{{c}} ({d[2].n_examples}, {d[2].n_classes})'
+    # table[6,0] = f'DRD\\textsuperscript{{d}} ({d[3].n_examples}, {d[3].n_classes})'
+    # table[18,0] = f'WFR24\\textsuperscript{{e}} ({d[4].n_examples}, {d[4].n_classes})'
 
-    table += """\n\\footnotesize \\textsuperscript{a}Breast Cancer Wisconsin Diagnostic, \\textsuperscript{b}Climate Model Simulation Crashes, \\textsuperscript{c}Connectionist Bench Sonar,\n\n\\textsuperscript{d}Diabetic Retinopathy Debrecen, \\textsuperscript{e}Wall Following Robot 24"""
+    # table += """\n\\footnotesize \\textsuperscript{a}Breast Cancer Wisconsin Diagnostic, \\textsuperscript{b}Climate Model Simulation Crashes, \\textsuperscript{c}Connectionist Bench Sonar,\n\n\\textsuperscript{d}Diabetic Retinopathy Debrecen, \\textsuperscript{e}Wall Following Robot 24"""
 
     doc.add_package('natbib')
 
