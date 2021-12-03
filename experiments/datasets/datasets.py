@@ -509,9 +509,9 @@ class Zoo(metaclass=Dataset):
         return df
 
 
-
 if __name__ == "__main__":
-    for i, d in enumerate(load_datasets(['acute_inflammation'])):
-        print(d)
-        assert not np.isnan(d.data.sum())
-        print(i, d.name, d.nominal_features, d.nominal_feat_dist)
+    for i, d in enumerate(load_datasets()):
+        print(d, d.n_classes)
+        classes = np.unique(d.labels)
+        for c in classes:
+            print('\t', sum(c == d.labels)/d.n_examples)

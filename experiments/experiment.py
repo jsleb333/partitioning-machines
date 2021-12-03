@@ -5,6 +5,7 @@ import csv
 from time import time
 from datetime import datetime
 from copy import copy
+from inspect import signature
 
 import sys, os
 sys.path.append(os.getcwd())
@@ -19,7 +20,7 @@ from partitioning_machines import Tree
 
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from experiments.datasets.datasets import Dataset
-from experiments.utils import camel_to_snake, Mock
+from experiments.utils import camel_to_snake, Mock, get_default_kwargs
 
 
 class Logger:
@@ -76,19 +77,26 @@ class Tracker:
 class Experiment:
     def __new__(cls, *args, **kwargs):
         new_exp = super().__new__(cls)
-        new_exp.config = kwargs | {'datetime': datetime.now()}
+        new_exp.config = get_default_kwargs(cls) | kwargs | {'datetime': datetime.now()}
         return new_exp
 
     def __init__(self, *,
                  dataset: Dataset,
                  test_split_ratio: float = .2,
                  n_draws: int = 25,
-                 max_n_leaves: int = 40) -> None:
-        self.model_name = camel_to_snake(type(self).__name__)
+                 max_n_leaves: int = 40,
+                 seed: int = 42,
+                 model_name: str = None) -> None:
+        if model_name is None:
+            self.model_name = camel_to_snake(type(self).__name__)
+            self.config['model_name'] = self.model_name
+        else:
+            self.model_name = model_name
         self.dataset = dataset
         self.test_split_ratio = test_split_ratio
         self.n_draws = n_draws
         self.max_n_leaves = max_n_leaves
+        self.rng = np.random.RandomState(seed)
 
     def run(self,
             *args,
@@ -109,9 +117,9 @@ class Experiment:
         logger.close()
 
     def _run(self, draw: int, *args, **kwargs) -> dict:
-        seed = draw*10 + 1
+        draw_seed = self.rng.randint(2**31)
 
-        self._prepare_data(seed)
+        self._prepare_data(draw_seed)
 
         self._fit_tree(*args, **kwargs)
 
@@ -122,7 +130,7 @@ class Experiment:
         acc_tr, acc_ts = self._evaluate_tree(*args, **kwargs)
 
         metrics = {'draw': draw,
-                   'seed': seed,
+                   'seed': draw_seed,
                    'train_accuracy': acc_tr,
                    'test_accuracy': acc_ts,
                    'n_leaves': self.dtc.tree.n_leaves,
@@ -321,8 +329,8 @@ experiments_list = [NoPruning, OursShaweTaylorPruning, OursHypInvPruning, CARTPr
 
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
-    # for exp in [OursShaweTaylorPruning]:
-    # for exp in [OursHypInvPruning]:
-    for exp in [KearnsMansourPruning]:
-        e = exp(dataset=Iris, n_draws=2)
-        e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
+    # # for exp in [OursShaweTaylorPruning]:
+    # # for exp in [OursHypInvPruning]:
+    # for exp in [KearnsMansourPruning]:
+    #     e = exp(dataset=Iris, n_draws=2)
+    #     e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))

@@ -22,6 +22,17 @@ def filter_signature(cls):
     return init_cls
 
 
+def get_default_kwargs(cls):
+    default_kwargs = {}
+    for base_cls in cls.mro():
+        if base_cls is object: break
+        sig = signature(base_cls.__init__).parameters
+        default_kwargs |= {k:v.default for k, v in sig.items()}
+    default_kwargs.pop('self', None)
+    default_kwargs.pop('kwargs', None)
+    return default_kwargs
+
+
 class Mock:
     def __getattr__(self, attr):
         return self
