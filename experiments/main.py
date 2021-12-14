@@ -17,31 +17,38 @@ from partitioning_machines import func_to_cmd
 def launch_experiment(datasets=list(),
                       model_names=list(),
                       exp_name='',
-                      test_split_ratio=.25,
+                      test_split_ratio=.2,
+                      val_split_ratio=.25,
                       n_draws=25,
                       n_folds=10,
-                      max_n_leaves=30,
+                      max_n_leaves=50,
                       error_prior_exponent=13.1,
+                      seed=42,
                       ):
     """
     Will launch the experiment with specified parameters. Automatically saves all results in the file: "./experiments/results/<dataset_name>/<exp_name>/<model_name>.csv". Experiments parameters are saved in the file: "./experiments/results/<dataset_name>/<exp_name>/<model_name>_params.py". See the README for more usage details.
 
     Args:
-        datasets (list[str]): The list of datasets to be used in the experiment. By default (an empty list) will iterate over all available datasets. Otherwise, will launch experiment for the specified datasets. To see all available datasets, consult the file "./experiments/datasets/datasets.py".
-
-        model_names (list[str]): Valid model names are 'original', 'cart', 'm-cart' and 'ours'. By default 'all' will run all 4 models one after the other.
-
-        exp_name (str): Name of the experiment. Will be used to save the results on disk. If empty, the date and time of the beginning of the experiment will be used.
-
-        test_split_ratio (float): Ratio of examples that will be kept for test.
-
-        n_draws (int): Number of times the experiments will be run with a new random state.
-
-        n_folds (int): Number of folds used by the pruning algorithms of CART and M-CART. (Ignored by 'ours' algorithm).
-
-        max_n_leaves (int): Maximum number of leaves the original tree is allowed to have.
-
-        error_prior_exponent (int): The distribution q_k will be of the form (1-r) * r**k, where r = 2**(-error_prior_exponent). (Ignored by 'cart' and 'm-cart' algorithms).
+        datasets (list[str]):
+            The list of datasets to be used in the experiment. By default (an empty list) will iterate over all available datasets. Otherwise, will launch experiment for the specified datasets. To see all available datasets, consult the file "./experiments/datasets/datasets.py".
+        model_names (list[str]):
+            Valid model names are 'original', 'cart', 'm-cart' and 'ours'. By default 'all' will run all 4 models one after the other.
+        exp_name (str):
+            Name of the experiment. Will be used to save the results on disk. If empty, the date and time of the beginning of the experiment will be used.
+        test_split_ratio (float):
+            Ratio of examples that will be kept for test.
+        val_split_ratio (float):
+            Ratio of examples that will be kept for validation. Will be computed after the split for the test.
+        n_draws (int):
+            Number of times the experiments will be run with a new random state.
+        n_folds (int):
+            Number of folds used by the pruning algorithms of CART and M-CART. (Ignored by 'ours' algorithm).
+        max_n_leaves (int):
+            Maximum number of leaves the original tree is allowed to have.
+        error_prior_exponent (int):
+            The distribution q_k will be of the form (1-r) * r**k, where r = 2**(-error_prior_exponent). (Ignored by 'cart' and 'm-cart' algorithms).
+        seed (int):
+            Seed for the random states.
     """
     models = {camel_to_snake(exp.__name__): exp for exp in experiments_list}
     if model_names:
@@ -59,10 +66,12 @@ def launch_experiment(datasets=list(),
                         dataset=dataset,
                         exp_name=exp_name,
                         test_split_ratio=test_split_ratio,
+                        val_split_ratio=val_split_ratio,
                         n_draws=n_draws,
                         n_folds=n_folds,
                         max_n_leaves=max_n_leaves,
                         error_prior_exponent=error_prior_exponent,
+                        seed=seed,
                     ).run(logger=Logger(exp_path), tracker=Tracker())
                 except Exception as err:
                     print(f'!!! Unable to complete experiment due to {err!r}!!!')
@@ -70,7 +79,7 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['kearns_mansour_pruning'],
-        exp_name='exp02-km01',
-        n_draws=100,
+        model_names=['reduced_error_pruning'],
+        exp_name='test',
+        n_draws=1,
     )
