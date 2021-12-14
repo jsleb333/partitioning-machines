@@ -1,134 +1,96 @@
-import sys, os
-sys.path.append(os.getcwd())
-from sklearn.model_selection import train_test_split
-from datetime import datetime
-from graal_utils import Timer
+import python2latex as p2l
 import numpy as np
+import pandas as pd
+import os
 
-from experiments.experiment import NoPruning, ReducedErrorPruning, OursShaweTaylorPruning, OraclePruning
-from experiments.experiment import Tracker, Logger
-from experiments.utils import camel_to_snake, filter_signature
-from experiments.datasets.datasets import load_datasets, QSARBiodegradation
-from partitioning_machines import func_to_cmd
+exps = {
+    'NoP_val_01': {
+        'name': 'no_pruning',
+        'caption': 'No pruning'
+        },
+    'RE_val_01':{
+        'name': 'reduced_error_pruning',
+        'caption': 'Reduced error pruning'
+        },
+    'ST_val_01':{
+        'name': 'st_pruning',
+        'caption': 'Shawe-Taylor pruning (ours)'
+        },
+}
 
+def extract_data(prepend):
+    ratios = np.linspace(0.05, 0.95, 19)
+    tr, ts = [], []
 
-val_split_ratio = .25
+    for ratio in ratios:
+        str_ratio = f'{ratio:.2f}'
+        filepath = f'{prepend}{str_ratio}.csv'
+        if not os.path.exists(filepath):
+            filepath = f'{prepend}{str_ratio[:-1]}.csv'
 
+        df = pd.read_csv(filepath, sep=',', header=0)
 
-class NoPruningTrVal(NoPruning):
-    pass
+        tr.append(df['train_accuracy'].to_numpy().mean())
+        ts.append(df['test_accuracy'].to_numpy().mean())
 
-class NoPruningTr(NoPruning):
-    def __init__(self, *, val_split_ratio: float = 0.2, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.val_split_ratio = val_split_ratio
-
-    def _prepare_data(self, seed, *args, **kwargs) -> None:
-        super()._prepare_data(seed, *args, **kwargs)
-        self.X_tr, self.X_val, self.y_tr, self.y_val = train_test_split(
-            self.X_tr, self.y_tr,
-            test_size=self.val_split_ratio,
-            random_state=seed+6
-        )
-
-class STPruningTrVal(OursShaweTaylorPruning):
-    pass
-
-class STPruningTr(OursShaweTaylorPruning, NoPruningTr):
-    pass
-
-class REPruningTr(ReducedErrorPruning):
-    pass
-
-class OraclePruningTr(OraclePruning, NoPruningTr):
-    pass
-
-class OraclePruningTrVal(OraclePruning):
-    pass
-
-experiments_list = [NoPruningTr, NoPruningTrVal, STPruningTr, STPruningTrVal, REPruningTr, OraclePruningTr, OraclePruningTrVal]
+    return ratios, tr, ts
 
 
-@func_to_cmd
-def launch_experiment(datasets=list(),
-                      model_names=list(),
-                      exp_name='',
-                      test_split_ratio=.2,
-                      val_split_ratio=.25,
-                      n_draws=25,
-                      n_folds=10,
-                      max_n_leaves=50,
-                      error_prior_exponent=13.1,
-                      seed=42,
-                      ):
-    """
-    Will launch the experiment with specified parameters. Automatically saves all results in the file: "./experiments/results/<dataset_name>/<exp_name>/<model_name>.csv". Experiments parameters are saved in the file: "./experiments/results/<dataset_name>/<exp_name>/<model_name>_params.py". See the README for more usage details.
+def plot_single_exp(exp_name='RE_val_01'):
+    plot = p2l.Plot(plot_name=exp_name,
+                    plot_path='./experiments/results/re_results/'+exp_name,
+                    height='.25\\textheight')
 
-    Args:
-        datasets (list[str]):
-            The list of datasets to be used in the experiment. By default (an empty list) will iterate over all available datasets. Otherwise, will launch experiment for the specified datasets. To see all available datasets, consult the file "./experiments/datasets/datasets.py".
-        model_names (list[str]):
-            Valid model names are 'original', 'cart', 'm-cart' and 'ours'. By default 'all' will run all 4 models one after the other.
-        exp_name (str):
-            Name of the experiment. Will be used to save the results on disk. If empty, the date and time of the beginning of the experiment will be used.
-        test_split_ratio (float):
-            Ratio of examples that will be kept for test.
-        val_split_ratio (float):
-            Ratio of examples that will be kept for validation. Will be computed after the split for the test.
-        n_draws (int):
-            Number of times the experiments will be run with a new random state.
-        n_folds (int):
-            Number of folds used by the pruning algorithms of CART and M-CART. (Ignored by 'ours' algorithm).
-        max_n_leaves (int):
-            Maximum number of leaves the original tree is allowed to have.
-        error_prior_exponent (int):
-            The distribution q_k will be of the form (1-r) * r**k, where r = 2**(-error_prior_exponent). (Ignored by 'cart' and 'm-cart' algorithms).
-        seed (int):
-            Seed for the random states.
-    """
-    models = {camel_to_snake(exp.__name__): exp for exp in experiments_list}
-    if model_names:
-        models = {name: model for name, model in models.items() if name in model_names}
+    name = exps[exp_name]['name']
+    caption = exps[exp_name]['caption']
 
-    if not exp_name:
-        exp_name = exp_name if exp_name else datetime.now().strftime("%Y-%m-%d_%Hh%Mm")
+    prepend = f'./experiments/results/{exp_name}/qsar_biodegradation/{name}_val='
 
-    for dataset in load_datasets(datasets):
-        for model_name, model in models.items():
-            with Timer(f'{model_name} model on dataset {dataset.name} with {dataset.n_examples} examples'):
-                try:
-                    exp_path = f'./experiments/results/{exp_name}/{dataset.name}/'
-                    filter_signature(model)(
-                        dataset=dataset,
-                        exp_name=exp_name,
-                        test_split_ratio=test_split_ratio,
-                        val_split_ratio=val_split_ratio,
-                        n_draws=n_draws,
-                        n_folds=n_folds,
-                        max_n_leaves=max_n_leaves,
-                        error_prior_exponent=error_prior_exponent,
-                        seed=seed,
-                    ).run(logger=Logger(exp_path), tracker=Tracker())
-                except Exception as err:
-                    print(f'!!! Unable to complete experiment due to {err!r}!!!')
+    ratios, tr, ts = extract_data(prepend)
+
+    plot.add_plot(ratios, tr, legend='Train acc.')
+    plot.add_plot(ratios, ts, legend='Test acc.')
+    plot.legend_position = 'south west'
+
+    plot.y_min = 0.6
+    plot.y_max = 1
+    plot.y_label = 'Accuracy'
+    plot.x_min = 0
+    plot.x_max = 1
+    plot.x_label = 'Validation ratio'
+
+    return plot
 
 
-if __name__ == "__main__":
+def plot_all_exps():
+    plot = p2l.Plot(plot_name='all_exps',
+                    plot_path='./experiments/results/re_results/',
+                    height='.5\\textheight')
 
-    with Timer():
-        for i, ratio in enumerate(np.linspace(.05, .95, 19)):
-            class NoPruningVal(NoPruningTr):
-                def __init__(self, *,
-                             model_name=f'no_pruning_val={ratio}',
-                             **kwargs) -> None:
-                    super().__init__(model_name=model_name, **kwargs)
+    for (exp_name, exp), color in zip(exps.items(), p2l.holi):
+        name = exp['name']
+        caption = exp['caption']
+        prepend = f'./experiments/results/{exp_name}/qsar_biodegradation/{name}_val='
 
-            experiments_list = [NoPruningVal]
+        ratios, tr, ts = extract_data(prepend)
 
-            Timer(launch_experiment)(
-                model_names=[camel_to_snake(exp.__name__) for exp in experiments_list],
-                datasets=['qsar_biodegradation'],
-                exp_name='NoP_val_01',
-                val_split_ratio=ratio,
-                n_draws=10,
-            )
+        plot.add_plot(ratios, tr, legend=caption + ' train', color=color)
+        plot.add_plot(ratios, ts, 'dashed', legend=caption + ' test', color=color)
+
+    plot.legend_position = 'south west'
+
+    plot.y_min = 0.6
+    plot.y_max = 1
+    plot.y_label = 'Accuracy'
+    plot.x_min = 0
+    plot.x_max = 1
+    plot.x_label = 'Validation ratio'
+
+    return plot
+
+
+if __name__ == '__main__':
+    doc = p2l.Document(filename='comp_re', filepath='./experiments/results/re_results/')
+    doc += plot_all_exps()
+
+    doc.build(delete_files='all', show_pdf=False)
