@@ -1,10 +1,13 @@
 import os, sys
 
+from scipy.sparse import data
 sys.path.append(os.getcwd())
+
 from urllib import request
 import pandas as pd
 import numpy as np
 from zipfile import ZipFile
+from sklearn.model_selection import train_test_split
 
 from experiments.utils import camel_to_snake
 
@@ -38,7 +41,7 @@ class Label(pd.CategoricalDtype):
         super().__init__(categories=categories, ordered=False)
 
 
-class Dataset(type):
+class MetaDataset(type):
     """Dataset metaclass which makes every datasets implemented 'lazy' in the sense that it will be loaded in memory only when its attributes are accessed. Each dataset is a singleton and can be unloaded from memory using the 'unload' method.
     """
     def __init__(cls, cls_name, bases, attrs):
@@ -46,17 +49,21 @@ class Dataset(type):
         cls.name = camel_to_snake(cls_name)
         cls.path_to_raw_file = os.path.dirname(__file__) + '/raw/' + cls.name + '.raw'
         cls._is_loaded = False
+        cls._has_failed_to_load = False
         dataset_list.append(cls) # Append to the list of available datasets
 
     def load(cls):
-        cls._is_loaded == True
+        if cls._is_loaded and not cls._has_failed_to_load:
+            return cls
+        cls._has_failed_to_load = True
+
         if not os.path.exists(cls.path_to_raw_file):
             cls.download_dataset()
         cls.dataframe = cls.build_dataframe(cls)
         cls._convert_categorical_str_to_int(cls.dataframe)
 
-        cls.data = cls.examples = cls.dataframe.loc[:, cls.dataframe.columns != 'label'].to_numpy()
-        cls.target = cls.labels = cls.dataframe.loc[:, 'label'].to_numpy()
+        cls.data = cls.examples = cls.X = cls.dataframe.loc[:, cls.dataframe.columns != 'label'].to_numpy()
+        cls.target = cls.labels = cls.y = cls.dataframe.loc[:, 'label'].to_numpy()
         cls.n_examples = cls.data.shape[0]
         cls.n_features = cls.data.shape[1]
         cls.n_classes = len(set(cls.target))
@@ -69,6 +76,8 @@ class Dataset(type):
         cls.nominal_feat_dist = cls._compute_feature_distribution(cls.nominal_features)
         cls.ordinal_feat_dist = cls._compute_feature_distribution(cls.ordinal_features)
 
+        cls._is_loaded == True
+        cls._has_failed_to_load = False
         return cls
 
     def _compute_feature_distribution(cls, features):
@@ -87,12 +96,9 @@ class Dataset(type):
             del cls.target
             cls._is_loaded = False
 
-    def __call__(cls, *args, **kwds): # Makes the dataset a singleton
-        if not cls._is_loaded:
-            cls.load()
-        return cls
-
     def __getattr__(cls, attr): # Loads the dataset on-demand (i.e. lazily)
+        if cls._has_failed_to_load: # Avoids stack overflow if something were to happen.
+            raise RuntimeError('Something has prevented the dataset from loading into memory.')
         if not cls._is_loaded:
             cls.load()
             return getattr(cls, attr)
@@ -120,7 +126,53 @@ class Dataset(type):
         raise NotImplementedError
 
 
-class AcuteInflammation(metaclass=Dataset):
+class Dataset(metaclass=MetaDataset):
+    def __init__(self,
+                 val_ratio=0, test_ratio=0,
+                 shuffle=True
+                 ):
+        """Prepares an instance of a dataset to be used to train, validate and test a model by splitting the data into train, val and test sets. The data can be split in one of two ways: 1) by specifying the ratios of examples that should be put in a validation and in a test sets, or 2) by specifying the exact numbers of examples in each set. If at least one size is specified, the ratios will be ignored.
+
+        Args:
+            val_ratio (int, optional):
+                Ratio of the examples that will be set aside for the validation set. Defaults to 0.
+            test_ratio (int, optional):
+                Ratio of the examples that will be set aside for the test set. Defaults to 0.
+            shuffle (Union[bool, int], optional):
+                Whether to shuffle the examples when preparing the sets or not. If an integer, is used as random state seed. Defaults to True.
+        """
+        type(self).load()
+        self.val_size = np.rint(self.n_examples * val_ratio).astype(int)
+        self.test_size = np.rint(self.n_examples * test_ratio).astype(int)
+        self.train_size = self.n_examples - self.val_size - self.test_size
+
+        ind = np.arange(self.n_examples)
+        if shuffle:
+            if isinstance(shuffle, int):
+                np.random.RandomState(shuffle)
+            np.random.shuffle(ind)
+
+        tr_ind = ind[:self.train_size]
+        val_ind = ind[self.train_size:self.train_size + self.val_size]
+        ts_ind = ind[self.train_size + self.val_size:]
+
+        self.X_train, self.y_train = self.X[tr_ind], self.y[tr_ind]
+        self.X_val, self.y_val = self.X[val_ind], self.y[val_ind]
+        self.X_test, self.y_test = self.X[ts_ind], self.y[ts_ind]
+
+    def __call__(self, *args, **kwargs):
+        """Emulates a call to __init__, but modifies the dataset in-place instead of creating a new one. See the __init__ documentations for arguments.
+
+        Returns:
+            Dataset: A reference to self.
+        """
+        self.__init__( *args, **kwargs)
+        return self
+
+del dataset_list[0]
+
+
+class AcuteInflammation(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/acute/diagnosis.data"
     bibtex_label = "czerniak2003application"
     def build_dataframe(cls):
@@ -139,7 +191,7 @@ class AcuteInflammation(metaclass=Dataset):
             df.drop(columns=['Inflammation'])
         return df
 
-class Adult(metaclass=Dataset):
+class Adult(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
     bibtex_label = "kohavi1996scaling"
     def build_dataframe(cls):
@@ -164,7 +216,7 @@ class Adult(metaclass=Dataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
-class Amphibians(metaclass=Dataset):
+class Amphibians(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00528/dataset.csv"
     bibtex_label = "blachnik2019predicting"
     def build_dataframe(cls):
@@ -198,7 +250,7 @@ class Amphibians(metaclass=Dataset):
             df.drop(columns=['ID', 'MV', 'Brown frogs', 'Common toad', 'Fire-bellied toad', 'Tree frog', 'Common newt', 'Great crested newt'], inplace=True)
         return df
 
-class BreastCancerWisconsinDiagnostic(metaclass=Dataset):
+class BreastCancerWisconsinDiagnostic(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data"
     bibtex_label = "street1993nuclear"
     def build_dataframe(cls):
@@ -208,7 +260,7 @@ class BreastCancerWisconsinDiagnostic(metaclass=Dataset):
             df.drop(columns=col_names[0], inplace=True)
         return df
 
-class Cardiotocography10(metaclass=Dataset):
+class Cardiotocography10(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00193/CTG.xls"
     bibtex_label = "ayres2000sisporto"
     def build_dataframe(cls):
@@ -220,7 +272,7 @@ class Cardiotocography10(metaclass=Dataset):
             df.rename(columns={'CLASS':'label'}, inplace=True)
         return df
 
-class ClimateModelSimulationCrashes(metaclass=Dataset):
+class ClimateModelSimulationCrashes(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00252/pop_failures.dat"
     bibtex_label = "lucas2013failure"
     def build_dataframe(cls):
@@ -230,7 +282,7 @@ class ClimateModelSimulationCrashes(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class ConnectionistBenchSonar(metaclass=Dataset):
+class ConnectionistBenchSonar(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/undocumented/connectionist-bench/sonar/sonar.all-data"
     bibtex_label = "gorman1988analysis"
     def build_dataframe(cls):
@@ -239,7 +291,7 @@ class ConnectionistBenchSonar(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class DiabeticRetinopathyDebrecen(metaclass=Dataset):
+class DiabeticRetinopathyDebrecen(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00329/messidor_features.arff"
     bibtex_label = "antal2014ensemble"
     def build_dataframe(cls):
@@ -248,7 +300,7 @@ class DiabeticRetinopathyDebrecen(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Fertility(metaclass=Dataset):
+class Fertility(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00244/fertility_Diagnosis.txt"
     bibtex_label = "gil2012predicting"
     def build_dataframe(cls):
@@ -257,7 +309,7 @@ class Fertility(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class HabermansSurvival(metaclass=Dataset):
+class HabermansSurvival(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/haberman/haberman.data"
     bibtex_label = "haberman1976generalized"
     def build_dataframe(cls):
@@ -266,7 +318,7 @@ class HabermansSurvival(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class HeartDiseaseClevelandProcessed(metaclass=Dataset):
+class HeartDiseaseClevelandProcessed(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
     bibtex_label = "detrano1989international"
     def build_dataframe(cls):
@@ -290,7 +342,7 @@ class HeartDiseaseClevelandProcessed(metaclass=Dataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
-class ImageSegmentation(metaclass=Dataset):
+class ImageSegmentation(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/image/segmentation.data"
     bibtex_label = None
     def build_dataframe(cls):
@@ -299,7 +351,7 @@ class ImageSegmentation(metaclass=Dataset):
             df.rename(columns={list(df)[0]:'label'}, inplace=True)
         return df
 
-class Ionosphere(metaclass=Dataset):
+class Ionosphere(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/ionosphere/ionosphere.data"
     bibtex_label = "sigillito1989classification"
     def build_dataframe(cls):
@@ -308,7 +360,7 @@ class Ionosphere(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Iris(metaclass=Dataset):
+class Iris(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     bibtex_label = "fisher1936use"
     def build_dataframe(cls):
@@ -316,7 +368,7 @@ class Iris(metaclass=Dataset):
             df = pd.read_csv(file, header=None, names=['sepal length', 'sepal width', 'petal length', 'petal width', 'label'])
         return df
 
-class Mushroom(metaclass=Dataset):
+class Mushroom(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data"
     bibtex_label = "lincoff1997field"
     def build_dataframe(cls):
@@ -349,7 +401,7 @@ class Mushroom(metaclass=Dataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
         return df
 
-class Parkinson(metaclass=Dataset):
+class Parkinson(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/parkinsons/parkinsons.data"
     bibtex_label = "little2007exploiting"
     def build_dataframe(cls):
@@ -359,7 +411,7 @@ class Parkinson(metaclass=Dataset):
             df.drop(columns='name', inplace=True)
         return df
 
-class PlanningRelax(metaclass=Dataset):
+class PlanningRelax(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00230/plrx.txt"
     bibtex_label = "bhatt2012planning"
     def build_dataframe(cls):
@@ -369,7 +421,7 @@ class PlanningRelax(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class QSARBiodegradation(metaclass=Dataset):
+class QSARBiodegradation(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00254/biodeg.csv"
     bibtex_label = "mansouri2013quantitative"
     def build_dataframe(cls):
@@ -378,7 +430,7 @@ class QSARBiodegradation(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Seeds(metaclass=Dataset):
+class Seeds(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt"
     bibtex_label = "charytanowicz2010complete"
     def build_dataframe(cls):
@@ -387,7 +439,7 @@ class Seeds(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Spambase(metaclass=Dataset):
+class Spambase(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
     bibtex_label = None
     def build_dataframe(cls):
@@ -396,7 +448,7 @@ class Spambase(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class StatlogGerman(metaclass=Dataset):
+class StatlogGerman(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data"
     bibtex_label = "hofmann94statloggerman"
     def build_dataframe(cls):
@@ -426,7 +478,7 @@ class StatlogGerman(metaclass=Dataset):
             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features, delim_whitespace=True)
         return df
 
-class VertebralColumn3C(metaclass=Dataset):
+class VertebralColumn3C(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00212/vertebral_column_data.zip"
     bibtex_label = "berthonnaud2005analysis"
     def build_dataframe(cls):
@@ -436,7 +488,7 @@ class VertebralColumn3C(metaclass=Dataset):
                 df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class WallFollowingRobot24(metaclass=Dataset):
+class WallFollowingRobot24(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00194/sensor_readings_24.data"
     bibtex_label = "freire2009short"
     def build_dataframe(cls):
@@ -445,7 +497,7 @@ class WallFollowingRobot24(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Wine(metaclass=Dataset):
+class Wine(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine/wine.data"
     bibtex_label = "aeberhard1994comparative"
     def build_dataframe(cls):
@@ -469,7 +521,7 @@ class Wine(metaclass=Dataset):
             df = pd.read_csv(file, names=col_names, header=None)
         return df
 
-class Yeast(metaclass=Dataset):
+class Yeast(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data"
     bibtex_label = "horton1996probabilistic"
     def build_dataframe(cls):
@@ -479,7 +531,7 @@ class Yeast(metaclass=Dataset):
             df.rename(columns={list(df)[-1]:'label'}, inplace=True)
         return df
 
-class Zoo(metaclass=Dataset):
+class Zoo(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data"
     bibtex_label = "forsyth90zoo"
     def build_dataframe(cls):
