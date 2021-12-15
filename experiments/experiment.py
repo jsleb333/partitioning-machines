@@ -1,26 +1,14 @@
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 import csv
 from time import time
 from datetime import datetime
-from copy import copy
-from inspect import signature
 
 import sys, os
 sys.path.append(os.getcwd())
 
-from hypergeo import hypinv_upperbound
-
-from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
-from partitioning_machines import shawe_taylor_bound, vapnik_bound
-from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
-from partitioning_machines import growth_function_upper_bound, wedderburn_etherington
-from partitioning_machines import Tree
-
-from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from experiments.datasets.datasets import Dataset
 from experiments.utils import camel_to_snake, Mock, get_default_kwargs
+from experiments.models import Model, model_list
 
 
 class Logger:
@@ -78,24 +66,26 @@ class Experiment:
     def __new__(cls, *args, **kwargs):
         new_exp = super().__new__(cls)
         new_exp.config = get_default_kwargs(cls) | kwargs | {'datetime': datetime.now()}
+        model = new_exp.config[kwargs['model']]
+        print(model)
+        # new_exp.config['model_config'] = model.config
         return new_exp
 
     def __init__(self, *,
                  dataset: Dataset,
+                 model: Model,
+                 val_split_ratio: float = 0,
                  test_split_ratio: float = .2,
                  n_draws: int = 25,
-                 max_n_leaves: int = 40,
                  seed: int = 42,
-                 model_name: str = None) -> None:
-        if model_name is None:
-            self.model_name = camel_to_snake(type(self).__name__)
-            self.config['model_name'] = self.model_name
-        else:
-            self.model_name = model_name
+                 exp_name: str = None
+                 ):
         self.dataset = dataset
+        self.model = model
+        self.val_split_ratio = val_split_ratio
         self.test_split_ratio = test_split_ratio
         self.n_draws = n_draws
-        self.max_n_leaves = max_n_leaves
+        self.exp_name = exp_name
         self.rng = np.random.RandomState(seed)
 
     def run(self,
@@ -119,216 +109,38 @@ class Experiment:
     def _run(self, draw: int, *args, **kwargs) -> dict:
         draw_seed = self.rng.randint(2**31)
 
-        self._prepare_data(draw_seed)
+        self.dataset(self.val_split_ratio,
+                     self.test_split_ratio,
+                     shuffle=draw_seed)
 
-        self._fit_tree(*args, **kwargs)
+        self.fit_tree(self.dataset)
 
         t_start = time()
-        self._prune_tree(*args, **kwargs)
+        self.prune_tree(self.dataset)
         elapsed_time = time() - t_start
 
-        acc_tr, acc_ts = self._evaluate_tree(*args, **kwargs)
+        acc_tr, acc_val, acc_ts = self.evaluate_tree(self.dataset)
 
         metrics = {'draw': draw,
                    'seed': draw_seed,
                    'train_accuracy': acc_tr,
                    'test_accuracy': acc_ts,
-                   'n_leaves': self.dtc.tree.n_leaves,
-                   'height': self.dtc.tree.height,
-                   'bound': self.dtc.bound_value,
+                   'n_leaves': self.model.tree.n_leaves,
+                   'height': self.model.tree.height,
+                   'bound': self.model.bound_value,
                    'time': elapsed_time}
+        if acc_val is not None:
+            metrics['val_accuracy'] = acc_val
+
         return metrics
-
-    def _prepare_data(self, seed, *args, **kwargs) -> None:
-        self.X_tr, self.X_ts, self.y_tr, self.y_ts = train_test_split(
-            self.dataset.examples, self.dataset.labels,
-            test_size=self.test_split_ratio,
-            random_state=seed
-        )
-
-    def _fit_tree(self, *args, **kwargs) -> None:
-        self.dtc = DecisionTreeClassifier(gini_impurity_criterion,
-                                      max_n_leaves=self.max_n_leaves)
-
-        nominal_mask = [i in self.dataset.nominal_features for i in range(self.dataset.n_features)]
-        self.dtc.fit(self.X_tr, self.y_tr, nominal_mask=nominal_mask)
-        self.dtc.bound_value = 'NA'
-
-    def _prune_tree(self, *args, **kwargs) -> None:
-        raise NotImplementedError
-
-    def _evaluate_tree(self, *args, **kwargs) -> tuple[float, float]:
-        acc_tr = accuracy_score(self.y_tr, self.dtc.predict(self.X_tr))
-        acc_ts = accuracy_score(self.y_ts, self.dtc.predict(self.X_ts))
-        return acc_tr, acc_ts
-
-
-class NoPruning(Experiment):
-    def _prune_tree(self, *args, **kwargs) -> None:
-        pass
-
-
-class OursShaweTaylorPruning(Experiment):
-    def __init__(self, *,
-                 error_prior_exponent: float = 13.1,
-                 delta: float = 0.05,
-                 **kwargs) -> None:
-        super().__init__(**kwargs)
-        r = 1/2**error_prior_exponent
-        self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
-        self.delta = delta
-
-    def _prune_tree(self, *args, **kwargs) -> None:
-        bound_score = BoundScore(
-            self.dataset.n_features,
-            self.dataset.nominal_feat_dist,
-            self.dataset.ordinal_feat_dist,
-            bound=shawe_taylor_bound,
-            errors_logprob_prior=self.errors_logprob_prior,
-            delta=self.delta,
-        )
-        self.dtc.bound_value = prune_with_score(self.dtc.tree, bound_score)
-
-
-class OursHypInvPruning(Experiment):
-    def __init__(self, *, delta: float = .05, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.delta = delta
-
-    def _prune_tree(self, *args, **kwargs) -> None:
-        def bound_score(pruned_tree, subtree):
-            growth_function = growth_function_upper_bound(
-                pruned_tree,
-                self.dataset.n_features,
-                nominal_feat_dist=self.dataset.nominal_feat_dist,
-                ordinal_feat_dist=self.dataset.ordinal_feat_dist,
-                n_classes=self.dataset.n_classes,
-                loose=True
-            )
-            # complexity_prob = 1/self.max_n_leaves * 1/wedderburn_etherington(pruned_tree.n_leaves)
-            complexity_prob = 1/sum(wedderburn_etherington(n) for n in range(self.max_n_leaves))
-
-            return hypinv_upperbound(
-                pruned_tree.n_errors,
-                pruned_tree.n_examples,
-                growth_function,
-                delta=self.delta * complexity_prob,
-                mprime=4*pruned_tree.n_examples,
-            )
-
-        self.dtc.bound_value = prune_with_score(self.dtc.tree, bound_score)
-
-
-class CARTPruning(Experiment):
-    def __init__(self, *,n_folds: int = 10, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.n_folds = n_folds
-
-    def _prune_tree(self, *args, **kwargs) -> None:
-        prune_with_cv(self.dtc, self.X_tr, self.y_tr, n_folds=self.n_folds, pruning_objective=breiman_alpha_pruning_objective)
-
-
-class CARTPruningModified(CARTPruning):
-    def _prune_tree(self, *args, **kwargs) -> None:
-        pruning_objective = modified_breiman_pruning_objective_factory(self.dataset.n_features)
-        prune_with_cv(self.dtc,
-                      self.X_tr, self.y_tr,
-                      n_folds=self.n_folds,
-                      pruning_objective=pruning_objective)
-
-
-class KearnsMansourPruning(Experiment):
-    def __init__(self, *, delta: float = .05, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.delta = delta
-
-    def alpha(self, subtree):
-        """
-        Equation (2) of the paper of Kearns and Mansour (1998) using our growth function upper bound.
-        """
-        tree_path = copy(subtree.root)
-        for direction in subtree.path_from_root():
-            if direction == 'left':
-                tree_path.right_subtree.remove_subtree()
-                tree_path = tree_path.left_subtree
-            else:
-                tree_path.left_subtree.remove_subtree()
-                tree_path = tree_path.right_subtree
-            tree_path.remove_subtree()
-            tree_path = tree_path.root
-
-        gf_tree_path = growth_function_upper_bound(
-            tree_path,
-            self.dataset.n_features,
-            nominal_feat_dist=self.dataset.nominal_feat_dist,
-            ordinal_feat_dist=self.dataset.ordinal_feat_dist,
-            n_classes=self.dataset.n_classes,
-            loose=True
-        )(subtree.n_examples)
-
-        gf_subtree = growth_function_upper_bound(
-            subtree,
-            self.dataset.n_features,
-            nominal_feat_dist=self.dataset.nominal_feat_dist,
-            ordinal_feat_dist=self.dataset.ordinal_feat_dist,
-            n_classes=self.dataset.n_classes,
-            loose=True
-        )(subtree.n_examples)
-
-        return np.sqrt(
-            (np.log(float(gf_tree_path))
-             + np.log(float(gf_subtree))
-             + np.log(self.dataset.n_examples/self.delta)
-            )/subtree.n_examples)
-
-    def _prune_tree(self, *args, **kwargs) -> None:
-        """
-        Equation (1) of the paper of Kearns and Mansour (1998).
-        """
-        for subtree in self.dtc.tree.traverse(order='post'):
-            if subtree.is_leaf():
-                continue
-            frac_errors_subtree = subtree.n_errors/subtree.n_examples
-            frac_errors_leaf = 1 - np.max(subtree.n_examples_by_label)/subtree.n_examples
-
-            subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree)
-
-        self.dtc.prune_tree(0)
-
-class OraclePruning(Experiment):
-    def _prune_tree(self, *args, **kwargs) -> None:
-        test_error_score = ErrorScore(self.dtc, self.X_ts, self.y_ts)
-        prune_with_score(self.dtc.tree, test_error_score)
-
-
-class ReducedErrorPruning(Experiment):
-    def __init__(self, val_split_ratio: float = .25, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.val_split_ratio = val_split_ratio
-
-    def _prepare_data(self, seed, *args, **kwargs) -> None:
-        super()._prepare_data(seed, *args, **kwargs)
-        self.X_tr, self.X_val, self.y_tr, self.y_val = train_test_split(
-            self.X_tr, self.y_tr,
-            test_size=self.val_split_ratio,
-            random_state=seed+6
-        )
-
-    def _run(self, draw: int, *args, **kwargs) -> dict:
-        metrics = super()._run(draw, *args, **kwargs)
-        metrics |= {'validation_accuracy': accuracy_score(self.y_val, self.dtc.predict(self.X_val))}
-        return metrics
-
-    def _prune_tree(self, *args, **kwargs) -> None:
-        val_error_score = ErrorScore(self.dtc, self.X_val, self.y_val)
-        prune_with_score(self.dtc.tree, val_error_score)
-
-
-experiments_list = [NoPruning, OursShaweTaylorPruning, OursHypInvPruning, CARTPruning, CARTPruningModified, KearnsMansourPruning, ReducedErrorPruning, OraclePruning]
 
 
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
+    for model in model_list:
+        exp = Experiment(Iris,
+                         model(),
+                         .1)
     # # for exp in [OursShaweTaylorPruning]:
     # # for exp in [OursHypInvPruning]:
     # for exp in [KearnsMansourPruning]:
