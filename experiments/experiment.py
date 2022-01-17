@@ -116,7 +116,7 @@ class Experiment:
         self.model.fit_tree(dataset)
 
         t_start = time()
-        self.model.prune_tree(dataset)
+        self.model._prune_tree(dataset)
         elapsed_time = time() - t_start
 
         acc_tr, acc_val, acc_ts = self.model.evaluate_tree(dataset)

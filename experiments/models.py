@@ -57,7 +57,7 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
         self.fit(dataset.X_train, dataset.y_train, nominal_mask=nominal_mask)
         self.bound_value = 'NA'
 
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         raise NotImplementedError
 
     def evaluate_tree(self, dataset) -> tuple[float, float]:
@@ -73,7 +73,7 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
 del model_dict['model']
 
 class NoPruning(Model):
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         pass
 
 
@@ -87,7 +87,7 @@ class OursShaweTaylorPruning(Model):
         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
         self.delta = delta
 
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         bound_score = BoundScore(
             dataset.n_features,
             dataset.nominal_feat_dist,
@@ -104,7 +104,7 @@ class OursHypInvPruning(Model):
         super().__init__(**kwargs)
         self.delta = delta
 
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         def bound_score(pruned_tree, subtree):
             growth_function = growth_function_upper_bound(
                 pruned_tree,
@@ -133,12 +133,12 @@ class CARTPruning(Model):
         super().__init__(**kwargs)
         self.n_folds = n_folds
 
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         prune_with_cv(self, dataset.X_train, dataset.y_train, n_folds=self.n_folds, pruning_objective=breiman_alpha_pruning_objective)
 
 
 class CARTPruningModified(CARTPruning):
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         pruning_objective = modified_breiman_pruning_objective_factory(dataset.n_features)
         prune_with_cv(self,
                       dataset.X_train, dataset.y_train,
@@ -190,7 +190,7 @@ class KearnsMansourPruning(Model):
              + np.log(dataset.n_examples/self.delta)
             )/subtree.n_examples)
 
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         """
         Equation (1) of the paper of Kearns and Mansour (1998).
         """
@@ -202,15 +202,15 @@ class KearnsMansourPruning(Model):
 
             subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset)
 
-        self.prune_tree(0)
+        self._prune_tree(0)
 
 class OraclePruning(Model):
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         test_error_score = ErrorScore(self, dataset.X_test, dataset.y_test)
         prune_with_score(self.tree, test_error_score)
 
 
 class ReducedErrorPruning(Model):
-    def prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> None:
         val_error_score = ErrorScore(self, dataset.X_val, dataset.y_val)
         prune_with_score(self.tree, val_error_score)
