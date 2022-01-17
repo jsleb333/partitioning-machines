@@ -93,14 +93,14 @@ class Experiment:
             tracker: Tracker = Mock(),
             **kwargs) -> None:
 
-        logger.dump_exp_config(self.model_name, self.config)
-        tracker.start(self.model_name)
+        logger.dump_exp_config(self.model.model_name, self.config)
+        tracker.start(self.model.model_name)
 
         for draw in range(self.n_draws):
             tracker.display_progress_before(draw)
             metrics = self._run(draw, *args, **kwargs)
             tracker.display_progress_after(draw)
-            logger.dump_row(metrics, self.model_name)
+            logger.dump_row(metrics, self.model.model_name)
 
         tracker.end(draw)
         logger.close()
@@ -108,17 +108,18 @@ class Experiment:
     def _run(self, draw: int, *args, **kwargs) -> dict:
         draw_seed = self.rng.randint(2**31)
 
-        self.dataset(self.val_split_ratio,
-                     self.test_split_ratio,
-                     shuffle=draw_seed)
+        dataset = self.dataset(
+            self.val_split_ratio,
+            self.test_split_ratio,
+            shuffle=draw_seed)
 
-        self.fit_tree(self.dataset)
+        self.model.fit_tree(dataset)
 
         t_start = time()
-        self.prune_tree(self.dataset)
+        self.model.prune_tree(dataset)
         elapsed_time = time() - t_start
 
-        acc_tr, acc_val, acc_ts = self.evaluate_tree(self.dataset)
+        acc_tr, acc_val, acc_ts = self.model.evaluate_tree(dataset)
 
         metrics = {'draw': draw,
                    'seed': draw_seed,
@@ -140,6 +141,7 @@ if __name__ == '__main__':
         exp = Experiment(dataset=Iris,
                          model=model(),
                          val_split_ratio=.1)
+        exp.run(tracker=Tracker())
     # # for exp in [OursShaweTaylorPruning]:
     # # for exp in [OursHypInvPruning]:
     # for exp in [KearnsMansourPruning]:

@@ -6,9 +6,9 @@ sys.path.append(os.getcwd())
 from datetime import datetime
 from graal_utils import Timer
 
-from experiments.experiment import experiments_list
-from experiments.experiment import Tracker, Logger
-from experiments.utils import camel_to_snake, filter_signature
+from experiments.models import model_dict
+from experiments.experiment import Experiment, Tracker, Logger
+from experiments.utils import filter_signature
 from experiments.datasets.datasets import load_datasets
 from partitioning_machines import func_to_cmd
 
@@ -23,6 +23,7 @@ def launch_experiment(datasets=list(),
                       n_folds=10,
                       max_n_leaves=50,
                       error_prior_exponent=13.1,
+                      delta=.05,
                       seed=42,
                       ):
     """
@@ -47,12 +48,13 @@ def launch_experiment(datasets=list(),
             Maximum number of leaves the original tree is allowed to have.
         error_prior_exponent (int):
             The distribution q_k will be of the form (1-r) * r**k, where r = 2**(-error_prior_exponent). (Ignored by 'cart' and 'm-cart' algorithms).
+        delta (float):
+            TODO
         seed (int):
             Seed for the random states.
     """
-    models = {camel_to_snake(exp.__name__): exp for exp in experiments_list}
     if model_names:
-        models = {name: model for name, model in models.items() if name in model_names}
+        models = {name: model for name, model in model_dict.items() if name in model_names}
 
     if not exp_name:
         exp_name = exp_name if exp_name else datetime.now().strftime("%Y-%m-%d_%Hh%Mm")
@@ -61,25 +63,31 @@ def launch_experiment(datasets=list(),
         for model_name, model in models.items():
             with Timer(f'{model_name} model on dataset {dataset.name} with {dataset.n_examples} examples'):
                 try:
-                    exp_path = f'./experiments/results/{exp_name}/{dataset.name}/'
-                    filter_signature(model)(
-                        dataset=dataset,
-                        exp_name=exp_name,
-                        test_split_ratio=test_split_ratio,
-                        val_split_ratio=val_split_ratio,
-                        n_draws=n_draws,
-                        n_folds=n_folds,
+                    init_model = filter_signature(model)(
                         max_n_leaves=max_n_leaves,
                         error_prior_exponent=error_prior_exponent,
+                        delta=delta,
+                        n_folds=n_folds,
+                    )
+                    exp_path = f'./experiments/results/{exp_name}/{dataset.name}/'
+                    Experiment(
+                        dataset=dataset,
+                        model=init_model,
+                        val_split_ratio=val_split_ratio,
+                        test_split_ratio=test_split_ratio,
+                        n_draws=n_draws,
                         seed=seed,
+                        exp_name=exp_name,
                     ).run(logger=Logger(exp_path), tracker=Tracker())
                 except Exception as err:
                     print(f'!!! Unable to complete experiment due to {err!r}!!!')
+                    raise
 
 
 if __name__ == "__main__":
     launch_experiment(
         model_names=['reduced_error_pruning'],
+        datasets=['iris'],
         exp_name='test',
-        n_draws=1,
+        n_draws=2,
     )

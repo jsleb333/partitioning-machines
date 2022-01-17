@@ -101,8 +101,7 @@ class MetaDataset(type):
             raise RuntimeError('Something has prevented the dataset from loading into memory.')
         if not cls._is_loaded:
             cls.load()
-            return getattr(cls, attr)
-        raise AttributeError
+        return object.__getattribute__(cls, attr)
 
     def __repr__(cls):
         return f'Dataset {cls.name} with {cls.n_examples} examples and {cls.n_features} features'
@@ -127,10 +126,7 @@ class MetaDataset(type):
 
 
 class Dataset(metaclass=MetaDataset):
-    def __init__(self,
-                 val_ratio=0, test_ratio=0,
-                 shuffle=True
-                 ):
+    def __init__(self, val_ratio=0, test_ratio=0, shuffle=True):
         """Prepares an instance of a dataset to be used to train, validate and test a model by splitting the data into train, val and test sets. The data can be split in one of two ways: 1) by specifying the ratios of examples that should be put in a validation and in a test sets, or 2) by specifying the exact numbers of examples in each set. If at least one size is specified, the ratios will be ignored.
 
         Args:
@@ -141,6 +137,9 @@ class Dataset(metaclass=MetaDataset):
             shuffle (Union[bool, int], optional):
                 Whether to shuffle the examples when preparing the sets or not. If an integer, is used as random state seed. Defaults to True.
         """
+        self.prepare_splits(val_ratio, test_ratio, shuffle)
+
+    def prepare_splits(self, val_ratio=0, test_ratio=0, shuffle=True):
         type(self).load()
         self.val_size = np.rint(self.n_examples * val_ratio).astype(int)
         self.test_size = np.rint(self.n_examples * test_ratio).astype(int)
@@ -565,5 +564,5 @@ if __name__ == "__main__":
     for i, d in enumerate(load_datasets()):
         print(d, d.n_classes)
         classes = np.unique(d.labels)
-        for c in classes:
-            print('\t', sum(c == d.labels)/d.n_examples)
+        d()
+        print(d.X_train.shape)

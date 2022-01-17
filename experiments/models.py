@@ -33,9 +33,13 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
     def __init__(self, *,
                  model_name: str = None,
                  max_n_leaves: int = 40,
+                 impurity_criterion=gini_impurity_criterion,
                  **kwargs
                  ) -> None:
-        super().__init__(max_n_leaves=max_n_leaves, **kwargs)
+        super().__init__(
+            max_n_leaves=max_n_leaves,
+            impurity_criterion=impurity_criterion,
+            **kwargs)
         if model_name is None:
             self.model_name = camel_to_snake(type(self).__name__)
             self.config['model_name'] = self.model_name
@@ -61,7 +65,9 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
         acc_val = None
         if dataset.val_size > 0:
             acc_val = accuracy_score(dataset.y_val, self.predict(dataset.X_val))
-        acc_ts = accuracy_score(dataset.y_test, self.predict(dataset.X_test))
+        acc_ts = None
+        if dataset.test_size > 0:
+            acc_ts = accuracy_score(dataset.y_test, self.predict(dataset.X_test))
         return acc_tr, acc_val, acc_ts
 
 del model_dict['model']
