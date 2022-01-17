@@ -202,7 +202,7 @@ class KearnsMansourPruning(Model):
 
             subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset)
 
-        self._prune_tree(0)
+        self.prune_tree(0)
 
 class OraclePruning(Model):
     def _prune_tree(self, dataset) -> None:
