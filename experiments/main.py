@@ -91,5 +91,5 @@ if __name__ == "__main__":
         # datasets=['iris'],
         exp_name='exp03-more-leaves',
         n_draws=100,
-        max_n_leaves=60,
+        max_n_leaves=50,
     )
