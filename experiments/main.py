@@ -53,6 +53,7 @@ def launch_experiment(datasets=list(),
         seed (int):
             Seed for the random states.
     """
+    models = model_dict
     if model_names:
         models = {name: model for name, model in model_dict.items() if name in model_names}
 
@@ -86,8 +87,9 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['reduced_error_pruning'],
-        datasets=['iris'],
-        exp_name='test',
-        n_draws=2,
+        # model_names=['reduced_error_pruning'],
+        # datasets=['iris'],
+        exp_name='exp03-more-leaves',
+        n_draws=100,
+        max_n_leaves=60,
     )
