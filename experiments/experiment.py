@@ -7,8 +7,8 @@ import sys, os
 sys.path.append(os.getcwd())
 
 from experiments.datasets.datasets import Dataset
-from experiments.utils import camel_to_snake, Mock, get_default_kwargs
-from experiments.models import Model, model_list
+from experiments.utils import Mock, get_default_kwargs
+from experiments.models import Model, model_dict
 
 
 class Logger:
@@ -66,9 +66,8 @@ class Experiment:
     def __new__(cls, *args, **kwargs):
         new_exp = super().__new__(cls)
         new_exp.config = get_default_kwargs(cls) | kwargs | {'datetime': datetime.now()}
-        model = new_exp.config[kwargs['model']]
-        print(model)
-        # new_exp.config['model_config'] = model.config
+        model = new_exp.config['model']
+        new_exp.config['model_config'] = model.config
         return new_exp
 
     def __init__(self, *,
@@ -137,10 +136,10 @@ class Experiment:
 
 if __name__ == '__main__':
     from datasets.datasets import Iris, Wine
-    for model in model_list:
-        exp = Experiment(Iris,
-                         model(),
-                         .1)
+    for model in model_dict.values():
+        exp = Experiment(dataset=Iris,
+                         model=model(),
+                         val_split_ratio=.1)
     # # for exp in [OursShaweTaylorPruning]:
     # # for exp in [OursHypInvPruning]:
     # for exp in [KearnsMansourPruning]:

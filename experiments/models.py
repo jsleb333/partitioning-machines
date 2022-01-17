@@ -1,6 +1,5 @@
 import numpy as np
 from sklearn.metrics import accuracy_score
-from datetime import datetime
 from copy import copy
 
 from hypergeo import hypinv_upperbound
@@ -17,19 +16,18 @@ from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, Bou
 from experiments.utils import camel_to_snake, get_default_kwargs
 
 
-model_list = []
+model_dict = {}
 
 class CamelToSnake(type):
     def __init__(cls, *args, **kwargs):
         cls.model_name = camel_to_snake(cls.__name__)
-        print(cls.model_name)
-        model_list.append(cls.model_name)
+        model_dict[cls.model_name] = cls
 
 
 class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
     def __new__(cls, *args, **kwargs):
         new_model = super().__new__(cls)
-        new_model.config = get_default_kwargs(cls) | kwargs | {'datetime': datetime.now()}
+        new_model.config = get_default_kwargs(cls) | kwargs
         return new_model
 
     def __init__(self, *,
@@ -47,6 +45,9 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
     def __str__(self):
         return self.model_name
 
+    def __repr__(self) -> str:
+        return type(self).__name__ + '()'
+
     def fit_tree(self, dataset) -> None:
         nominal_mask = [i in dataset.nominal_features for i in range(dataset.n_features)]
         self.fit(dataset.X_train, dataset.y_train, nominal_mask=nominal_mask)
@@ -63,6 +64,7 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
         acc_ts = accuracy_score(dataset.y_test, self.predict(dataset.X_test))
         return acc_tr, acc_val, acc_ts
 
+del model_dict['model']
 
 class NoPruning(Model):
     def prune_tree(self, dataset) -> None:
