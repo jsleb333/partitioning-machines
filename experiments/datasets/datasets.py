@@ -187,7 +187,6 @@ class Dataset(metaclass=MetaDataset):
         other_ind = ind[self.train_size:]
         return other_ind, other_size
 
-
     def __call__(self, *args, **kwargs):
         """Emulates a call to __init__, but modifies the dataset in-place instead of creating a new one. See the __init__ documentations for arguments.
 
