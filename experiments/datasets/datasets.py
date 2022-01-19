@@ -1,3 +1,4 @@
+import itertools
 import os, sys
 
 from scipy.sparse import data
@@ -137,27 +138,55 @@ class Dataset(metaclass=MetaDataset):
             shuffle (Union[bool, int], optional):
                 Whether to shuffle the examples when preparing the sets or not. If an integer, is used as random state seed. Defaults to True.
         """
-        self.prepare_splits(val_ratio, test_ratio, shuffle)
+        self.train_size = type(self).n_examples
+        self.val_size = self.test_size = 0
+        self.train_ind = np.arange(self.n_examples)
+        self.val_ind, self.test_ind = np.array([], dtype=int), np.array([], dtype=int)
 
-    def prepare_splits(self, val_ratio=0, test_ratio=0, shuffle=True):
-        type(self).load()
-        self.val_size = np.rint(self.n_examples * val_ratio).astype(int)
-        self.test_size = np.rint(self.n_examples * test_ratio).astype(int)
-        self.train_size = self.n_examples - self.val_size - self.test_size
+        self.make_train_test_split(test_ratio, shuffle)
+        self.make_train_val_split(val_ratio, shuffle)
 
-        ind = np.arange(self.n_examples)
+    @property
+    def X_train(self):
+        return self.X[self.train_ind]
+    @property
+    def y_train(self):
+        return self.y[self.train_ind]
+    @property
+    def X_val(self):
+        return self.X[self.val_ind]
+    @property
+    def y_val(self):
+        return self.y[self.val_ind]
+    @property
+    def X_test(self):
+        return self.X[self.test_ind]
+    @property
+    def y_test(self):
+        return self.y[self.test_ind]
+
+    def make_train_test_split(self, test_ratio=.2, shuffle=True):
+        self.test_ind, self.test_size = self._make_train_other_split(self.test_ind, test_ratio, shuffle)
+
+    def make_train_val_split(self, val_ratio=.2, shuffle=True):
+        self.val_ind, self.val_size = self._make_train_other_split(self.val_ind, val_ratio, shuffle)
+
+    def _make_train_other_split(self, other_ind, ratio=.2, shuffle=True):
+        other_size = round(self.n_examples * ratio)
+        self.train_size += len(other_ind) - other_size
+
+        ind = np.concatenate((self.train_ind, other_ind))
+        ind.sort()
         if shuffle:
-            if isinstance(shuffle, int):
-                np.random.RandomState(shuffle)
-            np.random.shuffle(ind)
+            if not isinstance(shuffle, int):
+                shuffle = None
+            rng = np.random.default_rng(shuffle)
+            rng.shuffle(ind)
 
-        tr_ind = ind[:self.train_size]
-        val_ind = ind[self.train_size:self.train_size + self.val_size]
-        ts_ind = ind[self.train_size + self.val_size:]
+        self.train_ind = ind[:self.train_size]
+        other_ind = ind[self.train_size:]
+        return other_ind, other_size
 
-        self.X_train, self.y_train = self.X[tr_ind], self.y[tr_ind]
-        self.X_val, self.y_val = self.X[val_ind], self.y[val_ind]
-        self.X_test, self.y_test = self.X[ts_ind], self.y[ts_ind]
 
     def __call__(self, *args, **kwargs):
         """Emulates a call to __init__, but modifies the dataset in-place instead of creating a new one. See the __init__ documentations for arguments.
@@ -561,8 +590,13 @@ class Zoo(Dataset):
 
 
 if __name__ == "__main__":
-    for i, d in enumerate(load_datasets()):
-        print(d, d.n_classes)
-        classes = np.unique(d.labels)
-        d()
-        print(d.X_train.shape)
+    # print(Iris)
+
+    # print(Iris(.2))
+    # print(QSARBiodegradation.n_examples)
+    iris = Iris(.2)
+    print(iris.X_train.shape)
+    # print(getattr(iris, 'X')[getattr(iris, 'train_ind')])
+    # iris.make_train_val_split(.2)
+    # print(iris.val_size, iris.test_size)
+
