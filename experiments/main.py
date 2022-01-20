@@ -69,12 +69,12 @@ def launch_experiment(datasets=list(),
                         error_prior_exponent=error_prior_exponent,
                         delta=delta,
                         n_folds=n_folds,
+                        val_split_ratio=val_split_ratio,
                     )
                     exp_path = f'./experiments/results/{exp_name}/{dataset.name}/'
                     Experiment(
                         dataset=dataset,
                         model=init_model,
-                        val_split_ratio=val_split_ratio,
                         test_split_ratio=test_split_ratio,
                         n_draws=n_draws,
                         seed=seed,

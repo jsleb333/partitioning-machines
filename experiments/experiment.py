@@ -73,7 +73,6 @@ class Experiment:
     def __init__(self, *,
                  dataset: Dataset,
                  model: Model,
-                 val_split_ratio: float = 0,
                  test_split_ratio: float = .2,
                  n_draws: int = 25,
                  seed: int = 42,
@@ -81,7 +80,6 @@ class Experiment:
                  ):
         self.dataset = dataset
         self.model = model
-        self.val_split_ratio = val_split_ratio
         self.test_split_ratio = test_split_ratio
         self.n_draws = n_draws
         self.exp_name = exp_name
@@ -108,10 +106,7 @@ class Experiment:
     def _run(self, draw: int, *args, **kwargs) -> dict:
         draw_seed = self.rng.randint(2**31)
 
-        dataset = self.dataset(
-            self.val_split_ratio,
-            self.test_split_ratio,
-            shuffle=draw_seed)
+        dataset = self.dataset(0, self.test_split_ratio, shuffle=draw_seed)
 
         self.model.fit_tree(dataset)
 

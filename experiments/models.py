@@ -18,13 +18,13 @@ from experiments.utils import camel_to_snake, get_default_kwargs
 
 model_dict = {}
 
-class CamelToSnake(type):
+class ModelRegister(type):
     def __init__(cls, *args, **kwargs):
         cls.model_name = camel_to_snake(cls.__name__)
         model_dict[cls.model_name] = cls
 
 
-class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
+class Model(DecisionTreeClassifier, metaclass=ModelRegister):
     def __new__(cls, *args, **kwargs):
         new_model = super().__new__(cls)
         new_model.config = get_default_kwargs(cls) | kwargs
@@ -71,6 +71,7 @@ class Model(DecisionTreeClassifier, metaclass=CamelToSnake):
         return acc_tr, acc_val, acc_ts
 
 del model_dict['model']
+
 
 class NoPruning(Model):
     def _prune_tree(self, dataset) -> None:
@@ -204,13 +205,26 @@ class KearnsMansourPruning(Model):
 
         self.prune_tree(0)
 
+
+class ReducedErrorPruning(Model):
+    def __init__(self, *,
+                 val_split_ratio: float = .2,
+                 seed: int = 42,
+                 **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.val_split_ratio = val_split_ratio
+        self.seed = seed
+
+    def fit_tree(self, dataset) -> None:
+        dataset.make_train_val_split(self.val_split_ratio, self.seed)
+        super().fit_tree(dataset)
+
+    def _prune_tree(self, dataset) -> None:
+        val_error_score = ErrorScore(self, dataset.X_val, dataset.y_val)
+        prune_with_score(self.tree, val_error_score)
+
+
 class OraclePruning(Model):
     def _prune_tree(self, dataset) -> None:
         test_error_score = ErrorScore(self, dataset.X_test, dataset.y_test)
         prune_with_score(self.tree, test_error_score)
-
-
-class ReducedErrorPruning(Model):
-    def _prune_tree(self, dataset) -> None:
-        val_error_score = ErrorScore(self, dataset.X_val, dataset.y_val)
-        prune_with_score(self.tree, val_error_score)
