@@ -3,8 +3,7 @@ sys.path.append(os.getcwd())
 
 from experiments.datasets.datasets import Iris
 from experiments.experiment import Experiment
-from experiments.models import NoPruning, OursShaweTaylorPruning, ReducedErrorPruning
-from copy import deepcopy
+from experiments.models import NoPruning, ReducedErrorPruning
 
 
 class TestExperiment:
