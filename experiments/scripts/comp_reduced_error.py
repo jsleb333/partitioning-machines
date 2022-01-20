@@ -43,18 +43,18 @@ if __name__ == "__main__":
 
     dataset = QSARBiodegradation()
     exp_path = f'./experiments/results/reder-exp01/{dataset.name}/'
-    n_draws = 10
+    n_draws = 20
     test_split_ratio = .2
     seed = 42
     max_n_leaves = [10, 20, 30, 40, 50, 60]
     val_split_ratios = np.linspace(0,1,11)[:-1]*(1-test_split_ratio)
     models = [NoPruningVal, STPruningVal, ReducedErrorPruning, OraclePruningVal]
 
-    exp_path = f'./experiments/results/test/'
-    n_draws = 1
-    max_n_leaves = [10]
-    val_split_ratios = [.8]
-    models = [NoPruningVal]
+    # exp_path = f'./experiments/results/test/'
+    # n_draws = 1
+    # max_n_leaves = [10]
+    # val_split_ratios = [.7]
+    # models = [NoPruningVal]
 
     for model in models:
         for n_leaves in max_n_leaves:
