@@ -1,69 +1,73 @@
 import sys, os
+
 sys.path.append(os.getcwd())
-from sklearn.model_selection import train_test_split
-from datetime import datetime
 from graal_utils import Timer
 import numpy as np
 
-from experiments.experiment import NoPruning, ReducedErrorPruning, OursShaweTaylorPruning, OraclePruning
-from experiments.main import launch_experiment
-from experiments.utils import camel_to_snake
+from experiments.models import NoPruning, ReducedErrorPruning, OursShaweTaylorPruning, OraclePruning
+from experiments.experiment import Experiment, Tracker, Logger
+from experiments.datasets.datasets import QSARBiodegradation
 
 
-val_split_ratio = .25
-
-
-class NoPruningTrVal(NoPruning):
-    pass
-
-class NoPruningTr(NoPruning):
-    def __init__(self, *, val_split_ratio: float = 0.2, **kwargs) -> None:
+class NoPruningVal(NoPruning):
+    def __init__(self, *, val_split_ratio=.2, **kwargs) -> None:
         super().__init__(**kwargs)
         self.val_split_ratio = val_split_ratio
 
-    def _prepare_data(self, seed, *args, **kwargs) -> None:
-        super()._prepare_data(seed, *args, **kwargs)
-        self.X_tr, self.X_val, self.y_tr, self.y_val = train_test_split(
-            self.X_tr, self.y_tr,
-            test_size=self.val_split_ratio,
-            random_state=seed+6
-        )
+    def fit_tree(self, dataset) -> None:
+        dataset.make_train_val_split()
+        super().fit_tree(dataset)
 
-class STPruningTrVal(OursShaweTaylorPruning):
-    pass
 
-class STPruningTr(OursShaweTaylorPruning, NoPruningTr):
-    pass
+class STPruningVal(OursShaweTaylorPruning):
+    def __init__(self, *, val_split_ratio=.2, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.val_split_ratio = val_split_ratio
 
-class REPruningTr(ReducedErrorPruning):
-    pass
+    def fit_tree(self, dataset) -> None:
+        dataset.make_train_val_split()
+        super().fit_tree(dataset)
 
-class OraclePruningTr(OraclePruning, NoPruningTr):
-    pass
 
-class OraclePruningTrVal(OraclePruning):
-    pass
+class OraclePruningVal(OraclePruning):
+    def __init__(self, *, val_split_ratio=.2, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.val_split_ratio = val_split_ratio
 
-experiments_list = [NoPruningTr, NoPruningTrVal, STPruningTr, STPruningTrVal, REPruningTr, OraclePruningTr, OraclePruningTrVal]
+    def fit_tree(self, dataset) -> None:
+        dataset.make_train_val_split()
+        super().fit_tree(dataset)
 
 
 if __name__ == "__main__":
 
-    with Timer():
-        # for i, ratio in enumerate(np.linspace(.05, .95, 19)):
-        for i, ratio in enumerate(np.linspace(.4, .95, 12)):
-            class STPruningVal(OursShaweTaylorPruning, NoPruningTr):
-                def __init__(self, *,
-                             model_name=f'st_pruning_val={ratio:.2f}',
-                             **kwargs) -> None:
-                    super().__init__(model_name=model_name, **kwargs)
+    dataset = QSARBiodegradation
+    exp_path = f'./experiments/results/reder-exp01/{dataset.name}/'
+    n_draws = 10
+    test_split_ratio = .2
+    max_n_leaves = [10, 20, 30, 40, 50, 60]
+    val_split_ratios = np.linspace(0,1,11)
+    models = [NoPruningVal, STPruningVal, ReducedErrorPruning, OraclePruningVal]
 
-            experiments_list = [STPruningVal]
+    # exp_path = f'./experiments/results/test/'
+    # n_draws = 1
+    # max_n_leaves = [50, 55, 60]
+    # val_split_ratios = [.2]
+    # models = [STPruningVal]
 
-            Timer(launch_experiment)(
-                model_names=[camel_to_snake(exp.__name__) for exp in experiments_list],
-                datasets=['qsar_biodegradation'],
-                exp_name='test',
-                val_split_ratio=ratio,
-                n_draws=1,
-            )
+    for model in models:
+        for n_leaves in max_n_leaves:
+            for val_split_ratio in val_split_ratios:
+                if val_split_ratio == 0 and model is ReducedErrorPruning:
+                    continue
+
+                exp_name = f'{model.model_name}-val={val_split_ratio:.2f}-n_leaves={n_leaves}'
+                with Timer(exp_name):
+                    Experiment(
+                        dataset=dataset,
+                        model=model(val_split_ratio=val_split_ratio, max_n_leaves=n_leaves),
+                        test_split_ratio=test_split_ratio,
+                        n_draws=n_draws,
+                        exp_name=exp_name
+                    ).run(logger=Logger(exp_path),
+                          tracker=Tracker())
