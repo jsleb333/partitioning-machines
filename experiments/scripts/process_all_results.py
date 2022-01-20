@@ -7,7 +7,7 @@ import numpy as np
 from scipy.stats import t as students_t
 
 from experiments.datasets.datasets import dataset_list
-from experiments.experiment import experiments_list
+from experiments.models import model_dict
 from experiments.utils import camel_to_snake
 
 from partitioning_machines import func_to_cmd
@@ -43,17 +43,15 @@ def process_results(exp_name='exp02'):
     doc = p2l.Document(exp_name + '_all_results', './experiments/results/' + exp_name)
     doc.packages['geometry'].options.append('landscape')
 
-    model_names = [camel_to_snake(exp.__name__) for exp in experiments_list]
-
     significance = 0.1
 
     caption = f"""Mean test accuracy and standard deviation on 100 random splits of {len(dataset_list)} datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
 
     label = "results"
 
-    alignement = r'@{\hspace{6pt}}'.join('l'+'c'*len(model_names))
+    alignement = r'@{\hspace{6pt}}'.join('l'+'c'*len(model_dict))
     table = doc.new(p2l.Table(
-        (len(dataset_list)+6, len(model_names)+1),
+        (len(dataset_list)+6, len(model_dict)+1),
         float_format='.2f',
         alignment=alignement,
         caption=caption,
@@ -69,17 +67,17 @@ def process_results(exp_name='exp02'):
                    .replace('Shawe Taylor', 'ST')
                    .replace('Hyp Inv', 'HTI')
                    .replace('Kearns Mansour', 'KM')
-                   for name in model_names]
+                   for name in model_dict]
     table[0,1:].add_rule()
     is_nominal = lambda d: '*' if d.nominal_features else ''
     table[2:len(dataset_list)+2,0] = [d.name.replace('_', ' ').title() + is_nominal(d) + f' ({d.n_examples}, {d.n_classes})' for d in dataset_list]
     table[1].add_rule()
     table[-5].add_rule()
 
-    ts_accs = np.zeros((len(model_names), len(dataset_list)))
+    ts_accs = np.zeros((len(model_dict), len(dataset_list)))
 
     for d, dataset in enumerate(dataset_list):
-        for i, model_name in enumerate(model_names):
+        for i, model_name in enumerate(model_dict):
             ts_acc = []
             path = './experiments/results/' + exp_name + '/' + dataset.name + '/'
             try:
@@ -105,16 +103,16 @@ def process_results(exp_name='exp02'):
     bests = np.zeros_like(ts_accs, dtype=int)
     for d in range(len(dataset_list)):
         b = ts_accs[1,d]
-        for i in range(len(model_names)):
+        for i in range(len(model_dict)):
             a = ts_accs[i,d]
             if a > b and not np.isclose(a, b, rtol=0, atol=significance/100):
                 bests[i,d] = 1
     table[-3,1:] = np.sum(bests, axis=1)
 
     table[-2,0] = 'Mean'
-    table[-2,1:] = [MeanWithCI(ts_accs[i]*100) for i in range(len(model_names))]
+    table[-2,1:] = [MeanWithCI(ts_accs[i]*100) for i in range(len(model_dict))]
     table[-1,0] = 'Fraction of oracle'
-    table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_names))]
+    table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_dict))]
 
     d = [dataset_list[i] for i in [0, 2, 3, 4, 16]]
 
@@ -137,4 +135,4 @@ def process_results(exp_name='exp02'):
 
 
 if __name__ == "__main__":
-    process_results()
+    process_results(exp_name='exp03-more-leaves')
