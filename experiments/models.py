@@ -213,8 +213,8 @@ class ReducedErrorPruning(Model):
         super().__init__(**kwargs)
         self.val_split_ratio = val_split_ratio
 
-    def fit_tree(self, dataset, draw_seed=42, **kwargs) -> None:
-        dataset.make_train_val_split(self.val_split_ratio, draw_seed)
+    def fit_tree(self, dataset, seed=42, **kwargs) -> None:
+        dataset.make_train_val_split(self.val_split_ratio, seed)
         super().fit_tree(dataset)
 
     def _prune_tree(self, dataset) -> None:
