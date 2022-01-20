@@ -52,7 +52,7 @@ class Model(DecisionTreeClassifier, metaclass=ModelRegister):
     def __repr__(self) -> str:
         return type(self).__name__ + '()'
 
-    def fit_tree(self, dataset) -> None:
+    def fit_tree(self, dataset, **kwargs) -> None:
         nominal_mask = [i in dataset.nominal_features for i in range(dataset.n_features)]
         self.fit(dataset.X_train, dataset.y_train, nominal_mask=nominal_mask)
         self.bound_value = 'NA'
@@ -209,14 +209,12 @@ class KearnsMansourPruning(Model):
 class ReducedErrorPruning(Model):
     def __init__(self, *,
                  val_split_ratio: float = .2,
-                 seed: int = 42,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.val_split_ratio = val_split_ratio
-        self.seed = seed
 
-    def fit_tree(self, dataset) -> None:
-        dataset.make_train_val_split(self.val_split_ratio, self.seed)
+    def fit_tree(self, dataset, draw_seed=42, **kwargs) -> None:
+        dataset.make_train_val_split(self.val_split_ratio, draw_seed)
         super().fit_tree(dataset)
 
     def _prune_tree(self, dataset) -> None:

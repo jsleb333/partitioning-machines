@@ -108,7 +108,7 @@ class Experiment:
 
         dataset = self.dataset(0, self.test_split_ratio, shuffle=draw_seed)
 
-        self.model.fit_tree(dataset)
+        self.model.fit_tree(dataset, seed=draw_seed)
 
         t_start = time()
         self.model._prune_tree(dataset)
