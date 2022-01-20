@@ -10,12 +10,9 @@ class TestDataset:
         seed = 42
         iris = Iris(.1, .1, shuffle=seed)
         X_1 = iris.X_val.copy()
-        print(X_1)
         iris.make_train_val_split(.1, shuffle=101)
-        print(iris.X_val)
         assert (X_1 != iris.X_val).any()
         iris.make_train_val_split(.1, shuffle=seed)
-        print(iris.X_val)
         assert (X_1 == iris.X_val).all()
 
 
