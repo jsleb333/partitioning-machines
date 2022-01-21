@@ -63,7 +63,7 @@ if __name__ == "__main__":
                     continue
 
                 model_name = f'{model.model_name}-val={val_split_ratio:.2f}-n_leaves={n_leaves}'
-                exp_path += f'{model.model_name}/n-leaves={n_leaves}/'
+                path = exp_path + f'{model.model_name}/n-leaves={n_leaves}/'
                 with Timer(model_name):
                     try:
                         Experiment(
@@ -74,7 +74,7 @@ if __name__ == "__main__":
                             test_split_ratio=test_split_ratio,
                             n_draws=n_draws,
                             seed=seed,
-                        ).run(logger=Logger(exp_path),
+                        ).run(logger=Logger(path),
                             tracker=Tracker())
                     except RuntimeWarning:
                         print('RuntimeWarning overflow')
