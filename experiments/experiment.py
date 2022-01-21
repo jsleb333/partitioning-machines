@@ -76,13 +76,11 @@ class Experiment:
                  test_split_ratio: float = .2,
                  n_draws: int = 25,
                  seed: int = 42,
-                 exp_name: str = None
                  ):
         self.dataset = dataset
         self.model = model
         self.test_split_ratio = test_split_ratio
         self.n_draws = n_draws
-        self.exp_name = exp_name
         self.rng = np.random.RandomState(seed)
 
     def run(self,

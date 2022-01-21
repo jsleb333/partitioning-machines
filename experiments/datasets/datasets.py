@@ -218,30 +218,30 @@ class AcuteInflammation(Dataset):
             df.drop(columns=['Inflammation'])
         return df
 
-class Adult(Dataset):
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
-    bibtex_label = "kohavi1996scaling"
-    def build_dataframe(cls):
-        with open(cls.path_to_raw_file, 'r') as file:
-            features = {
-                'age': float,
-                'workclass': Nominal(),
-                'fnlwgt': float,
-                'education': Nominal(),
-                'education-num': float,
-                'marital-status': Nominal(),
-                'occupation': Nominal(),
-                'relationship': Nominal(),
-                'race': Nominal(),
-                'sex': Nominal(),
-                'capital-gain': float,
-                'capital-loss': float,
-                'hours-per-week': float,
-                'native-country': Nominal(),
-                'label': Nominal()
-            }
-            df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
-        return df
+# class Adult(Dataset):
+#     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+#     bibtex_label = "kohavi1996scaling"
+#     def build_dataframe(cls):
+#         with open(cls.path_to_raw_file, 'r') as file:
+#             features = {
+#                 'age': float,
+#                 'workclass': Nominal(),
+#                 'fnlwgt': float,
+#                 'education': Nominal(),
+#                 'education-num': float,
+#                 'marital-status': Nominal(),
+#                 'occupation': Nominal(),
+#                 'relationship': Nominal(),
+#                 'race': Nominal(),
+#                 'sex': Nominal(),
+#                 'capital-gain': float,
+#                 'capital-loss': float,
+#                 'hours-per-week': float,
+#                 'native-country': Nominal(),
+#                 'label': Nominal()
+#             }
+#             df = pd.read_csv(file, names=features.keys(), header=None, dtype=features)
+#         return df
 
 class Amphibians(Dataset):
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00528/dataset.csv"

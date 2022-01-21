@@ -78,7 +78,6 @@ def launch_experiment(datasets=list(),
                         test_split_ratio=test_split_ratio,
                         n_draws=n_draws,
                         seed=seed,
-                        exp_name=exp_name,
                     ).run(logger=Logger(exp_path), tracker=Tracker())
                 except Exception as err:
                     print(f'!!! Unable to complete experiment due to {err!r}!!!')
@@ -90,6 +89,6 @@ if __name__ == "__main__":
         # model_names=['reduced_error_pruning'],
         # datasets=['iris'],
         exp_name='exp03-more-leaves',
-        n_draws=100,
-        max_n_leaves=40,
+        n_draws=25,
+        max_n_leaves=75,
     )
