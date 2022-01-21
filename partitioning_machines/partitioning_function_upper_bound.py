@@ -1,6 +1,6 @@
 from math import floor
-from numpy import pi
-from scipy.special import factorial
+from scipy.special import factorial as factorial_
+factorial = lambda n: int(factorial_(n, exact=True))
 from scipy.special import comb
 binom = lambda N, k: int(comb(N, k, exact=True))
 from sympy.functions.combinatorial.numbers import stirling
