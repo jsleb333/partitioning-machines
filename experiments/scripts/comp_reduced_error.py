@@ -52,9 +52,9 @@ if __name__ == "__main__":
 
     # exp_path = f'./experiments/results/test/'
     # n_draws = 1
-    # max_n_leaves = [10]
-    # val_split_ratios = [.7]
-    # models = [NoPruningVal]
+    # max_n_leaves = [60]
+    # val_split_ratios = [0, 0.1]
+    # models = [STPruningVal]
 
     for model in models:
         for n_leaves in max_n_leaves:
@@ -62,16 +62,20 @@ if __name__ == "__main__":
                 if val_split_ratio == 0 and model is ReducedErrorPruning:
                     continue
 
-                exp_name = f'{model.model_name}-val={val_split_ratio:.2f}-n_leaves={n_leaves}'
-                with Timer(exp_name):
-                    Experiment(
-                        dataset=dataset,
-                        model=model(val_split_ratio=val_split_ratio, max_n_leaves=n_leaves),
-                        test_split_ratio=test_split_ratio,
-                        n_draws=n_draws,
-                        exp_name=exp_name,
-                        seed=seed,
-                    ).run(logger=Logger(exp_path),
-                          tracker=Tracker())
-
-                    print(dataset.train_size, dataset.val_size, dataset.test_size)
+                model_name = f'{model.model_name}-val={val_split_ratio:.2f}-n_leaves={n_leaves}'
+                exp_path += f'{model.model_name}/n-leaves={n_leaves}/'
+                with Timer(model_name):
+                    try:
+                        Experiment(
+                            dataset=dataset,
+                            model=model(val_split_ratio=val_split_ratio,
+                                        max_n_leaves=n_leaves,
+                                        model_name=model_name),
+                            test_split_ratio=test_split_ratio,
+                            n_draws=n_draws,
+                            seed=seed,
+                        ).run(logger=Logger(exp_path),
+                            tracker=Tracker())
+                    except RuntimeWarning:
+                        print('RuntimeWarning overflow')
+                        continue
