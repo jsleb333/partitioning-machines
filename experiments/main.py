@@ -2,6 +2,7 @@
 This file contains the code necessary to run all experiments of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020). See the README for usage details.
 """
 import sys, os
+
 sys.path.append(os.getcwd())
 from datetime import datetime
 from graal_utils import Timer
@@ -9,7 +10,7 @@ from graal_utils import Timer
 from experiments.models import model_dict
 from experiments.experiment import Experiment, Tracker, Logger
 from experiments.utils import filter_signature
-from experiments.datasets import load_datasets
+from experiments.datasets import load_datasets, dataset_list
 from partitioning_machines import func_to_cmd
 
 
@@ -88,6 +89,7 @@ if __name__ == "__main__":
     launch_experiment(
         # model_names=['reduced_error_pruning'],
         # datasets=['iris'],
+        datasets=[d.name for d in dataset_list[3:]],
         exp_name='exp03-more-leaves',
         n_draws=25,
         max_n_leaves=75,
