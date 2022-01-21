@@ -95,6 +95,26 @@ class TestPatitioninFunctionUpperBound:
         m = 16
         assert pfub(m, 3)
 
+    def test_tight_bound_is_python_int(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree = Tree(stump, leaf)
+        ofd = [0,0,3,0,4]
+        nfd = [0,3,0,5,0,0]
+        pfub = PartitioningFunctionUpperBound(tree, 10, ordinal_feat_dist=ofd)
+        m = 16
+        assert isinstance(pfub(m, 3), int)
+
+    def test_loose_bound_is_python_int(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree = Tree(stump, leaf)
+        ofd = [0,0,3,0,4]
+        nfd = [0,3,0,5,0,0]
+        pfub = PartitioningFunctionUpperBound(tree, 10, ordinal_feat_dist=ofd, loose=True)
+        m = 16
+        assert isinstance(pfub(m, 3), int)
+
     def test_compute_bound_with_precomputed_tables(self):
         leaf = Tree()
         stump = Tree(leaf, leaf)

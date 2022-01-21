@@ -1,6 +1,8 @@
 from math import floor
 from numpy import pi
-from scipy.special import binom, factorial
+from scipy.special import factorial
+from scipy.special import comb
+binom = lambda N, k: int(comb(N, k, exact=True))
 from sympy.functions.combinatorial.numbers import stirling
 from sympy.functions.combinatorial.factorials import ff
 from copy import copy
@@ -191,7 +193,7 @@ class PartitioningFunctionUpperBound:
                 N += coef_ord * tmp_ord + tmp_nom
 
             if tree.left_subtree == tree.right_subtree:
-                N /= 2
+                N //= 2
 
             # Modification 3: Add value to lookup table.
             self.pfub_table[tree][c, m, l, tuple(n[1:])] = min(N, stirling(n_examples, n_parts))
@@ -259,7 +261,7 @@ class PartitioningFunctionUpperBound:
             N *= coef
 
             if tree.left_subtree == tree.right_subtree:
-                N /= 2
+                N //= 2
 
             # Modification 3: Add value to lookup table.
             self.pfub_table[tree][c, m, l, tuple(n[1:])] = min(N, stirling(n_examples, n_parts))
