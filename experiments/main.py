@@ -9,7 +9,7 @@ from graal_utils import Timer
 from experiments.models import model_dict
 from experiments.experiment import Experiment, Tracker, Logger
 from experiments.utils import filter_signature
-from experiments.datasets.datasets import load_datasets
+from experiments.datasets import load_datasets
 from partitioning_machines import func_to_cmd
 
 

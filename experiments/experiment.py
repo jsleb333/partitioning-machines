@@ -6,7 +6,7 @@ from datetime import datetime
 import sys, os
 sys.path.append(os.getcwd())
 
-from experiments.datasets.datasets import Dataset
+from experiments.datasets import Dataset
 from experiments.utils import Mock, get_default_kwargs
 from experiments.models import Model, model_dict
 
@@ -131,11 +131,10 @@ class Experiment:
 
 
 if __name__ == '__main__':
-    from datasets.datasets import Iris, Wine
+    from datasets import Iris, Wine
     for model in model_dict.values():
         exp = Experiment(dataset=Iris,
-                         model=model(),
-                         val_split_ratio=.1)
+                         model=model())
         exp.run(tracker=Tracker())
     # # for exp in [OursShaweTaylorPruning]:
     # # for exp in [OursHypInvPruning]:
