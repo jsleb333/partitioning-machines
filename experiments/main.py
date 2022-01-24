@@ -94,10 +94,10 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['reduced_error_pruning', 'ours_shawe_taylor_pruning', 'oracle_pruning'],
+        # model_names=['reduced_error_pruning', 'ours_shawe_taylor_pruning', 'oracle_pruning'],
         # datasets=['iris'],
-        datasets=['cardiotocography10'],
-        exp_name='card10-03',
+        # datasets=['cardiotocography10'],
+        exp_name='exp04',
         n_draws=25,
         seed=101,
         max_n_leaves=100,
