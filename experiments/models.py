@@ -1,11 +1,11 @@
 import numpy as np
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import KFold
 from copy import copy
-
-from hypergeo import hypinv_upperbound
-
 import sys, os
 sys.path.append(os.getcwd())
+
+from hypergeo import hypinv_upperbound
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import shawe_taylor_bound, vapnik_bound
@@ -52,9 +52,10 @@ class Model(DecisionTreeClassifier, metaclass=ModelRegister):
     def __repr__(self) -> str:
         return type(self).__name__ + '()'
 
-    def fit_tree(self, dataset, **kwargs) -> None:
-        nominal_mask = [i in dataset.nominal_features for i in range(dataset.n_features)]
-        self.fit(dataset.X_train, dataset.y_train, nominal_mask=nominal_mask)
+    def fit_tree(self, dataset, seed=None, **kwargs) -> None:
+        self.seed = seed
+        self.nominal_mask = [i in dataset.nominal_features for i in range(dataset.n_features)]
+        self.fit(dataset.X_train, dataset.y_train, nominal_mask=self.nominal_mask)
         self.bound_value = 'NA'
 
     def _prune_tree(self, dataset) -> None:
@@ -98,6 +99,49 @@ class OursShaweTaylorPruning(Model):
             delta=self.delta,
         )
         self.bound_value = prune_with_score(self.tree, bound_score)
+
+
+class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
+    def __init__(self, *,
+                 n_folds: int = 5,
+                 delta: float = 0.05,
+                 **kwargs) -> None:
+        super().__init__(error_prior_exponent=13.1, delta=delta, **kwargs)
+        self.n_folds = n_folds
+
+    def _prune_tree(self, dataset) -> None:
+        self._cv_error_prior_exponent(dataset)
+        super()._prune_tree(dataset)
+
+    def _cv_error_prior_exponent(self, dataset):
+        exponents = list(range(1, 21))
+        cv_dtc = [copy(self) for _ in range(self.n_folds)]
+        fold_idx = list(KFold(n_splits=self.n_folds,
+                              shuffle=True,
+                              random_state=self.seed).split(dataset.X_train))
+
+        best_indices = np.zeros(len(exponents))
+        for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
+            X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
+            X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
+            dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
+
+            accuracies = []
+            for exponent in exponents:
+                r = 1/2**exponent
+                self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
+                copy_of_dtc = copy(dtc)
+                copy_of_dtc.tree = copy(dtc.tree)
+                OursShaweTaylorPruning._prune_tree(copy_of_dtc, dataset)
+                accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
+
+            best_indices += (np.array(accuracies) == np.max(accuracies))
+
+        best_exponent = exponents[np.argmax(best_indices)]
+
+        print(f'{best_exponent=}')
+        r = 1/2**best_exponent
+        self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
 
 
 class OursHypInvPruning(Model):
@@ -226,3 +270,13 @@ class OraclePruning(Model):
     def _prune_tree(self, dataset) -> None:
         test_error_score = ErrorScore(self, dataset.X_test, dataset.y_test)
         prune_with_score(self.tree, test_error_score)
+
+
+if __name__ == '__main__':
+    from experiments.datasets import Wine, Iris, Amphibians
+    dataset = Amphibians(0, .2, 101)
+    model = OursShaweTaylorPruningCV(n_folds=10)
+    model.fit_tree(dataset, seed=101)
+    model._prune_tree(dataset)
+    print(model.evaluate_tree(dataset))
+

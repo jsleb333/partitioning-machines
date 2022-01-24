@@ -119,17 +119,17 @@ def prune_with_cv(
     """
     pruning_coefs = decision_tree.compute_pruning_coefficients(pruning_objective)
 
-    CV_trees = [copy(decision_tree) for i in range(n_folds)]
+    cv_trees = [copy(decision_tree) for i in range(n_folds)]
 
     fold_idx = list(KFold(n_splits=n_folds).split(X))
 
     for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
         X_tr, y_tr = X[tr_idx], y[tr_idx]
-        CV_trees[fold].fit(X_tr, y_tr)
+        cv_trees[fold].fit(X_tr, y_tr)
 
     n_errors = [0] * len(pruning_coefs)
     for k, threshold in enumerate(pruning_coefs):
-        for tree, (tr_idx, ts_idx) in zip(CV_trees, fold_idx):
+        for tree, (tr_idx, ts_idx) in zip(cv_trees, fold_idx):
             tree.prune_tree(threshold, pruning_objective)
             X_ts, y_ts = X[ts_idx], y[ts_idx]
             y_pred = tree.predict(X_ts)

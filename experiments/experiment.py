@@ -145,7 +145,5 @@ if __name__ == '__main__':
         print(model)
         print(exp._run(42, pre_pruning_metrics=True))
     # # for exp in [OursShaweTaylorPruning]:
-    # # for exp in [OursHypInvPruning]:
-    # for exp in [KearnsMansourPruning]:
     #     e = exp(dataset=Iris, n_draws=2)
     #     e.run(tracker=Tracker(), logger=Logger(exp_path='./experiments/results/test/'))
