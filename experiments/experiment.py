@@ -87,7 +87,7 @@ class Experiment:
             *args,
             logger: Logger = Mock(),
             tracker: Tracker = Mock(),
-            pre_pruning_metrics=False,
+            pre_pruning_metrics=True,
             **kwargs) -> None:
 
         logger.dump_exp_config(self.model.model_name, self.config)
@@ -102,7 +102,7 @@ class Experiment:
         tracker.end(draw)
         logger.close()
 
-    def _run(self, draw: int, pre_pruning_metrics=False, *args, **kwargs) -> dict:
+    def _run(self, draw: int, pre_pruning_metrics=True, *args, **kwargs) -> dict:
         draw_seed = self.rng.randint(2**31)
 
         metrics = {'draw': draw, 'seed': draw_seed}
