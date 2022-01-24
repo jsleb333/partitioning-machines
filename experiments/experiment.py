@@ -87,6 +87,7 @@ class Experiment:
             *args,
             logger: Logger = Mock(),
             tracker: Tracker = Mock(),
+            pre_pruning_metrics=False,
             **kwargs) -> None:
 
         logger.dump_exp_config(self.model.model_name, self.config)
@@ -94,19 +95,29 @@ class Experiment:
 
         for draw in range(self.n_draws):
             tracker.display_progress_before(draw)
-            metrics = self._run(draw, *args, **kwargs)
+            metrics = self._run(draw, pre_pruning_metrics, *args, **kwargs)
             tracker.display_progress_after(draw)
             logger.dump_row(metrics, self.model.model_name)
 
         tracker.end(draw)
         logger.close()
 
-    def _run(self, draw: int, *args, **kwargs) -> dict:
+    def _run(self, draw: int, pre_pruning_metrics=False, *args, **kwargs) -> dict:
         draw_seed = self.rng.randint(2**31)
+
+        metrics = {'draw': draw, 'seed': draw_seed}
 
         dataset = self.dataset(0, self.test_split_ratio, shuffle=draw_seed)
 
         self.model.fit_tree(dataset, seed=draw_seed)
+
+        if pre_pruning_metrics:
+            acc_tr_pre, acc_val_pre, acc_ts_pre = self.model.evaluate_tree(dataset)
+            metrics |= {'pre_pruning_train_accuracy': acc_tr_pre,
+                        'pre_pruning_test_accuracy': acc_ts_pre,
+                        'pre_pruning_val_accuracy': acc_val_pre,
+                        'pre_pruning_n_leaves': self.model.tree.n_leaves,
+                        'pre_pruning_height': self.model.tree.height}
 
         t_start = time()
         self.model._prune_tree(dataset)
@@ -114,26 +125,25 @@ class Experiment:
 
         acc_tr, acc_val, acc_ts = self.model.evaluate_tree(dataset)
 
-        metrics = {'draw': draw,
-                   'seed': draw_seed,
-                   'train_accuracy': acc_tr,
-                   'test_accuracy': acc_ts,
-                   'n_leaves': self.model.tree.n_leaves,
-                   'height': self.model.tree.height,
-                   'bound': self.model.bound_value,
-                   'time': elapsed_time}
-        if acc_val is not None:
-            metrics['val_accuracy'] = acc_val
+        metrics |= {'train_accuracy': acc_tr,
+                    'test_accuracy': acc_ts,
+                    'val_accuracy': acc_val,
+                    'n_leaves': self.model.tree.n_leaves,
+                    'height': self.model.tree.height,
+                    'bound': self.model.bound_value,
+                    'time': elapsed_time}
 
         return metrics
 
 
 if __name__ == '__main__':
-    from datasets import Iris, Wine
+    from datasets import Iris, Cardiotocography10
     for model in model_dict.values():
-        exp = Experiment(dataset=Iris,
-                         model=model())
-        exp.run(tracker=Tracker())
+        exp = Experiment(dataset=Cardiotocography10,
+                         model=model(max_n_leaves=75),)
+        # exp.run(tracker=Tracker())
+        print(model)
+        print(exp._run(42, pre_pruning_metrics=True))
     # # for exp in [OursShaweTaylorPruning]:
     # # for exp in [OursHypInvPruning]:
     # for exp in [KearnsMansourPruning]:

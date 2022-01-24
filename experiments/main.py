@@ -89,8 +89,9 @@ if __name__ == "__main__":
     launch_experiment(
         # model_names=['reduced_error_pruning'],
         # datasets=['iris'],
-        datasets=[d.name for d in dataset_list[3:]],
-        exp_name='exp03-more-leaves',
+        datasets=['cardiotocography_10'],
+        exp_name='card10-03',
         n_draws=25,
+        seed=101,
         max_n_leaves=75,
     )
