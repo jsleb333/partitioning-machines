@@ -89,7 +89,7 @@ if __name__ == "__main__":
     launch_experiment(
         # model_names=['reduced_error_pruning'],
         # datasets=['iris'],
-        datasets=['cardiotocography_10'],
+        datasets=['cardiotocography10'],
         exp_name='card10-03',
         n_draws=25,
         seed=101,
