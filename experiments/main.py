@@ -57,9 +57,16 @@ def launch_experiment(datasets=list(),
     models = model_dict
     if model_names:
         models = {name: model for name, model in model_dict.items() if name in model_names}
+        for name in model_names:
+            if name not in model_dict:
+                print('Unknown model: ', name)
 
     if not exp_name:
         exp_name = exp_name if exp_name else datetime.now().strftime("%Y-%m-%d_%Hh%Mm")
+
+    for dataset in datasets:
+        if dataset not in [d.name for d in dataset_list]:
+            print('Unknown dataset: ', dataset)
 
     for dataset in load_datasets(datasets):
         for model_name, model in models.items():
@@ -87,11 +94,12 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        # model_names=['reduced_error_pruning'],
+        model_names=['reduced_error_pruning', 'ours_shawe_taylor_pruning', 'oracle_pruning'],
         # datasets=['iris'],
         datasets=['cardiotocography10'],
         exp_name='card10-03',
         n_draws=25,
         seed=101,
-        max_n_leaves=75,
+        max_n_leaves=100,
+        val_split_ratio=.16,
     )
