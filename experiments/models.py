@@ -103,10 +103,10 @@ class OursShaweTaylorPruning(Model):
 
 class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
     def __init__(self, *,
-                 n_folds: int = 5,
+                 n_folds: int = 10,
                  delta: float = 0.05,
                  **kwargs) -> None:
-        super().__init__(error_prior_exponent=13.1, delta=delta, **kwargs)
+        super().__init__(delta=delta, **kwargs)
         self.n_folds = n_folds
 
     def _prune_tree(self, dataset) -> None:
@@ -137,9 +137,10 @@ class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
 
             best_indices += (np.array(accuracies) == np.max(accuracies))
 
-        best_exponent = exponents[np.argmax(best_indices)]
+        best_exponent = np.array(exponents)[best_indices == np.max(best_indices)].mean()
+        # best_exponent = (exponents[np.argmax(best_indices)] + exponents[::-1][np.argmax(best_indices[::-1])])/2
 
-        print(f'{best_exponent=}')
+        # print(f'{best_exponent=}')
         r = 1/2**best_exponent
         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
 
@@ -274,9 +275,16 @@ class OraclePruning(Model):
 
 if __name__ == '__main__':
     from experiments.datasets import Wine, Iris, Amphibians
-    dataset = Amphibians(0, .2, 101)
-    model = OursShaweTaylorPruningCV(n_folds=10)
-    model.fit_tree(dataset, seed=101)
-    model._prune_tree(dataset)
-    print(model.evaluate_tree(dataset))
+
+    for d in [Wine, Iris, Amphibians]:
+        print(d)
+        dataset = d(0, .2, 101)
+        for n in [2, 5, 8, 10]:
+            print(f'{n=}')
+            model = OursShaweTaylorPruningCV(n_folds=n)
+            model.fit_tree(dataset, seed=101)
+            print('leaves =', model.tree.n_leaves)
+            model._prune_tree(dataset)
+            print('leaves =', model.tree.n_leaves)
+            print(model.evaluate_tree(dataset))
 
