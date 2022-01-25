@@ -92,7 +92,8 @@ def process_results(exp_name='exp02'):
             except FileNotFoundError:
                 pass
 
-            ts_accs[i,d] = np.mean(np.array(ts_acc, dtype=float))
+            if ts_acc:
+                ts_accs[i,d] = np.mean(np.array(ts_acc, dtype=float))
 
         table[d+2,1:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=significance, rtol=0)
 
@@ -111,8 +112,8 @@ def process_results(exp_name='exp02'):
 
     table[-2,0] = 'Mean'
     table[-2,1:] = [MeanWithCI(ts_accs[i]*100) for i in range(len(model_dict))]
-    table[-1,0] = 'Fraction of oracle'
-    table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_dict))]
+    # table[-1,0] = 'Fraction of oracle'
+    # table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_dict))]
 
     d = [dataset_list[i] for i in [0, 2, 3, 4, 16]]
 
@@ -135,4 +136,4 @@ def process_results(exp_name='exp02'):
 
 
 if __name__ == "__main__":
-    process_results(exp_name='exp03-more-leaves')
+    process_results(exp_name='exp04')
