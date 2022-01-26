@@ -1,9 +1,10 @@
+from copy import copy
 import sys, os
 sys.path.append(os.getcwd())
 
 from experiments.datasets.datasets import Iris
 from experiments.experiment import Experiment
-from experiments.models import NoPruning, ReducedErrorPruning
+from experiments.models import NoPruning, ReducedErrorPruning, OursShaweTaylorPruning
 
 
 class TestExperiment:
@@ -56,3 +57,20 @@ class TestExperiment:
         assert (sets_tr[0] == sets_tr[2]).all()
         assert (sets_val[0] == sets_val[2]).all()
         assert all((sets_ts[0] == sets_ts[j]).all() for j in range(3))
+
+    def test_ours_shawe_taylor_reuses_pfub_table_between_draws(self):
+        iris = Iris()
+        n_draws = 2
+        pfub_table = {}
+        model = OursShaweTaylorPruning(pfub_table=pfub_table)
+
+        tables = []
+        for draw in range(n_draws):
+            dataset = iris(0, .2)
+            model.fit_tree(dataset)
+            model._prune_tree(dataset)
+            tables.append(copy(pfub_table))
+
+        assert len(tables[0]) > 0
+        assert len(tables[1]) > 0
+        assert len(tables[0]) != len(tables[1])

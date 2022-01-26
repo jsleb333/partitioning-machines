@@ -7,6 +7,7 @@ sys.path.append(os.getcwd())
 
 from hypergeo import hypinv_upperbound
 
+from partitioning_machines import Tree
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import shawe_taylor_bound, vapnik_bound
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
@@ -83,16 +84,19 @@ class OursShaweTaylorPruning(Model):
     def __init__(self, *,
                  error_prior_exponent: float = 13.1,
                  delta: float = 0.05,
+                 pfub_table: dict[Tree] = {},
                  **kwargs) -> None:
         super().__init__(**kwargs)
         r = 1/2**error_prior_exponent
         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
         self.delta = delta
+        self.pfub_table = pfub_table
 
     def _prune_tree(self, dataset) -> None:
         bound_score = BoundScore(
             dataset=dataset,
             bound=shawe_taylor_bound,
+            table=self.pfub_table,
             errors_logprob_prior=self.errors_logprob_prior,
             delta=self.delta,
         )
