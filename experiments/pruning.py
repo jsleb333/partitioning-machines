@@ -4,21 +4,24 @@ import numpy as np
 from scipy.special import zeta
 from copy import copy, deepcopy
 from typing import Callable
+import os, sys
+sys.path.append(os.getcwd())
 
-from partitioning_machines import DecisionTree
+from partitioning_machines import DecisionTree, DecisionTreeClassifier
 from partitioning_machines import wedderburn_etherington
 from partitioning_machines import breiman_alpha_pruning_objective, growth_function_upper_bound
+from experiments.datasets import Dataset
 
 
-def prune_with_score(decision_tree: DecisionTree,
-                     score_fn: Callable[[DecisionTree, DecisionTree], float],
+def prune_with_score(dtc: DecisionTreeClassifier,
+                     score_fn: Callable[[DecisionTreeClassifier, DecisionTree], float],
                      minimize: bool = True) -> float:
     """Prune a decision tree classifier using a score function to compare unpruned tree with pruned ones. This corresponds to Algorithm 3 in Appendix E of the paper of Leboeuf et al. (2020).
 
     Args:
-        decision_tree (DecisionTree):
+        dtc (DecisionTreeClassifier):
             The fully grown decision tree classifier trained on some dataset.
-        score_fn (Callable[[DecisionTree, DecisionTree], float]):
+        score_fn (Callable[[DecisionTreeClassifier, DecisionTreeClassifier], float]):
             A scoring function that characterizes the performance of the pruned tree. The function will receive as input the a pruned temporary copy of the original tree as well as a reference to the original subtree that was pruned. The package implements two score functions: ErrorScore and BoundScore.
         minimize (bool, optional):
             Determines if the score function should be minimized or maximized. Defaults to True.
@@ -27,15 +30,19 @@ def prune_with_score(decision_tree: DecisionTree,
     """
     sign = 1 if minimize else -1
 
-    best_score = tmp_best_score = score_fn(decision_tree, decision_tree)
+    best_score = tmp_best_score = score_fn(dtc, dtc.tree)
 
-    while not decision_tree.is_leaf():
+    tmp_dtc = copy(dtc)
+    tree = dtc.tree
+
+    while not tree.is_leaf():
         new_best_found = False
-        for subtree in decision_tree:
+        for subtree in tree:
             if subtree.is_leaf():
                 continue
             tmp_pruned_tree = subtree.remove_subtree(inplace=False).root
-            tmp_score = score_fn(tmp_pruned_tree, subtree)
+            tmp_dtc.tree = tmp_pruned_tree
+            tmp_score = score_fn(tmp_dtc, subtree)
             if tmp_score*sign <= tmp_best_score*sign:
                 tmp_best_score = tmp_score
                 tmp_best_subtree = subtree
@@ -51,20 +58,16 @@ def prune_with_score(decision_tree: DecisionTree,
 
 
 class ErrorScore:
-    def __init__(self, dtc, X, y) -> None:
-        self.dtc = deepcopy(dtc)
+    def __init__(self, X, y) -> None:
         self.X, self.y = X, y
 
-    def __call__(self, pruned_tree, subtree) -> float:
-        self.dtc.tree = pruned_tree
-        return 1 - accuracy_score(y_true=self.y, y_pred=self.dtc.predict(self.X))
+    def __call__(self, pruned_dtc, subtree) -> float:
+        return 1 - accuracy_score(y_true=self.y, y_pred=pruned_dtc.predict(self.X))
 
 
 class BoundScore:
     def __init__(self,
-                 n_features: int,
-                 nominal_feat_dist: list[int],
-                 ordinal_feat_dist: list[int],
+                 dataset: Dataset,
                  bound: Callable,
                  table: dict = {},
                  loose_pfub: bool = True,
@@ -72,9 +75,7 @@ class BoundScore:
                  complexity_logprob_prior: Callable = None,
                  delta: float = .05) -> None:
 
-        self.n_features = n_features
-        self.nominal_feat_dist = nominal_feat_dist
-        self.ordinal_feat_dist = ordinal_feat_dist
+        self.dataset = dataset
         self.bound = bound
         self.table = table
         self.loose_pfub = loose_pfub
@@ -90,21 +91,21 @@ class BoundScore:
             s = 2
             self.complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
 
-    def __call__(self, pruned_tree, subtree):
-        n_classes = pruned_tree.n_examples_by_label.shape[0]
-        growth_function = growth_function_upper_bound(pruned_tree,
-                                                      self.n_features,
-                                                      nominal_feat_dist=self.nominal_feat_dist,
-                                                      ordinal_feat_dist=self.ordinal_feat_dist,
-                                                      n_classes=n_classes,
-                                                      pre_computed_tables=self.table,
-                                                      loose=self.loose_pfub)
-        n_examples = pruned_tree.n_examples
-        n_errors = pruned_tree.n_errors
+    def __call__(self, pruned_dtc, *args, **kwargs):
+        growth_function = growth_function_upper_bound(
+            pruned_dtc.tree,
+            self.dataset.n_features,
+            nominal_feat_dist=self.dataset.nominal_feat_dist,
+            ordinal_feat_dist=self.dataset.ordinal_feat_dist,
+            n_classes=self.dataset.n_classes,
+            pre_computed_tables=self.table,
+            loose=self.loose_pfub)
+        # n_errors = pruned_dtc.tree.n_errors
+        n_errors = sum(self.dataset.y_train == pruned_dtc.predict(self.dataset.X_train))
         errors_logprob = self.errors_logprob_prior(n_errors)
-        complexity_logprob = self.complexity_logprob_prior(pruned_tree.n_leaves)
+        complexity_logprob = self.complexity_logprob_prior(pruned_dtc.tree.n_leaves)
 
-        return self.bound(n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, self.delta)
+        return self.bound(pruned_dtc.tree.n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, self.delta)
 
 
 def prune_with_cv(

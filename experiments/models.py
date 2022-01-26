@@ -91,14 +91,12 @@ class OursShaweTaylorPruning(Model):
 
     def _prune_tree(self, dataset) -> None:
         bound_score = BoundScore(
-            dataset.n_features,
-            dataset.nominal_feat_dist,
-            dataset.ordinal_feat_dist,
+            dataset=dataset,
             bound=shawe_taylor_bound,
             errors_logprob_prior=self.errors_logprob_prior,
             delta=self.delta,
         )
-        self.bound_value = prune_with_score(self.tree, bound_score)
+        self.bound_value = prune_with_score(self, bound_score)
 
 
 class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
@@ -146,32 +144,34 @@ class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
 
 
 class OursHypInvPruning(Model):
-    def __init__(self, *, delta: float = .05, **kwargs) -> None:
+    def __init__(self, *, delta: float = .05, mprime_ratio: int = 4, **kwargs) -> None:
         super().__init__(**kwargs)
         self.delta = delta
+        self.mprime_ratio = mprime_ratio
 
     def _prune_tree(self, dataset) -> None:
-        def bound_score(pruned_tree, subtree):
+        n_examples = len(dataset.train_ind)
+        def bound_score(pruned_dtc, subtree):
             growth_function = growth_function_upper_bound(
-                pruned_tree,
+                pruned_dtc.tree,
                 dataset.n_features,
                 nominal_feat_dist=dataset.nominal_feat_dist,
                 ordinal_feat_dist=dataset.ordinal_feat_dist,
                 n_classes=dataset.n_classes,
                 loose=True
             )
-            # complexity_prob = 1/self.max_n_leaves * 1/wedderburn_etherington(pruned_tree.n_leaves)
+            # complexity_prob = 1/self.max_n_leaves * 1/wedderburn_etherington(pruned_dtc.tree.n_leaves)
             complexity_prob = 1/sum(wedderburn_etherington(n) for n in range(self.max_n_leaves))
 
             return hypinv_upperbound(
-                pruned_tree.n_errors,
-                pruned_tree.n_examples,
+                pruned_dtc.tree.n_errors,
+                pruned_dtc.tree.n_examples,
                 growth_function,
-                delta=self.delta * complexity_prob,
-                mprime=4*pruned_tree.n_examples,
+                delta=self.delta*complexity_prob,
+                mprime=self.mprime_ratio*n_examples,
             )
 
-        self.bound_value = prune_with_score(self.tree, bound_score)
+        self.bound_value = prune_with_score(self, bound_score)
 
 
 class CARTPruning(Model):
@@ -263,14 +263,14 @@ class ReducedErrorPruning(Model):
         super().fit_tree(dataset)
 
     def _prune_tree(self, dataset) -> None:
-        val_error_score = ErrorScore(self, dataset.X_val, dataset.y_val)
-        prune_with_score(self.tree, val_error_score)
+        val_error_score = ErrorScore(dataset.X_val, dataset.y_val)
+        prune_with_score(self, val_error_score)
 
 
 class OraclePruning(Model):
     def _prune_tree(self, dataset) -> None:
-        test_error_score = ErrorScore(self, dataset.X_test, dataset.y_test)
-        prune_with_score(self.tree, test_error_score)
+        test_error_score = ErrorScore(dataset.X_test, dataset.y_test)
+        prune_with_score(self, test_error_score)
 
 
 if __name__ == '__main__':
@@ -279,12 +279,16 @@ if __name__ == '__main__':
     for d in [Wine, Iris, Amphibians]:
         print(d)
         dataset = d(0, .2, 101)
-        for n in [2, 5, 8, 10]:
-            print(f'{n=}')
-            model = OursShaweTaylorPruningCV(n_folds=n)
-            model.fit_tree(dataset, seed=101)
-            print('leaves =', model.tree.n_leaves)
-            model._prune_tree(dataset)
-            print('leaves =', model.tree.n_leaves)
-            print(model.evaluate_tree(dataset))
+        # for n in [2, 5, 8, 10]:
+        #     print(f'{n=}')
+        #     model = OursShaweTaylorPruningCV(n_folds=n)
+        #     model.fit_tree(dataset, seed=101)
+        #     print('leaves =', model.tree.n_leaves)
+        #     model._prune_tree(dataset)
+        #     print('leaves =', model.tree.n_leaves)
+        #     print(model.evaluate_tree(dataset))
+        model = OursShaweTaylorPruning()
+        model.fit_tree(dataset)
+        model._prune_tree(dataset)
+
 
