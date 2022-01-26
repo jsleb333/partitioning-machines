@@ -1,5 +1,6 @@
 """Implementation of a binary tree"""
 from copy import copy, deepcopy
+from re import sub
 
 
 class Tree:
@@ -236,7 +237,9 @@ class Tree:
 
         if subtree.parent is None: # Changing the whole tree
             subtree.__dict__ = tree.__dict__
+            subtree.parent = None
         else:
+            tree.parent = subtree.parent
             if subtree is subtree.parent.left_subtree:
                 subtree.parent.left_subtree = tree
             else:
