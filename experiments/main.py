@@ -94,13 +94,13 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['ours_shawe_taylor_pruning_cv'],
+        # model_names=['ours_shawe_taylor_pruning_cv'],
         # datasets=['parkinson', 'iris'],
         # datasets=['cardiotocography10'],
-        exp_name='exp04-stcv',
-        n_folds=10,
+        exp_name='exp05-bprune',
+        # n_folds=10,
         n_draws=25,
         seed=101,
-        max_n_leaves=100,
+        max_n_leaves=75,
         # val_split_ratio=.2,
     )
