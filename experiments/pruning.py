@@ -2,7 +2,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import zero_one_loss, accuracy_score
 import numpy as np
 from scipy.special import zeta
-from copy import copy, deepcopy
+from copy import copy
 from typing import Callable
 import os, sys
 sys.path.append(os.getcwd())
@@ -32,17 +32,14 @@ def prune_with_score(dtc: DecisionTreeClassifier,
 
     best_score = tmp_best_score = score_fn(dtc, dtc.tree)
 
-    def pruning_possibility(subtree):
-        left_subtree = subtree.left_subtree
-        right_subtree = subtree.right_subtree
-        yield subtree.remove_subtree(inplace=False).root
-        yield copy(subtree).replace_subtree(left_subtree).root
-        yield copy(subtree).replace_subtree(right_subtree).root
-
     def subtree_replacements(subtree):
+        if subtree.is_leaf():
+            return
         subtree = copy(subtree)
-        yield subtree.left_subtree
-        yield subtree.right_subtree
+        if not subtree.left_subtree.is_leaf():
+            yield subtree.left_subtree
+        if not subtree.right_subtree.is_leaf():
+            yield subtree.right_subtree
         yield subtree.remove_subtree()
 
     tmp_pruned_dtc = copy(dtc)
@@ -50,28 +47,21 @@ def prune_with_score(dtc: DecisionTreeClassifier,
 
     while not tree.is_leaf():
         new_best_found = False
-        choice = None
-        print(f'{tree.n_leaves=}')
         for subtree in tree:
-            if subtree.is_leaf():
-                continue
-            for i, replacement in enumerate(subtree_replacements(subtree)):
-                tmp_pruned_dtc.tree = subtree.replace_subtree(replacement).root
+            for replacement in subtree_replacements(subtree):
+                tmp_pruned_dtc.tree = subtree.replace_subtree(replacement, inplace=False).root
                 tmp_score = score_fn(tmp_pruned_dtc, subtree)
                 if tmp_score*sign <= tmp_best_score*sign:
-                    choice = i
-                    tmp_replacement = replacement
                     tmp_best_score = tmp_score
                     tmp_best_subtree = subtree
+                    tmp_replacement = replacement
                     new_best_found = True
 
         if new_best_found:
-            print(choice)
             tmp_best_subtree.replace_subtree(tmp_replacement)
             best_score = tmp_best_score
         else:
             break
-    print(f'{tree.n_leaves=}')
 
     return best_score
 
