@@ -101,7 +101,7 @@ class BoundScore:
             pre_computed_tables=self.table,
             loose=self.loose_pfub)
         # n_errors = pruned_dtc.tree.n_errors
-        n_errors = sum(self.dataset.y_train == pruned_dtc.predict(self.dataset.X_train))
+        n_errors = sum(self.dataset.y_train != pruned_dtc.predict(self.dataset.X_train))
         errors_logprob = self.errors_logprob_prior(n_errors)
         complexity_logprob = self.complexity_logprob_prior(pruned_dtc.tree.n_leaves)
 
