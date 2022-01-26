@@ -180,69 +180,70 @@ class Tree:
             return False
 
     def __copy__(self):
-        # Delete critical references
+        return self._copy(deep=False)
+
+    def __deepcopy__(self, memo):
+        return self._copy(memo=memo, deep=True)
+
+    def _copy(self, memo=None, deep=False):
+        copy_fn = deepcopy if deep else copy
+
+        # Shallow copy to have access to references
         copy_of_dict = copy(self.__dict__)
+
+        # Delete critical references to avoid recursion loops
         copy_of_dict['parent'] = None
         copy_of_dict['left_subtree'] = None
         copy_of_dict['right_subtree'] = None
 
-        # Creating new instances
+        # Deep copy of other references if necessary
+        if deep:
+            copy_of_dict = deepcopy(copy_of_dict, memo)
+
+        # Creating the new instance
         copy_of_tree = type(self).__new__(type(self))
         copy_of_tree.__dict__.update(copy_of_dict)
         if not self.is_leaf():
-            left_subtree = copy(self.left_subtree)
+            left_subtree = copy_fn(self.left_subtree)
             left_subtree.parent = copy_of_tree
             copy_of_tree.left_subtree = left_subtree
 
-            right_subtree = copy(self.right_subtree)
+            right_subtree = copy_fn(self.right_subtree)
             right_subtree.parent = copy_of_tree
             copy_of_tree.right_subtree = right_subtree
 
         return copy_of_tree
 
-    def __deepcopy__(self, memo):
-        # Shallow copy to have access to references
-        copy_of_dict = copy(self.__dict__)
-
-        # Delete critical references
-        copy_of_dict['parent'] = None
-        copy_of_dict['left_subtree'] = None
-        copy_of_dict['right_subtree'] = None
-
-        # Deepcopy of other references
-        deepcopy_of_dict = deepcopy(copy_of_dict, memo)
-
-        # Creating new instances
-        deepcopy_of_tree = type(self).__new__(type(self))
-        deepcopy_of_tree.__dict__.update(deepcopy_of_dict)
-        if not self.is_leaf():
-            left_subtree = deepcopy(self.left_subtree, memo)
-            left_subtree.parent = deepcopy_of_tree
-            deepcopy_of_tree.left_subtree = left_subtree
-
-            right_subtree = deepcopy(self.right_subtree, memo)
-            right_subtree.parent = deepcopy_of_tree
-            deepcopy_of_tree.right_subtree = right_subtree
-
-
-        return deepcopy_of_tree
-
-    def replace_subtree(self, tree, update_tree=True):
+    def replace_subtree(self, tree, update_tree=True, inplace: bool = True):
         """
         Replaces current subtree with given tree instead.
 
-        Returns self.
+        Args:
+            tree (Tree):
+                Tree object to replace current subtree.
+            update_tree (bool):
+                If True, will automatically update the attributes of the tree (height, lenght, n_leaves, etc.).
+            inplace (bool):
+                If True, will replace the subtree of the current tree. Otherwise, the current tree is (shallow) copied before the subtree is removed.
+
+        Returns self or a new tree.
         """
-        if self.parent is None: # Changing the whole tree
-            self.__dict__ = tree.__dict__
+        if inplace:
+            subtree = self
         else:
-            if self is self.parent.left_subtree:
-                self.parent.left_subtree = tree
+            copy_of_tree = copy(self.root)
+            subtree = copy_of_tree.follow_path(self.path_from_root())
+
+        if subtree.parent is None: # Changing the whole tree
+            subtree.__dict__ = tree.__dict__
+        else:
+            if subtree is subtree.parent.left_subtree:
+                subtree.parent.left_subtree = tree
             else:
-                self.parent.right_subtree = tree
+                subtree.parent.right_subtree = tree
             if update_tree:
-                self.update_tree()
-        return self
+                subtree.update_tree()
+        return subtree
 
     def split_leaf(self, update_tree=True):
         """
@@ -254,17 +255,29 @@ class Tree:
             raise RuntimeError('Cannot split internal node.')
         return self.replace_subtree(Tree(Tree(), Tree()), update_tree=update_tree)
 
-    def remove_subtree(self, update_tree=True):
+    def remove_subtree(self, update_tree: bool = True, inplace: bool = True):
         """
         Transforms the subtree into a leaf.
 
-        Returns self.
+        Args:
+            update_tree (bool):
+                If True, will automatically update the attributes of the tree (height, lenght, n_leaves, etc.).
+            inplace (bool):
+                If True, will remove the subtree of the current tree. Otherwise, the current tree is (shallow) copied before the subtree is removed.
+
+        Returns self or a new tree.
         """
-        self.left_subtree = None
-        self.right_subtree = None
+        if inplace:
+            subtree = self
+        else:
+            copy_of_tree = copy(self.root)
+            subtree = copy_of_tree.follow_path(self.path_from_root())
+
+        subtree.left_subtree = None
+        subtree.right_subtree = None
         if update_tree:
-            self.update_tree()
-        return self
+            subtree.update_tree()
+        return subtree
 
     def path_from_root(self):
         """
@@ -296,4 +309,3 @@ class Tree:
                 subtree = subtree.right_subtree
 
         return subtree
-
