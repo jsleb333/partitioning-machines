@@ -103,48 +103,48 @@ class OursShaweTaylorPruning(Model):
         self.bound_value = prune_with_score(self, bound_score)
 
 
-class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
-    def __init__(self, *,
-                 n_folds: int = 10,
-                 delta: float = 0.05,
-                 **kwargs) -> None:
-        super().__init__(delta=delta, **kwargs)
-        self.n_folds = n_folds
+# class OursShaweTaylorPruningCV(OursShaweTaylorPruning):
+#     def __init__(self, *,
+#                  n_folds: int = 10,
+#                  delta: float = 0.05,
+#                  **kwargs) -> None:
+#         super().__init__(delta=delta, **kwargs)
+#         self.n_folds = n_folds
 
-    def _prune_tree(self, dataset) -> None:
-        self._cv_error_prior_exponent(dataset)
-        super()._prune_tree(dataset)
+#     def _prune_tree(self, dataset) -> None:
+#         self._cv_error_prior_exponent(dataset)
+#         super()._prune_tree(dataset)
 
-    def _cv_error_prior_exponent(self, dataset):
-        exponents = list(range(1, 21))
-        cv_dtc = [copy(self) for _ in range(self.n_folds)]
-        fold_idx = list(KFold(n_splits=self.n_folds,
-                              shuffle=True,
-                              random_state=self.seed).split(dataset.X_train))
+#     def _cv_error_prior_exponent(self, dataset):
+#         exponents = list(range(1, 21))
+#         cv_dtc = [copy(self) for _ in range(self.n_folds)]
+#         fold_idx = list(KFold(n_splits=self.n_folds,
+#                               shuffle=True,
+#                               random_state=self.seed).split(dataset.X_train))
 
-        best_indices = np.zeros(len(exponents))
-        for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
-            X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
-            X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
-            dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
+#         best_indices = np.zeros(len(exponents))
+#         for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
+#             X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
+#             X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
+#             dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
 
-            accuracies = []
-            for exponent in exponents:
-                r = 1/2**exponent
-                self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
-                copy_of_dtc = copy(dtc)
-                copy_of_dtc.tree = copy(dtc.tree)
-                OursShaweTaylorPruning._prune_tree(copy_of_dtc, dataset)
-                accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
+#             accuracies = []
+#             for exponent in exponents:
+#                 r = 1/2**exponent
+#                 self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
+#                 copy_of_dtc = copy(dtc)
+#                 copy_of_dtc.tree = copy(dtc.tree)
+#                 OursShaweTaylorPruning._prune_tree(copy_of_dtc, dataset)
+#                 accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
 
-            best_indices += (np.array(accuracies) == np.max(accuracies))
+#             best_indices += (np.array(accuracies) == np.max(accuracies))
 
-        best_exponent = np.array(exponents)[best_indices == np.max(best_indices)].mean()
-        # best_exponent = (exponents[np.argmax(best_indices)] + exponents[::-1][np.argmax(best_indices[::-1])])/2
+#         best_exponent = np.array(exponents)[best_indices == np.max(best_indices)].mean()
+#         # best_exponent = (exponents[np.argmax(best_indices)] + exponents[::-1][np.argmax(best_indices[::-1])])/2
 
-        # print(f'{best_exponent=}')
-        r = 1/2**best_exponent
-        self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
+#         # print(f'{best_exponent=}')
+#         r = 1/2**best_exponent
+#         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
 
 
 class OursHypInvPruning(Model):
@@ -196,63 +196,63 @@ class CARTPruningModified(CARTPruning):
                       pruning_objective=pruning_objective)
 
 
-class KearnsMansourPruning(Model):
-    def __init__(self, *, delta: float = .05, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.delta = delta
+# class KearnsMansourPruning(Model):
+#     def __init__(self, *, delta: float = .05, **kwargs) -> None:
+#         super().__init__(**kwargs)
+#         self.delta = delta
 
-    def alpha(self, subtree, dataset):
-        """
-        Equation (2) of the paper of Kearns and Mansour (1998) using our growth function upper bound.
-        """
-        tree_path = copy(subtree.root)
-        for direction in subtree.path_from_root():
-            if direction == 'left':
-                tree_path.right_subtree.remove_subtree()
-                tree_path = tree_path.left_subtree
-            else:
-                tree_path.left_subtree.remove_subtree()
-                tree_path = tree_path.right_subtree
-            tree_path.remove_subtree()
-            tree_path = tree_path.root
+#     def alpha(self, subtree, dataset):
+#         """
+#         Equation (2) of the paper of Kearns and Mansour (1998) using our growth function upper bound.
+#         """
+#         tree_path = copy(subtree.root)
+#         for direction in subtree.path_from_root():
+#             if direction == 'left':
+#                 tree_path.right_subtree.remove_subtree()
+#                 tree_path = tree_path.left_subtree
+#             else:
+#                 tree_path.left_subtree.remove_subtree()
+#                 tree_path = tree_path.right_subtree
+#             tree_path.remove_subtree()
+#             tree_path = tree_path.root
 
-        gf_tree_path = growth_function_upper_bound(
-            tree_path,
-            dataset.n_features,
-            nominal_feat_dist=dataset.nominal_feat_dist,
-            ordinal_feat_dist=dataset.ordinal_feat_dist,
-            n_classes=dataset.n_classes,
-            loose=True
-        )(subtree.n_examples)
+#         gf_tree_path = growth_function_upper_bound(
+#             tree_path,
+#             dataset.n_features,
+#             nominal_feat_dist=dataset.nominal_feat_dist,
+#             ordinal_feat_dist=dataset.ordinal_feat_dist,
+#             n_classes=dataset.n_classes,
+#             loose=True
+#         )(subtree.n_examples)
 
-        gf_subtree = growth_function_upper_bound(
-            subtree,
-            dataset.n_features,
-            nominal_feat_dist=dataset.nominal_feat_dist,
-            ordinal_feat_dist=dataset.ordinal_feat_dist,
-            n_classes=dataset.n_classes,
-            loose=True
-        )(subtree.n_examples)
+#         gf_subtree = growth_function_upper_bound(
+#             subtree,
+#             dataset.n_features,
+#             nominal_feat_dist=dataset.nominal_feat_dist,
+#             ordinal_feat_dist=dataset.ordinal_feat_dist,
+#             n_classes=dataset.n_classes,
+#             loose=True
+#         )(subtree.n_examples)
 
-        return np.sqrt(
-            (np.log(float(gf_tree_path))
-             + np.log(float(gf_subtree))
-             + np.log(dataset.n_examples/self.delta)
-            )/subtree.n_examples)
+#         return np.sqrt(
+#             (np.log(float(gf_tree_path))
+#              + np.log(float(gf_subtree))
+#              + np.log(dataset.n_examples/self.delta)
+#             )/subtree.n_examples)
 
-    def _prune_tree(self, dataset) -> None:
-        """
-        Equation (1) of the paper of Kearns and Mansour (1998).
-        """
-        for subtree in self.tree.traverse(order='post'):
-            if subtree.is_leaf():
-                continue
-            frac_errors_subtree = subtree.n_errors/subtree.n_examples
-            frac_errors_leaf = 1 - np.max(subtree.n_examples_by_label)/subtree.n_examples
+#     def _prune_tree(self, dataset) -> None:
+#         """
+#         Equation (1) of the paper of Kearns and Mansour (1998).
+#         """
+#         for subtree in self.tree.traverse(order='post'):
+#             if subtree.is_leaf():
+#                 continue
+#             frac_errors_subtree = subtree.n_errors/subtree.n_examples
+#             frac_errors_leaf = 1 - np.max(subtree.n_examples_by_label)/subtree.n_examples
 
-            subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset)
+#             subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset)
 
-        self.prune_tree(0)
+#         self.prune_tree(0)
 
 
 class ReducedErrorPruning(Model):
