@@ -54,5 +54,5 @@ class TestModel:
         nopru.tree = best_tree
 
         for acc_1, acc_2 in zip(nopru.evaluate_tree(iris), reder.evaluate_tree(iris)):
-            assert acc_1 == acc_2
+            assert acc_1 != acc_2
 
