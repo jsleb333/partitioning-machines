@@ -6,7 +6,7 @@ import csv
 import numpy as np
 from scipy.stats import t as students_t
 
-from experiments.datasets.datasets import dataset_list
+from experiments.datasets import dataset_list as d_list
 from experiments.models import model_dict
 from experiments.utils import camel_to_snake
 
@@ -43,6 +43,8 @@ def process_results(exp_name='exp02'):
     path = './experiments/results/' + exp_name
     doc = p2l.Document(exp_name + '_all_results', path)
     doc.packages['geometry'].options.append('landscape')
+
+    dataset_list = [d for d in d_list if d.name not in ['cardiotocography10']]
 
     significance = 0.1
 
@@ -118,8 +120,8 @@ def process_results(exp_name='exp02'):
 
     table[-2,0] = 'Mean'
     table[-2,1:] = [MeanWithCI(ts_accs[i]*100) for i in range(len(model_dict))]
-    # table[-1,0] = 'Fraction of oracle'
-    # table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_dict))]
+    table[-1,0] = 'Fraction of oracle'
+    table[-1,1:] = [MeanWithCI((1-ts_accs[-1]/ts_accs[i])*100) for i in range(len(model_dict))]
 
     d = [dataset_list[i] for i in [0, 2, 3, 4, 16]]
 
@@ -134,7 +136,7 @@ def process_results(exp_name='exp02'):
     doc.add_package('natbib')
 
 
-    doc.build(delete_files='all')
+    doc.build(delete_files='all', show_pdf=False)
     # try:
     #     doc.build(delete_files='all')
     # except:
