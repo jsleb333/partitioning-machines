@@ -84,13 +84,12 @@ class OursShaweTaylorPruning(Model):
     def __init__(self, *,
                  error_prior_exponent: float = 13.1,
                  delta: float = 0.05,
-                 pfub_table: dict[Tree] = {},
                  **kwargs) -> None:
         super().__init__(**kwargs)
         r = 1/2**error_prior_exponent
         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
         self.delta = delta
-        self.pfub_table = pfub_table
+        self.pfub_table = {}
 
     def _prune_tree(self, dataset) -> None:
         bound_score = BoundScore(

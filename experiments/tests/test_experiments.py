@@ -61,8 +61,8 @@ class TestExperiment:
     def test_ours_shawe_taylor_reuses_pfub_table_between_draws(self):
         iris = Iris()
         n_draws = 2
-        pfub_table = {}
-        model = OursShaweTaylorPruning(pfub_table=pfub_table)
+        model = OursShaweTaylorPruning()
+        pfub_table = model.pfub_table
 
         tables = []
         for draw in range(n_draws):
