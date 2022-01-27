@@ -40,12 +40,18 @@ def process_results(exp_name='exp02'):
 
     Prints in the console the tex string used to produce the tables, and will compile it if possible.
     """
-    doc = p2l.Document(exp_name + '_all_results', './experiments/results/' + exp_name)
+    path = './experiments/results/' + exp_name
+    doc = p2l.Document(exp_name + '_all_results', path)
     doc.packages['geometry'].options.append('landscape')
 
     significance = 0.1
 
-    caption = f"""Mean test accuracy and standard deviation on 100 random splits of {len(dataset_list)} datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold."""
+    with open(path + '/iris/no_pruning_exp_config.py') as file:
+        namespace = {}
+        exec(file.read().replace('"', ''), namespace)
+        exp_config = namespace['exp_config']
+
+    caption = f"""Mean test accuracy and standard deviation on {exp_config['n_draws']} random splits of {len(dataset_list)} datasets taken from the UCI Machine Learning Repository \\citep{{Dua:2019}}. In parenthesis is the total number of examples followed by the number of classes of the dataset. The best performances up to a ${significance}\\%$ accuracy gap are highlighted in bold. The maximum number of leaves is set to {exp_config['model_config']['max_n_leaves']}. The dataset is split into training and test sets with a ratio of {exp_config['test_split_ratio']}."""
 
     label = "results"
 
@@ -136,4 +142,4 @@ def process_results(exp_name='exp02'):
 
 
 if __name__ == "__main__":
-    process_results(exp_name='exp04')
+    process_results(exp_name='exp05-bprune')
