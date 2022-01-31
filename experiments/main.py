@@ -94,7 +94,7 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        # model_names=['ours_shawe_taylor_pruning_cv'],
+        model_names=['kearns_mansour_pruning'],
         # datasets=['parkinson', 'iris'],
         # datasets=['cardiotocography10'],
         exp_name='exp06-less-test',
