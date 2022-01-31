@@ -1,3 +1,4 @@
+from matplotlib.pyplot import table
 import numpy as np
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
@@ -195,63 +196,91 @@ class CARTPruningModified(CARTPruning):
                       pruning_objective=pruning_objective)
 
 
-# class KearnsMansourPruning(Model):
-#     def __init__(self, *, delta: float = .05, **kwargs) -> None:
-#         super().__init__(**kwargs)
-#         self.delta = delta
+class KearnsMansourPruning(Model):
+    def __init__(self, *,
+                 delta: float = .05,
+                 c: float = np.logspace(-20, 0, num=21, base=10),
+                 n_folds: int = 10,
+                 **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.delta = delta
+        self.c = c
+        self.n_folds = n_folds
+        self.table = {}
 
-#     def alpha(self, subtree, dataset):
-#         """
-#         Equation (2) of the paper of Kearns and Mansour (1998) using our growth function upper bound.
-#         """
-#         tree_path = copy(subtree.root)
-#         for direction in subtree.path_from_root():
-#             if direction == 'left':
-#                 tree_path.right_subtree.remove_subtree()
-#                 tree_path = tree_path.left_subtree
-#             else:
-#                 tree_path.left_subtree.remove_subtree()
-#                 tree_path = tree_path.right_subtree
-#             tree_path.remove_subtree()
-#             tree_path = tree_path.root
+    def alpha(self, subtree, dataset, c):
+        """
+        Equation (2) of the paper of Kearns and Mansour (1998) using our growth function upper bound.
+        """
+        tree_path = copy(subtree.root)
+        for direction in subtree.path_from_root():
+            if direction == 'left':
+                tree_path.right_subtree.remove_subtree()
+                tree_path = tree_path.left_subtree
+            else:
+                tree_path.left_subtree.remove_subtree()
+                tree_path = tree_path.right_subtree
+            tree_path.remove_subtree()
+            tree_path = tree_path.root
 
-#         gf_tree_path = growth_function_upper_bound(
-#             tree_path,
-#             dataset.n_features,
-#             nominal_feat_dist=dataset.nominal_feat_dist,
-#             ordinal_feat_dist=dataset.ordinal_feat_dist,
-#             n_classes=dataset.n_classes,
-#             loose=True
-#         )(subtree.n_examples)
+        gf_tree_path = growth_function_upper_bound(
+            tree_path,
+            dataset.n_features,
+            nominal_feat_dist=dataset.nominal_feat_dist,
+            ordinal_feat_dist=dataset.ordinal_feat_dist,
+            n_classes=dataset.n_classes,
+            loose=True,
+            pre_computed_tables=self.table
+        )(subtree.n_examples)
 
-#         gf_subtree = growth_function_upper_bound(
-#             subtree,
-#             dataset.n_features,
-#             nominal_feat_dist=dataset.nominal_feat_dist,
-#             ordinal_feat_dist=dataset.ordinal_feat_dist,
-#             n_classes=dataset.n_classes,
-#             loose=True
-#         )(subtree.n_examples)
+        gf_subtree = growth_function_upper_bound(
+            subtree,
+            dataset.n_features,
+            nominal_feat_dist=dataset.nominal_feat_dist,
+            ordinal_feat_dist=dataset.ordinal_feat_dist,
+            n_classes=dataset.n_classes,
+            loose=True,
+            pre_computed_tables=self.table
+        )(subtree.n_examples)
 
-#         return np.sqrt(
-#             (np.log(float(gf_tree_path))
-#              + np.log(float(gf_subtree))
-#              + np.log(dataset.n_examples/self.delta)
-#             )/subtree.n_examples)
+        return c * np.sqrt(
+            (np.log(float(gf_tree_path))
+             + np.log(float(gf_subtree))
+             + np.log(dataset.n_examples/self.delta)
+            )/subtree.n_examples)
 
-#     def _prune_tree(self, dataset) -> None:
-#         """
-#         Equation (1) of the paper of Kearns and Mansour (1998).
-#         """
-#         for subtree in self.tree.traverse(order='post'):
-#             if subtree.is_leaf():
-#                 continue
-#             frac_errors_subtree = subtree.n_errors/subtree.n_examples
-#             frac_errors_leaf = 1 - np.max(subtree.n_examples_by_label)/subtree.n_examples
+    def _prune_tree(self, dataset) -> None:
+        def pruning_objective_factory(c):
+            def pruning_objective(subtree):
+                """
+                Equation (1) of the paper of Kearns and Mansour (1998).
+                """
+                frac_errors_subtree = subtree.n_errors/subtree.n_examples
+                frac_errors_leaf = 1 - np.max(subtree.n_examples_by_label)/subtree.n_examples
 
-#             subtree.pruning_coef = frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset)
+                return frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset, c)
+            return pruning_objective
 
-#         self.prune_tree(0)
+        fold_idx = list(KFold(n_splits=self.n_folds,
+                              shuffle=True,
+                              random_state=self.seed).split(dataset.X_train))
+
+        best_cs = []
+        for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
+            X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
+            X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
+            dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
+
+            accuracies = []
+            for c in self.c:
+                copy_of_dtc = copy(dtc)
+                copy_of_dtc.tree = copy(dtc.tree)
+                copy_of_dtc.prune_tree(0, pruning_objective_factory(c))
+                accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
+
+            best_cs.append(self.c[np.argmax(accuracies)])
+
+        self.prune_tree(0, pruning_objective=pruning_objective_factory(np.mean(best_cs)))
 
 
 class ReducedErrorPruning(Model):
@@ -290,8 +319,9 @@ if __name__ == '__main__':
         #     model._prune_tree(dataset)
         #     print('leaves =', model.tree.n_leaves)
         #     print(model.evaluate_tree(dataset))
-        model = OursShaweTaylorPruning()
+        model = KearnsMansourPruning()
         model.fit_tree(dataset)
         model._prune_tree(dataset)
+        print(model.evaluate_tree(dataset))
 
 

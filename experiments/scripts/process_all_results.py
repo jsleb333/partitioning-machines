@@ -45,6 +45,7 @@ def process_results(exp_name='exp02'):
     doc.packages['geometry'].options.append('landscape')
 
     dataset_list = [d for d in d_list if d.name not in ['cardiotocography10']]
+    # dataset_list = d_list
 
     significance = 0.1
 
@@ -103,7 +104,7 @@ def process_results(exp_name='exp02'):
             if ts_acc:
                 ts_accs[i,d] = np.mean(np.array(ts_acc, dtype=float))
 
-        table[d+2,1:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=significance, rtol=0)
+        table[d+2,2:-1].highlight_best(best=lambda content: '$\\mathbf{' + content[1:-1] + '}$', atol=significance, rtol=0)
 
     table[-4,0] = r'Number of best'
     bests = np.isclose(ts_accs, np.max(ts_accs[:-1,:], axis=0), rtol=0, atol=significance/100)
@@ -144,4 +145,4 @@ def process_results(exp_name='exp02'):
 
 
 if __name__ == "__main__":
-    process_results(exp_name='exp05-bprune')
+    process_results(exp_name='exp06-less-test')
