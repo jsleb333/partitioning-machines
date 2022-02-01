@@ -147,6 +147,59 @@ class OursShaweTaylorPruning(Model):
 #         self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
 
 
+class OursSinglePassST(Model):
+    def __init__(self, *,
+                 delta: float = 0.05,
+                 error_priors: np.ndarray = np.logspace(-30, -1, num=15, base=2),
+                 n_folds: int = 10,
+                 **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.error_priors = error_priors
+        self.delta = delta
+        self.n_folds = n_folds
+        self.pfub_table = {}
+
+    def _prune_tree(self, dataset) -> None:
+        def pruning_objective_factory(r, dtc):
+            objective = BoundScore(
+                dataset=dataset,
+                bound=shawe_taylor_bound,
+                table=self.pfub_table,
+                errors_logprob_prior=lambda n_errors: np.log(1-r) + n_errors*np.log(r),
+                delta=self.delta,
+            )
+            bound_before_pruning = objective(dtc)
+            def pruning_objective(subtree):
+                pruned_dtc = copy(dtc)
+                pruned_dtc.tree = subtree.remove_subtree(inplace=False).root
+                return objective(pruned_dtc) - bound_before_pruning
+            return pruning_objective
+
+        fold_idx = list(KFold(n_splits=self.n_folds,
+                              shuffle=True,
+                              random_state=self.seed).split(dataset.X_train))
+
+        best_rs = []
+        for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
+            X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
+            X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
+            dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
+
+            accuracies = []
+            for r in self.error_priors:
+                copy_of_dtc = copy(dtc)
+                copy_of_dtc.tree = copy(dtc.tree)
+                copy_of_dtc.prune_tree(0, pruning_objective_factory(r, copy_of_dtc))
+                accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
+
+            best_rs.append(self.error_priors[np.argmax(accuracies)])
+
+        best_r = np.exp(np.log(best_rs).mean())
+        print(np.log2(best_r))
+
+        self.prune_tree(0, pruning_objective=pruning_objective_factory(best_r, self))
+
+
 class OursHypInvPruning(Model):
     def __init__(self, *, delta: float = .05, mprime_ratio: int = 4, **kwargs) -> None:
         super().__init__(**kwargs)
