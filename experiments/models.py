@@ -195,7 +195,6 @@ class OursSinglePassST(Model):
             best_rs.append(self.error_priors[np.argmax(accuracies)])
 
         best_r = np.exp(np.log(best_rs).mean())
-        print(np.log2(best_r))
 
         self.prune_tree(0, pruning_objective=pruning_objective_factory(best_r, self))
 
@@ -252,12 +251,12 @@ class CARTPruningModified(CARTPruning):
 class KearnsMansourPruning(Model):
     def __init__(self, *,
                  delta: float = .05,
-                 c: float = np.logspace(-20, 0, num=21, base=10),
+                 cs: np.ndarray = np.logspace(-20, 0, num=21, base=10),
                  n_folds: int = 10,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.delta = delta
-        self.c = c
+        self.cs = cs
         self.n_folds = n_folds
         self.table = {}
 
@@ -325,13 +324,13 @@ class KearnsMansourPruning(Model):
             dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
 
             accuracies = []
-            for c in self.c:
+            for c in self.cs:
                 copy_of_dtc = copy(dtc)
                 copy_of_dtc.tree = copy(dtc.tree)
                 copy_of_dtc.prune_tree(0, pruning_objective_factory(c))
                 accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
 
-            best_cs.append(self.c[np.argmax(accuracies)])
+            best_cs.append(self.cs[np.argmax(accuracies)])
 
         self.prune_tree(0, pruning_objective=pruning_objective_factory(np.mean(best_cs)))
 
@@ -363,7 +362,7 @@ if __name__ == '__main__':
 
     for d in [Wine, Iris, Amphibians]:
         print(d)
-        dataset = d(0, .2, 101)
+        dataset = d(0, .15, 37)
         # for n in [2, 5, 8, 10]:
         #     print(f'{n=}')
         #     model = OursShaweTaylorPruningCV(n_folds=n)
@@ -372,9 +371,21 @@ if __name__ == '__main__':
         #     model._prune_tree(dataset)
         #     print('leaves =', model.tree.n_leaves)
         #     print(model.evaluate_tree(dataset))
+        seed = 42
         model = KearnsMansourPruning()
-        model.fit_tree(dataset)
+        model.fit_tree(dataset, seed=seed)
         model._prune_tree(dataset)
-        print(model.evaluate_tree(dataset))
+        print('CVSP-ST', model.evaluate_tree(dataset))
+
+        model = OursShaweTaylorPruning()
+        model.fit_tree(dataset, seed=seed)
+        model._prune_tree(dataset)
+        print('ST', model.evaluate_tree(dataset))
+
+        model = ReducedErrorPruning()
+        dataset.make_train_val_split(.15)
+        model.fit_tree(dataset, seed=seed)
+        model._prune_tree(dataset)
+        print('REDER', model.evaluate_tree(dataset))
 
 

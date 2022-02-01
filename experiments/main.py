@@ -94,10 +94,10 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['kearns_mansour_pruning'],
+        model_names=['ours_single_pass_st'],
         # datasets=['parkinson', 'iris'],
         # datasets=['cardiotocography10'],
-        exp_name='exp06-less-test',
+        exp_name='exp06-SPST',
         # n_folds=10,
         n_draws=25,
         seed=37,

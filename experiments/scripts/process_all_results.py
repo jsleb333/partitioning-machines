@@ -98,7 +98,7 @@ def process_results(exp_name='exp02'):
                         ts_acc.append(row[pos])
                 table[d+2, i+1] = MeanWithCI(100*np.array(ts_acc, dtype=float))
 
-            except FileNotFoundError:
+            except:
                 pass
 
             if ts_acc:
