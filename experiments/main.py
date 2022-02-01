@@ -96,7 +96,7 @@ if __name__ == "__main__":
     launch_experiment(
         model_names=['ours_single_pass_st'],
         # datasets=['parkinson', 'iris'],
-        # datasets=['cardiotocography10'],
+        datasets=[d.name for d in dataset_list][4:],
         exp_name='exp06-SPST',
         # n_folds=10,
         n_draws=25,
