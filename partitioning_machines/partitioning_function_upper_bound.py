@@ -383,6 +383,12 @@ def partitioning_function_upper_bound(tree,
             Number of examples. Corresponds to the variable 'm' in the paper.
         n_rl_feat (int):
             Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        ordinal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the ordinal features. See the document of PartitioningFunctionUpperBound for more details.
+        nominal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the nominal features. See the document of PartitioningFunctionUpperBound for more details.
+        pre_computed_tables (Union[dict, None]):
+            If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree.
         loose (bool):
             If True, will use the more computationally efficient but looser algorithm
         log (bool):
@@ -403,15 +409,20 @@ def growth_function_upper_bound(tree,
                                 nominal_feat_dist=None,
                                 n_classes=2,
                                 pre_computed_tables=None,
-                                loose=False):
+                                loose=False,
+                                log=False):
     r"""
     Args:
         tree (Tree object):
             Tree structure for which to compute the bound.
-        n_examples (int):
-            Number of examples. Corresponds to the variable 'm' in the paper.
         n_rl_feat (int):
             Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        ordinal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the ordinal features. See the document of PartitioningFunctionUpperBound for more details.
+        nominal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the nominal features. See the document of PartitioningFunctionUpperBound for more details.
+        pre_computed_tables (Union[dict, None]):
+            If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree.
         n_classes (int):
             Number of classes. Corresponds to the variable 'n' in the paper.
         loose (bool):
