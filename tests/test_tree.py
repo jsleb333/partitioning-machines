@@ -128,9 +128,15 @@ class TestTree:
         tree.split_leaf()
         assert tree == trees[1]
 
-    def test_remove_subtree(self, trees):
+    def test_remove_subtree_inplace(self, trees):
         trees[2].left_subtree.remove_subtree()
         assert trees[2] == trees[1]
+
+    def test_remove_subtree_copy(self, trees):
+        new_tree = trees[2].left_subtree.remove_subtree(inplace=False)
+        print(trees[1], trees[2], new_tree)
+        assert trees[2] != trees[1]
+        assert new_tree.root == trees[1]
 
     def test_copy(self, trees):
         object_passed_by_reference_by_default = {'a':1}
