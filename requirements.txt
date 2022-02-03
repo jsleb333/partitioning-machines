@@ -1,5 +1,12 @@
+git+https://github.com/jsleb333/hypergeometric_tail_inversion#hypergeo
+git+https://github.com/GRAAL-Research/graal-utils.git
 numpy
 scipy
 sympy
+python2latex>=0.4.0
+colorspacious
+xlrd
+pandas
+seaborn
+colorama
 sklearn
-python2latex
