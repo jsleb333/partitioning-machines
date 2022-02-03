@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from math import floor
 from scipy.special import factorial as factorial_
@@ -19,7 +20,15 @@ class PartitioningFunctionUpperBound:
 
     It implements an optimized version of the algorithm 1 of Appendix D by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
-    def __init__(self, tree, n_rl_feat, *, ordinal_feat_dist=None, nominal_feat_dist=None, pre_computed_tables=None, loose=False, log=False):
+    def __init__(self,
+                 tree,
+                 n_rl_feat,
+                 *,
+                 ordinal_feat_dist=None,
+                 nominal_feat_dist=None,
+                 pre_computed_tables=None,
+                 loose=False,
+                 log=False):
         r"""
         Args:
             tree (Tree object):
@@ -286,6 +295,7 @@ class PartitioningFunctionUpperBound:
         n = self._truncate_nominal_feat_dist(nominal_feat_dist, m)
 
         trivial_case = self._check_trivial_cases(m, c, tree.n_leaves)
+        print(trivial_case)
         if trivial_case is not None:
             if trivial_case == 0:
                 return -np.inf
@@ -295,59 +305,78 @@ class PartitioningFunctionUpperBound:
         # Modification 1: Check first in the table if value is already computed.
         if tree not in self.pfub_table:
             self.pfub_table[tree] = {}
-        if (c, m, l, tuple(n[1:])) not in self.pfub_table[tree]:
-            k_left = m - tree.right_subtree.n_leaves
-            k_right = m - tree.left_subtree.n_leaves
+        if (c, m, l, tuple(n[1:])) in self.pfub_table[tree]:
+            return self.pfub_table[tree][c, m, l, tuple(n[1:])]
 
+        k_left = m - tree.right_subtree.n_leaves
+        k_right = m - tree.left_subtree.n_leaves
 
-            coef_nom = min(
-                max(floor(m/min(k_left, m-k_left)), floor(m/min(k_right, m-k_right)))*self.n_nominal_feat,
-                sum(C*n[C] for C in range(1, len(n)))
-            )
-            log_coef = np.log(m - tree.n_leaves) + np.log(2*l + 2*self.n_ordinal_feat + coef_nom)
+        coef_nom = min(
+            max(floor(m/min(k_left, m-k_left)), floor(m/min(k_right, m-k_right)))*self.n_nominal_feat,
+            sum(C*n[C] for C in range(1, len(n)))
+        )
+        log_coef = np.log(m - tree.n_leaves) + np.log(2*l + 2*self.n_ordinal_feat + coef_nom)
 
-            # Modification 2: To avoid making useless calls, we expand some cases of a and b that can be simplified
-            log_coef += (log_factorial(c)
-                + self._compute_log_upper_bound_loose(tree.right_subtree, c, k_right, n)
-                + self._compute_log_upper_bound_loose(tree.left_subtree, c, k_left, n))
+        # Main term is largest non-zero term of the sum.
+        a_main = min(c, tree.left_subtree.n_leaves)
+        b_main = min(c, tree.right_subtree.n_leaves)
+        main_term = (log_Kabc(a_main, b_main, c)
+            + self._compute_log_upper_bound_loose(tree.left_subtree, a_main, k_left, n)
+            + self._compute_log_upper_bound_loose(tree.right_subtree, b_main, k_right, n)
+        )
 
-            N = 1
-            for a in range(1, c+1):
-                for b in range(max(1, c-a), c+1):
-                    if a == c and b == c:
-                        continue
-                    elif a == 1 and b == 1:
-                        N += 1
-                    elif a == 1 and b == c-1:
-                        N += self._compute_upper_bound_loose(tree.right_subtree, b, k_right, n)
-                    elif a == 1 and b == c:
-                        N += c*self._compute_upper_bound_loose(tree.right_subtree, b, k_right, n)
-                    elif b == 1 and a == c-1:
-                        N += self._compute_upper_bound_loose(tree.left_subtree, a, k_left, n)
-                    elif b == 1 and a == c:
-                        N += c*self._compute_upper_bound_loose(tree.left_subtree, a, k_left, n)
-                    else:
-                        pi_left = self._check_trivial_cases(k_left, a, tree.left_subtree.n_leaves)
-                        pi_right = self._check_trivial_cases(k_right, b, tree.right_subtree.n_leaves)
+        cumul = 1
+        n_parts_iter = ((a, b) for a in range(1, c+1) for b in range(max(1, c-a), c+1))
+        # Modification 2: To avoid making useless calls, we expand some cases of a and b that can be simplified
+        for i, (a, b) in enumerate(n_parts_iter):
+            if a == a_main and b == b_main: # Skipped as already accounted by main_term
+                continue
+            elif a == 1 and b == 1:
+                cumul += np.exp(-main_term)
+            elif a == 1 and b == c-1:
+                cumul += np.exp(
+                    self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    - main_term)
+            elif a == 1 and b == c:
+                cumul += np.exp(
+                    np.log(c)
+                    + self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    - main_term)
+            elif b == 1 and a == c-1:
+                cumul += np.exp(
+                    self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    - main_term)
+            elif b == 1 and a == c:
+                cumul += np.exp(
+                    np.log(c)
+                    + self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    - main_term)
+            else:
+                pi_left = self._check_trivial_cases(k_left, a, tree.left_subtree.n_leaves)
+                pi_right = self._check_trivial_cases(k_right, b, tree.right_subtree.n_leaves)
 
-                        if pi_left == 0 or pi_right == 0:
-                            continue
+                if pi_left == 0 or pi_right == 0:
+                    continue
 
-                        if pi_left is None:
-                            pi_left = self._compute_upper_bound_loose(tree.left_subtree, a, k_left, n)
-                        if pi_right is None:
-                            pi_right = self._compute_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                if pi_left is None:
+                    log_pi_left = self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                else:
+                    log_pi_left = np.log(pi_left)
 
-                        Kabc = binom(a, c - b) * binom(b, c - a) * factorial(a + b - c)
-                        N += Kabc * pi_left * pi_right
+                if pi_right is None:
+                    log_pi_right = self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                else:
+                    log_pi_right = np.log(pi_right)
 
-            N *= coef
+                cumul += np.exp(log_Kabc(a, b, c) + log_pi_left + log_pi_right - main_term)
 
-            if tree.left_subtree == tree.right_subtree:
-                N //= 2
+        log_bound = log_coef + main_term + np.log(cumul)
+        if tree.left_subtree == tree.right_subtree:
+            log_bound -= np.log(2)
 
-            # Modification 3: Add value to lookup table.
-            self.pfub_table[tree][c, m, l, tuple(n[1:])] = min(N, stirling(n_examples, n_parts))
+        # Modification 3: Add value to lookup table.
+        result = min(log_bound, math.log(stirling(m, c)))
+        self.pfub_table[tree][c, m, l, tuple(n[1:])] = result
 
         return self.pfub_table[tree][c, m, l, tuple(n[1:])]
 
@@ -361,8 +390,10 @@ class PartitioningFunctionUpperBound:
             return self._compute_log_upper_bound_loose(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
         elif self.loose:
             return self._compute_upper_bound_loose(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
-        else:
+        elif not self.loose and not self.log:
             return self._compute_upper_bound_tight(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
+        else:
+            raise RuntimeError('Unsupported combination of "log" but not "loose".')
 
 
 def partitioning_function_upper_bound(tree,
@@ -430,20 +461,29 @@ def growth_function_upper_bound(tree,
         log (bool):
             If True, will return the logarithm of the PFUB.
     """
+    pfub = PartitioningFunctionUpperBound(
+        tree,
+        n_rl_feat,
+        ordinal_feat_dist=ordinal_feat_dist,
+        nominal_feat_dist=nominal_feat_dist,
+        pre_computed_tables=pre_computed_tables,
+        loose=loose,
+        log=log
+    )
     if not log:
-        pfub = PartitioningFunctionUpperBound(tree, n_rl_feat, pre_computed_tables=pre_computed_tables, loose=loose, log=log)
         def upper_bound(n_examples):
             max_range = min(n_classes, tree.n_leaves, n_examples)
             return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))
     else:
-        log_pfub = PartitioningFunctionUpperBound(tree, n_rl_feat, pre_computed_tables=pre_computed_tables, loose=loose, log=log)
+        log_pfub = pfub
         def upper_bound(n_examples):
             M = min(n_classes, tree.n_leaves, n_examples)
-            main_term = log_factorial(n_classes, M) + log_pfub(n_examples, M)
-            N = 0
-            for n_part in range(1, M):
-                N += np.exp(log_ff(n_classes, n_part) + log_pfub(n_examples, n_part) - main_term)
-            return main_term + np.log(1 + N)
+            main_term = log_ff(n_classes, M) + log_pfub(n_examples, M)
+            cumul = 1
+            for n_parts in range(1, M):
+                cumul += np.exp(log_ff(n_classes, n_parts) + log_pfub(n_examples, n_parts) - main_term)
+            return main_term + np.log(cumul)
+    return upper_bound
 
 
 if __name__ == '__main__':
@@ -452,11 +492,4 @@ if __name__ == '__main__':
     from partitioning_machines import Tree
     from graal_utils import Timer
 
-    leaf = Tree()
-    stump = Tree(leaf, leaf)
-    tree = Tree(stump, stump)
-    c = 2
-    m = 50
-    for _ in Timer(range(1)):
-        pfub = PartitioningFunctionUpperBound(tree, 10, nominal_feat_dist=[0,0,0], loose=False)
-        print(pfub(m, c))
+    assert growth_function_upper_bound(Tree(Tree(), Tree()), n_rl_feat=10, n_classes=3, log=True)(1) == np.log(3)
