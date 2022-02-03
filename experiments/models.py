@@ -100,9 +100,9 @@ class OursShaweTaylorPruning(Model):
             errors_logprob_prior=self.errors_logprob_prior,
             delta=self.delta,
         )
-        self.bound_value = prune_with_score(self, bound_score)
         pre_bound = {'pre_pruning_bound': bound_score(self)}
         print(pre_bound)
+        self.bound_value = prune_with_score(self, bound_score)
         return pre_bound
 
 
