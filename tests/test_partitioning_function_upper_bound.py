@@ -1,3 +1,4 @@
+import numpy as np
 from partitioning_machines.tree import Tree
 from partitioning_machines.partitioning_function_upper_bound import PartitioningFunctionUpperBound, growth_function_upper_bound
 
@@ -136,6 +137,22 @@ class TestPatitioninFunctionUpperBound:
         pfub(100, 2)
         pfub(100, 3)
 
+    def test_log_loose_bound(self):
+        leaf = Tree()
+        stump = Tree(leaf, leaf)
+        tree = Tree(stump, leaf)
+        pfub = PartitioningFunctionUpperBound(tree, 10, loose=True)
+        log_pfub = PartitioningFunctionUpperBound(tree, 10, loose=True, log=True)
+        assert log_pfub(1, 1) == 0
+        m, c = 50, 3
+        assert np.isclose(np.log(pfub(m, c)), log_pfub(m, c))
+        m, c = 30, 5 # More parts than leaves
+        assert log_pfub(m, c) == -np.inf
+
 def test_growth_function_upper_bound():
     assert growth_function_upper_bound(Tree(Tree(), Tree()), n_rl_feat=10, n_classes=3)(1) == 3
     assert growth_function_upper_bound(Tree(Tree(), Tree()), n_rl_feat=10, n_classes=3)(2) == 3 + 6
+
+def test_log_growth_function_upper_bound():
+    assert np.isclose(growth_function_upper_bound(Tree(Tree(), Tree()), n_rl_feat=10, n_classes=3, log=True, loose=True)(1), np.log(3))
+    assert np.isclose(growth_function_upper_bound(Tree(Tree(), Tree()), n_rl_feat=10, n_classes=3, log=True, loose=True)(2), np.log(3 + 6))

@@ -1,10 +1,16 @@
+import math
+import numpy as np
 from math import floor
 from scipy.special import factorial as factorial_
 factorial = lambda n: int(factorial_(n, exact=True))
-from scipy.special import comb
+from scipy.special import comb, gammaln
 binom = lambda N, k: int(comb(N, k, exact=True))
+log_factorial = lambda n: gammaln(n+1)
+log_binom = lambda N, k: log_factorial(N) - log_factorial(N-k) - log_factorial(k)
+log_Kabc = lambda a, b, c: log_binom(a, c-b) + log_binom(b, c-a) + log_factorial(a+b-c)
 from sympy.functions.combinatorial.numbers import stirling
 from sympy.functions.combinatorial.factorials import ff
+log_ff = lambda N, a: log_factorial(N) - log_factorial(N-a)
 from copy import copy
 
 
@@ -14,7 +20,15 @@ class PartitioningFunctionUpperBound:
 
     It implements an optimized version of the algorithm 1 of Appendix D by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
-    def __init__(self, tree, n_rl_feat, *, ordinal_feat_dist=None, nominal_feat_dist=None, pre_computed_tables=None, loose=False):
+    def __init__(self,
+                 tree,
+                 n_rl_feat,
+                 *,
+                 ordinal_feat_dist=None,
+                 nominal_feat_dist=None,
+                 pre_computed_tables=None,
+                 loose=False,
+                 log=False):
         r"""
         Args:
             tree (Tree object):
@@ -29,6 +43,8 @@ class PartitioningFunctionUpperBound:
                 If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree. The transfered table will be updated with any new value computed. If None, a table will be created from scratch. One can get the computed table by accessing the 'pfub_table' attribute.
             loose (bool):
                 If loose is True, a looser but *much more* computationally efficient version of the bound is computed. In that case, no table is needed.
+            log (bool):
+                If log is True, a logarithmic adaptation of the algorithm is used instead to avoid overflows. The PFUB outputs will correspond to log(pfub(m)).
         """
         self.tree = tree
         self.n_rl_feat = n_rl_feat
@@ -41,6 +57,7 @@ class PartitioningFunctionUpperBound:
 
         self.pfub_table = {} if pre_computed_tables is None else pre_computed_tables
         self.loose = loose
+        self.log = log
 
     def _truncate_nominal_feat_dist(self, nominal_feat_dist, n_examples):
         # Remove trailing zeros
@@ -73,8 +90,6 @@ class PartitioningFunctionUpperBound:
             return 1
         elif n_examples <= n_leaves:
             return stirling(n_examples, n_parts)
-        else:
-            return None
 
     def _compute_upper_bound_tight(self,
                                    tree,
@@ -268,16 +283,117 @@ class PartitioningFunctionUpperBound:
 
         return self.pfub_table[tree][c, m, l, tuple(n[1:])]
 
+    def _compute_log_upper_bound_loose(self,
+                                       tree,
+                                       n_parts,
+                                       n_examples,
+                                       nominal_feat_dist):
+        """
+        Log implementation of the looser but faster implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        """
+        c, m, l = n_parts, n_examples, self.n_rl_feat
+        n = self._truncate_nominal_feat_dist(nominal_feat_dist, m)
+
+        trivial_case = self._check_trivial_cases(m, c, tree.n_leaves)
+        print(trivial_case)
+        if trivial_case is not None:
+            if trivial_case == 0:
+                return -np.inf
+            else:
+                return np.log(trivial_case)
+
+        # Modification 1: Check first in the table if value is already computed.
+        if tree not in self.pfub_table:
+            self.pfub_table[tree] = {}
+        if (c, m, l, tuple(n[1:])) in self.pfub_table[tree]:
+            return self.pfub_table[tree][c, m, l, tuple(n[1:])]
+
+        k_left = m - tree.right_subtree.n_leaves
+        k_right = m - tree.left_subtree.n_leaves
+
+        coef_nom = min(
+            max(floor(m/min(k_left, m-k_left)), floor(m/min(k_right, m-k_right)))*self.n_nominal_feat,
+            sum(C*n[C] for C in range(1, len(n)))
+        )
+        log_coef = np.log(m - tree.n_leaves) + np.log(2*l + 2*self.n_ordinal_feat + coef_nom)
+
+        # Main term is largest non-zero term of the sum.
+        a_main = min(c, tree.left_subtree.n_leaves)
+        b_main = min(c, tree.right_subtree.n_leaves)
+        main_term = (log_Kabc(a_main, b_main, c)
+            + self._compute_log_upper_bound_loose(tree.left_subtree, a_main, k_left, n)
+            + self._compute_log_upper_bound_loose(tree.right_subtree, b_main, k_right, n)
+        )
+
+        cumul = 1
+        n_parts_iter = ((a, b) for a in range(1, c+1) for b in range(max(1, c-a), c+1))
+        # Modification 2: To avoid making useless calls, we expand some cases of a and b that can be simplified
+        for i, (a, b) in enumerate(n_parts_iter):
+            if a == a_main and b == b_main: # Skipped as already accounted by main_term
+                continue
+            elif a == 1 and b == 1:
+                cumul += np.exp(-main_term)
+            elif a == 1 and b == c-1:
+                cumul += np.exp(
+                    self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    - main_term)
+            elif a == 1 and b == c:
+                cumul += np.exp(
+                    np.log(c)
+                    + self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    - main_term)
+            elif b == 1 and a == c-1:
+                cumul += np.exp(
+                    self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    - main_term)
+            elif b == 1 and a == c:
+                cumul += np.exp(
+                    np.log(c)
+                    + self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    - main_term)
+            else:
+                pi_left = self._check_trivial_cases(k_left, a, tree.left_subtree.n_leaves)
+                pi_right = self._check_trivial_cases(k_right, b, tree.right_subtree.n_leaves)
+
+                if pi_left == 0 or pi_right == 0:
+                    continue
+
+                if pi_left is None:
+                    log_pi_left = self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                else:
+                    log_pi_left = np.log(pi_left)
+
+                if pi_right is None:
+                    log_pi_right = self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                else:
+                    log_pi_right = np.log(pi_right)
+
+                cumul += np.exp(log_Kabc(a, b, c) + log_pi_left + log_pi_right - main_term)
+
+        log_bound = log_coef + main_term + np.log(cumul)
+        if tree.left_subtree == tree.right_subtree:
+            log_bound -= np.log(2)
+
+        # Modification 3: Add value to lookup table.
+        result = min(log_bound, math.log(stirling(m, c)))
+        self.pfub_table[tree][c, m, l, tuple(n[1:])] = result
+
+        return self.pfub_table[tree][c, m, l, tuple(n[1:])]
+
     def __call__(self, n_examples, n_parts=2):
         """
         Args:
             n_examples (int): Number of examples. Corresponds to the variable 'm' in the paper.
             n_parts (int): Number of parts. Corresponds to the variable 'c' in the paper.
         """
-        if self.loose:
+        if self.loose and self.log:
+            return self._compute_log_upper_bound_loose(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
+        elif self.loose:
             return self._compute_upper_bound_loose(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
-        else:
+        elif not self.loose and not self.log:
             return self._compute_upper_bound_tight(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
+        else:
+            raise RuntimeError('Unsupported combination of "log" but not "loose".')
 
 
 def partitioning_function_upper_bound(tree,
@@ -298,6 +414,16 @@ def partitioning_function_upper_bound(tree,
             Number of examples. Corresponds to the variable 'm' in the paper.
         n_rl_feat (int):
             Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        ordinal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the ordinal features. See the document of PartitioningFunctionUpperBound for more details.
+        nominal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the nominal features. See the document of PartitioningFunctionUpperBound for more details.
+        pre_computed_tables (Union[dict, None]):
+            If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree.
+        loose (bool):
+            If True, will use the more computationally efficient but looser algorithm
+        log (bool):
+            If True, will return the logarithm of the PFUB.
     """
     pfub = PartitioningFunctionUpperBound(tree,
                                           n_rl_feat,
@@ -314,16 +440,49 @@ def growth_function_upper_bound(tree,
                                 nominal_feat_dist=None,
                                 n_classes=2,
                                 pre_computed_tables=None,
-                                loose=False):
-    pfub = PartitioningFunctionUpperBound(tree,
-                                          n_rl_feat,
-                                          ordinal_feat_dist=ordinal_feat_dist,
-                                          nominal_feat_dist=nominal_feat_dist,
-                                          pre_computed_tables=pre_computed_tables,
-                                          loose=loose)
-    def upper_bound(n_examples):
-        max_range = min(n_classes, tree.n_leaves, n_examples)
-        return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))
+                                loose=False,
+                                log=False):
+    r"""
+    Args:
+        tree (Tree object):
+            Tree structure for which to compute the bound.
+        n_rl_feat (int):
+            Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        ordinal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the ordinal features. See the document of PartitioningFunctionUpperBound for more details.
+        nominal_feat_dist (Union[Sequence[int], None]):
+            Feature distribution of the nominal features. See the document of PartitioningFunctionUpperBound for more details.
+        pre_computed_tables (Union[dict, None]):
+            If the upper bound has already been computed for another tree, the computed tables of the PartitioningFunctionUpperBound object can be transfered here to speed up the process for current tree.
+        n_classes (int):
+            Number of classes. Corresponds to the variable 'n' in the paper.
+        loose (bool):
+            If True, will use the more computationally efficient but looser algorithm
+        log (bool):
+            If True, will return the logarithm of the PFUB.
+    """
+    pfub = PartitioningFunctionUpperBound(
+        tree,
+        n_rl_feat,
+        ordinal_feat_dist=ordinal_feat_dist,
+        nominal_feat_dist=nominal_feat_dist,
+        pre_computed_tables=pre_computed_tables,
+        loose=loose,
+        log=log
+    )
+    if not log:
+        def upper_bound(n_examples):
+            max_range = min(n_classes, tree.n_leaves, n_examples)
+            return sum(ff(n_classes, n)*pfub(n_examples, n) for n in range(1, max_range+1))
+    else:
+        log_pfub = pfub
+        def upper_bound(n_examples):
+            M = min(n_classes, tree.n_leaves, n_examples)
+            main_term = log_ff(n_classes, M) + log_pfub(n_examples, M)
+            cumul = 1
+            for n_parts in range(1, M):
+                cumul += np.exp(log_ff(n_classes, n_parts) + log_pfub(n_examples, n_parts) - main_term)
+            return main_term + np.log(cumul)
     return upper_bound
 
 
@@ -333,11 +492,4 @@ if __name__ == '__main__':
     from partitioning_machines import Tree
     from graal_utils import Timer
 
-    leaf = Tree()
-    stump = Tree(leaf, leaf)
-    tree = Tree(stump, stump)
-    c = 2
-    m = 50
-    for _ in Timer(range(1)):
-        pfub = PartitioningFunctionUpperBound(tree, 10, nominal_feat_dist=[0,0,0], loose=False)
-        print(pfub(m, c))
+    assert growth_function_upper_bound(Tree(Tree(), Tree()), n_rl_feat=10, n_classes=3, log=True)(1) == np.log(3)
