@@ -60,7 +60,7 @@ class Model(DecisionTreeClassifier, metaclass=ModelRegister):
         self.fit(dataset.X_train, dataset.y_train, nominal_mask=self.nominal_mask)
         self.bound_value = 'NA'
 
-    def _prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> dict:
         raise NotImplementedError
 
     def evaluate_tree(self, dataset) -> tuple[float, float]:
@@ -101,6 +101,9 @@ class OursShaweTaylorPruning(Model):
             delta=self.delta,
         )
         self.bound_value = prune_with_score(self, bound_score)
+        pre_bound = {'pre_pruning_bound': bound_score(self)}
+        print(pre_bound)
+        return pre_bound
 
 
 # class OursShaweTaylorPruningCV(OursShaweTaylorPruning):

@@ -120,8 +120,11 @@ class Experiment:
                         'pre_pruning_height': self.model.tree.height}
 
         t_start = time()
-        self.model._prune_tree(dataset)
+        prune_metrics = self.model._prune_tree(dataset)
         elapsed_time = time() - t_start
+
+        if prune_metrics is not None:
+            metrics |= prune_metrics
 
         acc_tr, acc_val, acc_ts = self.model.evaluate_tree(dataset)
 
