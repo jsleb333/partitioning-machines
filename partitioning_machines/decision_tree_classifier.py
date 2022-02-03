@@ -4,7 +4,7 @@ from partitioning_machines import Tree
 from partitioning_machines import OneHotEncoder
 
 
-class _DecisionTree(Tree):
+class DecisionTree(Tree):
     def __init__(self,
                  impurity_score,
                  n_examples_by_label,
@@ -108,8 +108,7 @@ class DecisionTreeClassifier:
 
         if nominal_mask is None:
             nominal_mask = np.array([False]*self.n_features)
-
-        assert nominal_mask.shape[0] == self.n_features
+        nominal_mask = np.array(nominal_mask, dtype=bool)
 
         self._init_tree(encoded_y, self.n_examples)
 
@@ -146,7 +145,7 @@ class DecisionTreeClassifier:
 
     def _init_tree(self, encoded_y, n_examples):
         n_examples_by_label = np.sum(encoded_y, axis=0)
-        self.tree = _DecisionTree(self.impurity_criterion(n_examples_by_label/n_examples),
+        self.tree = DecisionTree(self.impurity_criterion(n_examples_by_label/n_examples),
                          n_examples_by_label)
 
     def _select_best_split(self, possible_splits):
@@ -188,34 +187,33 @@ class DecisionTreeClassifier:
 
     def prune_tree(self, pruning_coef_threshold, pruning_objective=None):
         """
-        Prunes the tree by replacing each subtree that have a pruning coefficient less than or equal to 'pruning_coef_threshold' by a leaf. Returns the number of internal nodes pruned.
+        Prunes the tree by replacing each subtree that have a pruning coefficient less than or equal to 'pruning_coef_threshold' by a leaf. Does so by inspecting each subtree to find the 'pruning_coef' attribute and comparing to the threshold. The 'pruning_coef' attribute is set beforehand when 'pruning_objective' is an appropriate callable, or by calling beforehand the method 'compute_pruning_coefficients'.
+
+        Comparing to Algorithm 3 in Appendix E of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020), the current method only implements the 'for' loop inside the 'while' loop. The rest of the algorithm must be implemented by the user. This separation was needed so that the current method can also be used with other types of pruning algorithms.
 
         Args:
             pruning_coef_threshold (float): Threshold the pruning coefficient must satisfy.
-            pruning_objective (callable): Will be used to compute the pruning coefficients if provided. Used by the 'compute_pruning_coefficients' method. If None, it assumes the 'compute_pruning_coefficients' method has already been called and subtrees possesses the 'pruning_coef' attributes.
+            pruning_objective (callable): Will be used to compute the pruning coefficients if provided. Used by the 'compute_pruning_coefficients' method. If None, it assumes the 'compute_pruning_coefficients' method has already been called and subtrees possesses the 'pruning_coef' attribute.
 
         Returns: (int) the number of internal nodes pruned.
         """
         if pruning_objective is not None:
             self.compute_pruning_coefficients(pruning_objective)
 
-        subtrees_to_remove = []
         n_nodes_before = self.tree.n_nodes
 
         for subtree in self.tree:
             if not subtree.is_leaf():
                 if subtree.pruning_coef <= pruning_coef_threshold:
-                    self._prune_subtree(subtree)
+                    subtree.remove_subtree()
 
         return n_nodes_before - self.tree.n_nodes
 
-    def _prune_subtree(self, subtree):
-        subtree.left_subtree = None
-        subtree.right_subtree = None
-        self.tree.update_tree()
-
 
 class Splitter:
+    """
+    Class that stores important data necessary to make an actual Split object. Its main purpose is to unclutter the 'fit' method of the 'DecisionTreeClassifier' class and to provide by the same token a "lazy evaluation" scheme for the splitting algorithm.
+    """
     def __init__(self, X, y, nominal_mask, impurity_criterion, optimization_mode, min_examples_per_leaf=1, verbose=False):
         self.X = X
         self.y = y
@@ -230,6 +228,9 @@ class Splitter:
         return Split(leaf, X_idx_sorted, self, self.verbose)
 
 class Split:
+    """
+    Class that examines all possible split of a node and chooses the best one. Does not apply the split and does not preorder the data except if explicitely called by the appropriate methods. Also maintains useful information on the split, such as the number of examples sent to the left and to the right, as well as the gain made by the split.
+    """
     def __init__(self, leaf, X_idx_sorted, splitter, verbose=False):
         self.leaf = leaf
         self.X_idx_sorted = X_idx_sorted
@@ -248,6 +249,9 @@ class Split:
         self.validity = self._find_best_split()
 
     def _find_best_split(self):
+        """
+        Finds the best split according to the impurity criterion and respecting the minimum number of examples per leaf. This is done by sorting the examples by the values of their features (in a matrix 'X_idx_sorted'), and by examining the gain made by moving the split exactly one examples at the time simultaneously for all features (using vectorized operations).
+        """
         n_examples_by_label = self.leaf.n_examples_by_label
 
         if self.verbose:
@@ -275,7 +279,6 @@ class Split:
         n_examples_by_label_right = n_examples_by_label - n_examples_by_label_left
 
         for row, x_idx in enumerate(self.X_idx_sorted[:-1]):
-            print(f'{row=}')
 
             # Transfer an example from the right leaf to the left one
             transfered_labels = self.y[x_idx]
@@ -375,12 +378,12 @@ class Split:
 
     def apply_split(self):
         impurity_left = self.impurity_criterion(self.n_examples_by_label_left/self.n_examples_left)
-        left_leaf = _DecisionTree(impurity_left,
+        left_leaf = DecisionTree(impurity_left,
                                   self.n_examples_by_label_left.copy(),
                                   parent=self.leaf)
 
         impurity_right = self.impurity_criterion(self.n_examples_by_label_right/self.n_examples_right)
-        right_leaf = _DecisionTree(impurity_right,
+        right_leaf = DecisionTree(impurity_right,
                                   self.n_examples_by_label_right.copy(),
                                   parent=self.leaf)
         self.leaf.left_subtree = left_leaf
