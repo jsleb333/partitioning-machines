@@ -15,9 +15,9 @@ from copy import copy
 
 class PartitioningFunctionUpperBound:
     """
-    This class computes the partioning function upper bound of Theorem 14 of the paper of Leboeuf et al. (2020).
+    This class computes the partioning function upper bound of Theorem 9 of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020).
 
-    It implements an optimized version of the algorithm 1 of Appendix E by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
+    It implements an optimized version of the algorithm 1 of Appendix D by avoiding to compute the same value for the same subtree structures inside the tree multiple times by storing already computed values.
     """
     def __init__(self, tree, n_rl_feat, *, ordinal_feat_dist=None, nominal_feat_dist=None, pre_computed_tables=None, loose=False, log=False):
         r"""
@@ -88,7 +88,7 @@ class PartitioningFunctionUpperBound:
                                    n_examples,
                                    nominal_feat_dist):
         """
-        Optimized implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        Optimized implementation of Algorithm 1 of Appendix D of the paper.
         """
         c, m, l, o = n_parts, n_examples, self.n_rl_feat, self.ordinal_feat_dist
         n = self._truncate_nominal_feat_dist(nominal_feat_dist, m)
@@ -212,7 +212,7 @@ class PartitioningFunctionUpperBound:
                                    n_examples,
                                    nominal_feat_dist):
         """
-        Looser but faster implementation of Algorithm 1 of Appendix E of Leboeuf et al. (2020).
+        Looser but faster implementation of Algorithm 1 of Appendix D of the paper. The corresponding equation can be found at the end of section 6.2.
         """
         c, m, l = n_parts, n_examples, self.n_rl_feat
         n = self._truncate_nominal_feat_dist(nominal_feat_dist, m)
@@ -365,22 +365,55 @@ class PartitioningFunctionUpperBound:
             return self._compute_upper_bound_tight(self.tree, n_parts, n_examples, nominal_feat_dist=self.nominal_feat_dist)
 
 
-def growth_function_upper_bound(tree,
-                                n_rl_feat,
-                                n_classes=2,
-                                pre_computed_tables=None,
-                                loose=False,
-                                log=False):
+def partitioning_function_upper_bound(tree,
+                                      n_parts,
+                                      n_examples,
+                                      n_rl_feat,
+                                      ordinal_feat_dist=None,
+                                      nominal_feat_dist=None,
+                                      pre_computed_tables=None,
+                                      loose=False):
     r"""
     Args:
         tree (Tree object):
             Tree structure for which to compute the bound.
-        n_classes (int):
-            Number of classes. Corresponds to the variable 'n' in the paper.
+        n_parts (int):
+            Number of parts in the partitions. Corresponds to the variable 'c' in the paper.
         n_examples (int):
             Number of examples. Corresponds to the variable 'm' in the paper.
         n_rl_feat (int):
             Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        loose (bool):
+            If True, will use the more computationally efficient but looser algorithm
+        log (bool):
+            If True, will return the logarithm of the PFUB.
+    """
+    pfub = PartitioningFunctionUpperBound(tree,
+                                          n_rl_feat,
+                                          ordinal_feat_dist=ordinal_feat_dist,
+                                          nominal_feat_dist=nominal_feat_dist,
+                                          pre_computed_tables=pre_computed_tables,
+                                          loose=loose)
+    return pfub(n_examples, n_parts)
+
+
+def growth_function_upper_bound(tree,
+                                n_rl_feat,
+                                ordinal_feat_dist=None,
+                                nominal_feat_dist=None,
+                                n_classes=2,
+                                pre_computed_tables=None,
+                                loose=False):
+    r"""
+    Args:
+        tree (Tree object):
+            Tree structure for which to compute the bound.
+        n_examples (int):
+            Number of examples. Corresponds to the variable 'm' in the paper.
+        n_rl_feat (int):
+            Number of real-valued features. Corresponds to the variable '\ell' in the paper.
+        n_classes (int):
+            Number of classes. Corresponds to the variable 'n' in the paper.
         loose (bool):
             If True, will use the more computationally efficient but looser algorithm
         log (bool):
@@ -400,7 +433,6 @@ def growth_function_upper_bound(tree,
             for n_part in range(1, M):
                 N += np.exp(log_ff(n_classes, n_part) + log_pfub(n_examples, n_part) - main_term)
             return main_term + np.log(1 + N)
-    return upper_bound
 
 
 if __name__ == '__main__':

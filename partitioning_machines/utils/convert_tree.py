@@ -1,5 +1,5 @@
-from partitioning_machines.decision_tree_classifier import DecisionTreeClassifier, _DecisionTree
-from partitioning_machines.decision_tree_classifier import _DecisionTree as Tree
+from partitioning_machines.decision_tree_classifier import DecisionTreeClassifier, DecisionTree
+from partitioning_machines.decision_tree_classifier import DecisionTree as Tree
 
 
 def tree_from_sklearn_decision_tree(sklearn_tree):
@@ -17,7 +17,7 @@ def _build_tree_from_sklearn_tree(sklearn_tree, current_node=0):
     children_left, children_right = sklearn_tree.children_left, sklearn_tree.children_right
     impurity_score = sklearn_tree.impurity[current_node]
     n_examples_by_label = sklearn_tree.value[current_node].reshape(-1)
-    
+
     if children_left[current_node] == -1 and children_right[current_node] == -1:
         subtree = Tree(impurity_score, n_examples_by_label)
     else:
