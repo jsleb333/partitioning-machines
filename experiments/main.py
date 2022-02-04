@@ -97,7 +97,7 @@ if __name__ == "__main__":
         # datasets=['parkinson', 'iris'],
         # datasets=[d.name for d in dataset_list][4:],
         exp_name='exp06-log',
-        # n_folds=10,
+        n_folds=5,
         n_draws=25,
         seed=37,
         max_n_leaves=75,
