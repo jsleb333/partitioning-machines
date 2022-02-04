@@ -8,7 +8,6 @@ sys.path.append(os.getcwd())
 
 from hypergeo import hypinv_upperbound
 
-from partitioning_machines import Tree
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
 from partitioning_machines import shawe_taylor_bound, vapnik_bound
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory

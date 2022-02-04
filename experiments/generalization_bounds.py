@@ -1,4 +1,7 @@
 import numpy as np
+import sys, os
+sys.path.append(os.getcwd())
+
 
 def shawe_taylor_bound(n_examples,
                        n_errors,

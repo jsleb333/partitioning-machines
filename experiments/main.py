@@ -2,7 +2,6 @@
 This file contains the code necessary to run all experiments of the paper 'Decision trees as partitioning machines to characterize their generalization properties' by Leboeuf, LeBlanc and Marchand (2020). See the README for usage details.
 """
 import sys, os
-
 sys.path.append(os.getcwd())
 from datetime import datetime
 from graal_utils import Timer
