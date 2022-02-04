@@ -5,7 +5,7 @@ sys.path.append(os.getcwd())
 
 def shawe_taylor_bound(n_examples,
                        n_errors,
-                       growth_function,
+                       log_growth_function,
                        errors_logprob,
                        complexity_logprob,
                        delta=.05,
@@ -13,7 +13,7 @@ def shawe_taylor_bound(n_examples,
     """
     Theorem 2.3 of Shawe-Taylor et al. (1997), Structural Risk Minimization over Data-Dependent Hierarchies, with the modification that Sauer's lemma is not used.
     """
-    epsilon = 2*n_errors + 4*(np.log(float(growth_function(2*n_examples)))
+    epsilon = 2*n_errors + 4*(log_growth_function(2*n_examples)
                               + np.log(4)
                               - np.log(delta)
                               - errors_logprob
@@ -23,7 +23,7 @@ def shawe_taylor_bound(n_examples,
 
 def vapnik_bound(n_examples,
                  n_errors,
-                 growth_function,
+                 log_growth_function,
                  errors_logprob,
                  complexity_logprob,
                  delta=.05,
@@ -31,7 +31,7 @@ def vapnik_bound(n_examples,
     """
     Equation (4.41) of Vapnik's book (1998) extended to SRM.
     """
-    epsilon = 4 / n_examples * (np.log(float(growth_function(2*n_examples)))
+    epsilon = 4 / n_examples * (log_growth_function(2*n_examples)
                                 + np.log(4)
                                 - np.log(delta)
                                 - errors_logprob

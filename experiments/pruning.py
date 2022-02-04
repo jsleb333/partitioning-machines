@@ -80,6 +80,7 @@ class BoundScore:
                  bound: Callable,
                  table: dict = {},
                  loose_pfub: bool = True,
+                 log_pfub: bool = True,
                  errors_logprob_prior: Callable = None,
                  complexity_logprob_prior: Callable = None,
                  delta: float = .05) -> None:
@@ -88,6 +89,7 @@ class BoundScore:
         self.bound = bound
         self.table = table
         self.loose_pfub = loose_pfub
+        self.log_pfub = log_pfub
         self.delta = delta
 
         self.errors_logprob_prior = errors_logprob_prior
@@ -101,20 +103,21 @@ class BoundScore:
             self.complexity_logprob_prior = lambda complexity_idx: -np.log(zeta(s)) - s*np.log(complexity_idx) - np.log(float(wedderburn_etherington(complexity_idx)))
 
     def __call__(self, pruned_dtc, *args, **kwargs):
-        growth_function = growth_function_upper_bound(
+        log_growth_function = growth_function_upper_bound(
             pruned_dtc.tree,
             self.dataset.n_features,
             nominal_feat_dist=self.dataset.nominal_feat_dist,
             ordinal_feat_dist=self.dataset.ordinal_feat_dist,
             n_classes=self.dataset.n_classes,
             pre_computed_tables=self.table,
-            loose=self.loose_pfub)
+            loose=self.loose_pfub,
+            log=self.log_pfub)
         # n_errors = pruned_dtc.tree.n_errors
         n_errors = sum(self.dataset.y_train != pruned_dtc.predict(self.dataset.X_train))
         errors_logprob = self.errors_logprob_prior(n_errors)
         complexity_logprob = self.complexity_logprob_prior(pruned_dtc.tree.n_leaves)
 
-        return self.bound(pruned_dtc.tree.n_examples, n_errors, growth_function, errors_logprob, complexity_logprob, self.delta)
+        return self.bound(pruned_dtc.tree.n_examples, n_errors, log_growth_function, errors_logprob, complexity_logprob, self.delta)
 
 
 def prune_with_cv(
