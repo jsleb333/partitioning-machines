@@ -299,7 +299,7 @@ class PartitioningFunctionUpperBound:
             if trivial_case == 0:
                 return -np.inf
             else:
-                return np.log(trivial_case)
+                return math.log(trivial_case)
 
         # Modification 1: Check first in the table if value is already computed.
         if tree not in self.pfub_table:
