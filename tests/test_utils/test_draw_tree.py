@@ -31,7 +31,7 @@ class TestComputeNodesPosition:
         assert trees[1].position == 0
         assert trees[1].left_subtree.position == -1
         assert trees[1].right_subtree.position == 1
-        
+
     def test_find_extremal_position_by_layer_max_mode(self, trees):
         tree = trees[2]
         _init_position(tree)
@@ -101,7 +101,6 @@ class TestComputeNodesPosition:
 
 def test_tree_struct_to_tikz(trees):
     pic = tree_struct_to_tikz(trees[9])
-    print(pic.build())
 
 def test_decision_tree_to_tikz(trees):
     X = np.array([[1,2,3,4],
