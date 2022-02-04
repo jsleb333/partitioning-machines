@@ -1,4 +1,3 @@
-from matplotlib.pyplot import table
 import numpy as np
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
@@ -9,10 +8,10 @@ sys.path.append(os.getcwd())
 from hypergeo import hypinv_upperbound
 
 from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
-from partitioning_machines import shawe_taylor_bound, vapnik_bound
 from partitioning_machines import breiman_alpha_pruning_objective, modified_breiman_pruning_objective_factory
 from partitioning_machines import growth_function_upper_bound, wedderburn_etherington
 
+from experiments.generalization_bounds import shawe_taylor_bound, vapnik_bound
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from experiments.utils import camel_to_snake, get_default_kwargs
 
