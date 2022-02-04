@@ -134,7 +134,6 @@ class TestTree:
 
     def test_remove_subtree_copy(self, trees):
         new_tree = trees[2].left_subtree.remove_subtree(inplace=False)
-        print(trees[1], trees[2], new_tree)
         assert trees[2] != trees[1]
         assert new_tree.root == trees[1]
 

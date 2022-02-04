@@ -295,7 +295,6 @@ class PartitioningFunctionUpperBound:
         n = self._truncate_nominal_feat_dist(nominal_feat_dist, m)
 
         trivial_case = self._check_trivial_cases(m, c, tree.n_leaves)
-        print(trivial_case)
         if trivial_case is not None:
             if trivial_case == 0:
                 return -np.inf
