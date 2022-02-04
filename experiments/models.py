@@ -157,7 +157,7 @@ class OursSinglePassST(Model):
         self.n_folds = n_folds
         self.pfub_table = {}
 
-    def _prune_tree(self, dataset) -> None:
+    def _prune_tree(self, dataset) -> dict:
         def pruning_objective_factory(r, dtc):
             objective = BoundScore(
                 dataset=dataset,
@@ -195,6 +195,8 @@ class OursSinglePassST(Model):
         best_r = np.exp(np.log(best_rs).mean())
 
         self.prune_tree(0, pruning_objective=pruning_objective_factory(best_r, self))
+
+        return {'error_prior_exponent': np.log2(best_r)}
 
 
 class OursHypInvPruning(Model):

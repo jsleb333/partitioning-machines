@@ -93,11 +93,10 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['ours_shawe_taylor_pruning'],
-        # model_names=['ours_single_pass_st'],
+        model_names=['ours_shawe_taylor_pruning', 'ours_single_pass_st'],
         # datasets=['parkinson', 'iris'],
         # datasets=[d.name for d in dataset_list][4:],
-        exp_name='test-inf',
+        exp_name='exp06-log',
         # n_folds=10,
         n_draws=1,
         seed=37,
