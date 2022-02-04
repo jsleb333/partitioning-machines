@@ -122,7 +122,6 @@ class TestPatitioninFunctionUpperBound:
         tree = Tree(stump, leaf)
         pfub = PartitioningFunctionUpperBound(tree, 10)
         pfub(16, 2)
-        print(pfub.pfub_table)
 
         other_tree = Tree(tree, tree)
         pfub = PartitioningFunctionUpperBound(other_tree, 10, pre_computed_tables=pfub.pfub_table)
