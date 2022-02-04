@@ -208,23 +208,25 @@ class OursHypInvPruning(Model):
     def _prune_tree(self, dataset) -> None:
         n_examples = len(dataset.train_ind)
         def bound_score(pruned_dtc, subtree):
-            growth_function = growth_function_upper_bound(
+            log_growth_function = growth_function_upper_bound(
                 pruned_dtc.tree,
                 dataset.n_features,
                 nominal_feat_dist=dataset.nominal_feat_dist,
                 ordinal_feat_dist=dataset.ordinal_feat_dist,
                 n_classes=dataset.n_classes,
-                loose=True
+                loose=True,
+                log=True
             )
             # complexity_prob = 1/self.max_n_leaves * 1/wedderburn_etherington(pruned_dtc.tree.n_leaves)
             complexity_prob = 1/sum(wedderburn_etherington(n) for n in range(self.max_n_leaves))
 
             return hypinv_upperbound(
-                pruned_dtc.tree.n_errors,
-                pruned_dtc.tree.n_examples,
-                growth_function,
-                delta=self.delta*complexity_prob,
+                k=pruned_dtc.tree.n_errors,
+                m=pruned_dtc.tree.n_examples,
+                growth_function=log_growth_function,
+                delta=np.log(self.delta) + np.log(complexity_prob),
                 mprime=self.mprime_ratio*n_examples,
+                log_delta=True
             )
 
         self.bound_value = prune_with_score(self, bound_score)
@@ -373,20 +375,20 @@ if __name__ == '__main__':
         #     print('leaves =', model.tree.n_leaves)
         #     print(model.evaluate_tree(dataset))
         seed = 42
-        model = KearnsMansourPruning()
+        model = OursHypInvPruning()
         model.fit_tree(dataset, seed=seed)
         model._prune_tree(dataset)
-        print('CVSP-ST', model.evaluate_tree(dataset))
+        print('HTI', model.evaluate_tree(dataset))
 
-        model = OursShaweTaylorPruning()
-        model.fit_tree(dataset, seed=seed)
-        model._prune_tree(dataset)
-        print('ST', model.evaluate_tree(dataset))
+        # model = OursShaweTaylorPruning()
+        # model.fit_tree(dataset, seed=seed)
+        # model._prune_tree(dataset)
+        # print('ST', model.evaluate_tree(dataset))
 
-        model = ReducedErrorPruning()
-        dataset.make_train_val_split(.15)
-        model.fit_tree(dataset, seed=seed)
-        model._prune_tree(dataset)
-        print('REDER', model.evaluate_tree(dataset))
+        # model = ReducedErrorPruning()
+        # dataset.make_train_val_split(.15)
+        # model.fit_tree(dataset, seed=seed)
+        # model._prune_tree(dataset)
+        # print('REDER', model.evaluate_tree(dataset))
 
 
