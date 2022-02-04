@@ -275,31 +275,32 @@ class KearnsMansourPruning(Model):
             tree_path.remove_subtree()
             tree_path = tree_path.root
 
-        gf_tree_path = growth_function_upper_bound(
+        log_gf_tree_path = growth_function_upper_bound(
             tree_path,
             dataset.n_features,
             nominal_feat_dist=dataset.nominal_feat_dist,
             ordinal_feat_dist=dataset.ordinal_feat_dist,
             n_classes=dataset.n_classes,
             loose=True,
-            pre_computed_tables=self.table
+            pre_computed_tables=self.table,
+            log=True
         )(subtree.n_examples)
 
-        gf_subtree = growth_function_upper_bound(
+        log_gf_subtree = growth_function_upper_bound(
             subtree,
             dataset.n_features,
             nominal_feat_dist=dataset.nominal_feat_dist,
             ordinal_feat_dist=dataset.ordinal_feat_dist,
             n_classes=dataset.n_classes,
             loose=True,
-            pre_computed_tables=self.table
+            pre_computed_tables=self.table,
+            log=True
         )(subtree.n_examples)
 
-        return c * np.sqrt(
-            (np.log(float(gf_tree_path))
-             + np.log(float(gf_subtree))
-             + np.log(dataset.n_examples/self.delta)
-            )/subtree.n_examples)
+        return c*np.sqrt(
+            (log_gf_tree_path + log_gf_subtree + np.log(dataset.n_examples/self.delta))
+            /subtree.n_examples
+        )
 
     def _prune_tree(self, dataset) -> None:
         def pruning_objective_factory(c):
