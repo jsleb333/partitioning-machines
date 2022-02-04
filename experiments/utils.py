@@ -39,3 +39,7 @@ class Mock:
 
     def __call__(self, *args, **kwds):
         return self
+
+
+def count_nodes_not_stump(tree):
+    return sum(1 for node in tree if (not node.is_stump() and not node.is_leaf()))
