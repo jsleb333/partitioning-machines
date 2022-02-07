@@ -189,7 +189,7 @@ class OursHypInvPruning(Model):
     def __init__(self, *,
                  delta: float = .05,
                  mprime_ratio: int = 4,
-                 pfub_factor: float = 1.9e7,
+                 pfub_factor: float = 1.37e9,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.delta = delta

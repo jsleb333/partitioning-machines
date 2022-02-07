@@ -8,7 +8,6 @@ from sklearn.metrics import accuracy_score
 from experiments.models import OursHypInvPruning
 from experiments.datasets import Wine
 from experiments.cross_validator import CrossValidator
-from experiments.utils import geo_mean
 
 n_folds = 5
 seed = 37
@@ -30,5 +29,5 @@ best_pfub_constants = []
 for draw in range(n_draws):
     best_pfub_constants.extend(cv.cross_validate(func_to_maximize, pfub_factors, seed+draw*10, verbose=False))
 
-print(geo_mean(best_pfub_constants), np.log10(geo_mean(best_pfub_constants)))
-# Prints 1.9e7
+print(np.mean(best_pfub_constants), np.log10(np.mean(best_pfub_constants)))
+# Prints 1.37e9
