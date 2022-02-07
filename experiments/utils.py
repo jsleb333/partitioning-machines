@@ -1,5 +1,6 @@
 import re
 from inspect import signature
+import numpy as np
 
 
 def camel_to_snake(name):
@@ -43,3 +44,7 @@ class Mock:
 
 def count_nodes_not_stump(tree):
     return sum(1 for node in tree if (not node.is_stump() and not node.is_leaf()))
+
+
+def geo_mean(array):
+    return np.exp(np.mean(np.log(array)))

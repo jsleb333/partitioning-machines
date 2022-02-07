@@ -1,6 +1,5 @@
 import numpy as np
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import KFold
 from copy import copy
 import sys, os
 sys.path.append(os.getcwd())
@@ -14,7 +13,7 @@ from partitioning_machines import growth_function_upper_bound, wedderburn_etheri
 from experiments.generalization_bounds import shawe_taylor_bound, vapnik_bound
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
 from experiments.cross_validator import CrossValidator
-from experiments.utils import camel_to_snake, get_default_kwargs, count_nodes_not_stump
+from experiments.utils import camel_to_snake, geo_mean, get_default_kwargs, count_nodes_not_stump
 
 model_dict = {}
 
@@ -180,7 +179,7 @@ class OursSinglePassST(Model):
             return accuracy_score(y_true=y_test, y_pred=dtc.predict(X_test))
 
         best_rs = cv.cross_validate(func_to_maximize, self.error_priors, seed=self.seed)
-        best_r = np.exp(np.log(best_rs).mean())
+        best_r = geo_mean(best_rs)
         self.prune_tree(0, pruning_objective=pruning_objective_factory(best_r, self))
 
         return {'error_prior_exponent': np.log2(best_r)}
@@ -190,7 +189,7 @@ class OursHypInvPruning(Model):
     def __init__(self, *,
                  delta: float = .05,
                  mprime_ratio: int = 4,
-                 pfub_factor: float = 1e8,
+                 pfub_factor: float = 1.9e7,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.delta = delta
@@ -198,7 +197,6 @@ class OursHypInvPruning(Model):
         self.pfub_factor = pfub_factor
 
     def _prune_tree(self, dataset) -> None:
-        n_examples = len(dataset.train_ind)
         def bound_score(pruned_dtc, subtree):
             log_growth_function = growth_function_upper_bound(
                 pruned_dtc.tree,
@@ -217,7 +215,7 @@ class OursHypInvPruning(Model):
                 m=pruned_dtc.tree.n_examples,
                 growth_function=lambda m: log_growth_function(m) - node_dtc*np.log(self.pfub_factor),
                 delta=np.log(self.delta) + np.log(complexity_prob),
-                mprime=self.mprime_ratio*n_examples,
+                mprime=self.mprime_ratio*pruned_dtc.tree.n_examples,
                 log_delta=True
             )
 
