@@ -222,6 +222,64 @@ class OursHypInvPruning(Model):
         self.bound_value = prune_with_score(self, bound_score)
 
 
+class OursSinglePassHTI(Model):
+    def __init__(self, *,
+                 delta: float = 0.05,
+                 mprime_ratio: int = 4,
+                 pfub_factors: float = np.logspace(0, 20, num=21, base=10),
+                 n_folds: int = 5,
+                 **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.delta = delta
+        self.mprime_ratio = mprime_ratio
+        self.pfub_factors = pfub_factors
+        self.n_folds = n_folds
+        self.pfub_table = {}
+
+    def hti_bound(self, pfub_factor):
+        log_growth_function = growth_function_upper_bound(
+            self.tree,
+            dataset.n_features,
+            nominal_feat_dist=dataset.nominal_feat_dist,
+            ordinal_feat_dist=dataset.ordinal_feat_dist,
+            n_classes=dataset.n_classes,
+            loose=True,
+            log=True
+        )
+        complexity_prob = 1/sum(wedderburn_etherington(n) for n in range(self.max_n_leaves))
+        node_dtc = count_nodes_not_stump(self.tree)
+
+        return hypinv_upperbound(
+            k=self.tree.n_errors,
+            m=self.tree.n_examples,
+            growth_function=lambda m: log_growth_function(m) - node_dtc*np.log(pfub_factor),
+            delta=np.log(self.delta) + np.log(complexity_prob),
+            mprime=self.mprime_ratio*self.tree.n_examples,
+            log_delta=True
+        )
+
+    def _prune_tree(self, dataset) -> dict:
+        def pruning_objective_factory(pfub_factor, dtc):
+            bound_before_pruning = self.hti_bound(pfub_factor)
+            def pruning_objective(subtree):
+                pruned_dtc = copy(dtc)
+                pruned_dtc.tree = subtree.remove_subtree(inplace=False).root
+                return pruned_dtc.hti_bound(pfub_factor) - bound_before_pruning
+            return pruning_objective
+
+        cv = CrossValidator(dataset, self, self.n_folds)
+
+        def func_to_maximize(dtc, X_test, y_test, param):
+            dtc.prune_tree(0, pruning_objective_factory(param, dtc))
+            return accuracy_score(y_true=y_test, y_pred=dtc.predict(X_test))
+
+        best_pfub_factors = cv.cross_validate(func_to_maximize, self.pfub_factors, seed=self.seed)
+        best_pfub_factor = np.mean(best_pfub_factors)
+        self.prune_tree(0, pruning_objective=pruning_objective_factory(best_pfub_factor, self))
+
+        return {'pfub_factor': np.log10(best_pfub_factor)}
+
+
 class CARTPruning(Model):
     def __init__(self, *,n_folds: int = 10, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -354,15 +412,15 @@ if __name__ == '__main__':
         #     print('leaves =', model.tree.n_leaves)
         #     print(model.evaluate_tree(dataset))
         seed = 42
-        # model = OursHypInvPruning()
-        # model.fit_tree(dataset, seed=seed)
-        # model._prune_tree(dataset)
-        # print('HTI', model.evaluate_tree(dataset))
-
-        model = KearnsMansourPruning()
+        model = OursHypInvPruning()
         model.fit_tree(dataset, seed=seed)
         model._prune_tree(dataset)
-        print('ST', model.evaluate_tree(dataset))
+        print('HTI', model.evaluate_tree(dataset))
+
+        model = OursSinglePassHTI()
+        model.fit_tree(dataset, seed=seed)
+        print(model._prune_tree(dataset))
+        print('SP-HTI', model.evaluate_tree(dataset))
 
         # model = ReducedErrorPruning()
         # dataset.make_train_val_split(.15)
