@@ -13,8 +13,8 @@ from partitioning_machines import growth_function_upper_bound, wedderburn_etheri
 
 from experiments.generalization_bounds import shawe_taylor_bound, vapnik_bound
 from experiments.pruning import prune_with_cv, prune_with_score, ErrorScore, BoundScore
+from experiments.cross_validator import CrossValidator
 from experiments.utils import camel_to_snake, get_default_kwargs, count_nodes_not_stump
-
 
 model_dict = {}
 
@@ -173,27 +173,14 @@ class OursSinglePassST(Model):
                 return objective(pruned_dtc) - bound_before_pruning
             return pruning_objective
 
-        fold_idx = list(KFold(n_splits=self.n_folds,
-                              shuffle=True,
-                              random_state=self.seed).split(dataset.X_train))
+        cv = CrossValidator(dataset, self, self.n_folds)
 
-        best_rs = []
-        for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
-            X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
-            X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
-            dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
+        def func_to_maximize(dtc, X_test, y_test, param):
+            dtc.prune_tree(0, pruning_objective_factory(param, dtc))
+            return accuracy_score(y_true=y_test, y_pred=dtc.predict(X_test))
 
-            accuracies = []
-            for r in self.error_priors:
-                copy_of_dtc = copy(dtc)
-                copy_of_dtc.tree = copy(dtc.tree)
-                copy_of_dtc.prune_tree(0, pruning_objective_factory(r, copy_of_dtc))
-                accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
-
-            best_rs.append(self.error_priors[np.argmax(accuracies)])
-
+        best_rs = cv.cross_validate(func_to_maximize, self.error_priors, seed=self.seed)
         best_r = np.exp(np.log(best_rs).mean())
-
         self.prune_tree(0, pruning_objective=pruning_objective_factory(best_r, self))
 
         return {'error_prior_exponent': np.log2(best_r)}
@@ -222,7 +209,6 @@ class OursHypInvPruning(Model):
                 loose=True,
                 log=True
             )
-            # complexity_prob = 1/self.max_n_leaves * 1/wedderburn_etherington(pruned_dtc.tree.n_leaves)
             complexity_prob = 1/sum(wedderburn_etherington(n) for n in range(self.max_n_leaves))
             node_dtc = count_nodes_not_stump(pruned_dtc.tree)
 
@@ -322,24 +308,13 @@ class KearnsMansourPruning(Model):
                 return frac_errors_leaf - frac_errors_subtree - self.alpha(subtree, dataset, c)
             return pruning_objective
 
-        fold_idx = list(KFold(n_splits=self.n_folds,
-                              shuffle=True,
-                              random_state=self.seed).split(dataset.X_train))
+        cv = CrossValidator(dataset, self, self.n_folds)
 
-        best_cs = []
-        for fold, (tr_idx, ts_idx) in enumerate(fold_idx):
-            X_train, y_train = dataset.X_train[tr_idx], dataset.y_train[tr_idx]
-            X_test, y_test = dataset.X_train[ts_idx], dataset.y_train[ts_idx]
-            dtc = copy(self).fit(X_train, y_train, nominal_mask=self.nominal_mask)
+        def func_to_maximize(dtc, X_test, y_test, param):
+            dtc.prune_tree(0, pruning_objective_factory(param))
+            return accuracy_score(y_true=y_test, y_pred=dtc.predict(X_test))
 
-            accuracies = []
-            for c in self.cs:
-                copy_of_dtc = copy(dtc)
-                copy_of_dtc.tree = copy(dtc.tree)
-                copy_of_dtc.prune_tree(0, pruning_objective_factory(c))
-                accuracies.append(accuracy_score(y_true=y_test, y_pred=copy_of_dtc.predict(X_test)))
-
-            best_cs.append(self.cs[np.argmax(accuracies)])
+        best_cs = cv.cross_validate(func_to_maximize, self.cs, seed=self.seed)
 
         self.prune_tree(0, pruning_objective=pruning_objective_factory(np.mean(best_cs)))
 
@@ -381,12 +356,12 @@ if __name__ == '__main__':
         #     print('leaves =', model.tree.n_leaves)
         #     print(model.evaluate_tree(dataset))
         seed = 42
-        model = OursHypInvPruning()
-        model.fit_tree(dataset, seed=seed)
-        model._prune_tree(dataset)
-        print('HTI', model.evaluate_tree(dataset))
+        # model = OursHypInvPruning()
+        # model.fit_tree(dataset, seed=seed)
+        # model._prune_tree(dataset)
+        # print('HTI', model.evaluate_tree(dataset))
 
-        model = OursShaweTaylorPruning()
+        model = KearnsMansourPruning()
         model.fit_tree(dataset, seed=seed)
         model._prune_tree(dataset)
         print('ST', model.evaluate_tree(dataset))
