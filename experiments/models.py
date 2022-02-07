@@ -195,6 +195,7 @@ class OursHypInvPruning(Model):
         self.delta = delta
         self.mprime_ratio = mprime_ratio
         self.pfub_factor = pfub_factor
+        self.pfub_table = {}
 
     def _prune_tree(self, dataset) -> None:
         def bound_score(pruned_dtc, subtree):
@@ -204,6 +205,7 @@ class OursHypInvPruning(Model):
                 nominal_feat_dist=dataset.nominal_feat_dist,
                 ordinal_feat_dist=dataset.ordinal_feat_dist,
                 n_classes=dataset.n_classes,
+                pre_computed_tables=self.pfub_table,
                 loose=True,
                 log=True
             )
@@ -236,13 +238,14 @@ class OursSinglePassHTI(Model):
         self.n_folds = n_folds
         self.pfub_table = {}
 
-    def hti_bound(self, pfub_factor):
+    def hti_bound(self, pfub_factor, dataset):
         log_growth_function = growth_function_upper_bound(
             self.tree,
             dataset.n_features,
             nominal_feat_dist=dataset.nominal_feat_dist,
             ordinal_feat_dist=dataset.ordinal_feat_dist,
             n_classes=dataset.n_classes,
+            pre_computed_tables=self.pfub_table,
             loose=True,
             log=True
         )
@@ -260,11 +263,11 @@ class OursSinglePassHTI(Model):
 
     def _prune_tree(self, dataset) -> dict:
         def pruning_objective_factory(pfub_factor, dtc):
-            bound_before_pruning = self.hti_bound(pfub_factor)
+            bound_before_pruning = self.hti_bound(pfub_factor, dataset)
             def pruning_objective(subtree):
                 pruned_dtc = copy(dtc)
                 pruned_dtc.tree = subtree.remove_subtree(inplace=False).root
-                return pruned_dtc.hti_bound(pfub_factor) - bound_before_pruning
+                return pruned_dtc.hti_bound(pfub_factor, dataset) - bound_before_pruning
             return pruning_objective
 
         cv = CrossValidator(dataset, self, self.n_folds)
@@ -402,7 +405,7 @@ if __name__ == '__main__':
 
     for d in [Wine, Iris, Amphibians]:
         print(d)
-        dataset = d(0, .15, 37)
+        dataset = d(0, .5, 37)
         # for n in [2, 5, 8, 10]:
         #     print(f'{n=}')
         #     model = OursShaweTaylorPruningCV(n_folds=n)

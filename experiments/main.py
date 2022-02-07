@@ -93,11 +93,11 @@ def launch_experiment(datasets=list(),
 
 if __name__ == "__main__":
     launch_experiment(
-        model_names=['ours_hyp_inv_pruning'],
+        model_names=['ours_hyp_inv_pruning', 'ours_single_pass_hti'],
         # datasets=['parkinson', 'iris'],
         # datasets=[d.name for d in dataset_list][4:],
         exp_name='exp06-hti',
-        # n_folds=5,
+        n_folds=5,
         n_draws=25,
         seed=37,
         max_n_leaves=75,
