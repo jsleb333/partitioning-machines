@@ -76,6 +76,7 @@ class MetaDataset(type):
                 else: cls.nominal_features.append(i)
         cls.nominal_feat_dist = cls._compute_feature_distribution(cls.nominal_features)
         cls.ordinal_feat_dist = cls._compute_feature_distribution(cls.ordinal_features)
+        cls.n_real_valued_features = cls.n_features - len(cls.nominal_features) - len(cls.ordinal_features)
 
         cls._is_loaded == True
         cls._has_failed_to_load = False
