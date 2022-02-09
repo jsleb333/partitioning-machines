@@ -201,7 +201,7 @@ class OursHypInvPruning(Model):
         def bound_score(pruned_dtc, subtree):
             log_growth_function = growth_function_upper_bound(
                 pruned_dtc.tree,
-                n_rl_feat=self.dataset.n_real_valued_features,
+                dataset.n_features,
                 nominal_feat_dist=dataset.nominal_feat_dist,
                 ordinal_feat_dist=dataset.ordinal_feat_dist,
                 n_classes=dataset.n_classes,
@@ -241,7 +241,7 @@ class OursSinglePassHTI(Model):
     def hti_bound(self, pfub_factor, dataset):
         log_growth_function = growth_function_upper_bound(
             self.tree,
-            n_rl_feat=self.dataset.n_real_valued_features,
+            dataset.n_features,
             nominal_feat_dist=dataset.nominal_feat_dist,
             ordinal_feat_dist=dataset.ordinal_feat_dist,
             n_classes=dataset.n_classes,
@@ -330,7 +330,7 @@ class KearnsMansourPruning(Model):
 
         log_gf_tree_path = growth_function_upper_bound(
             tree_path,
-            n_rl_feat=self.dataset.n_real_valued_features,
+            dataset.n_features,
             nominal_feat_dist=dataset.nominal_feat_dist,
             ordinal_feat_dist=dataset.ordinal_feat_dist,
             n_classes=dataset.n_classes,
@@ -341,7 +341,7 @@ class KearnsMansourPruning(Model):
 
         log_gf_subtree = growth_function_upper_bound(
             subtree,
-            n_rl_feat=self.dataset.n_real_valued_features,
+            dataset.n_features,
             nominal_feat_dist=dataset.nominal_feat_dist,
             ordinal_feat_dist=dataset.ordinal_feat_dist,
             n_classes=dataset.n_classes,
