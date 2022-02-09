@@ -320,8 +320,8 @@ class PartitioningFunctionUpperBound:
         a_main = min(c, tree.left_subtree.n_leaves)
         b_main = min(c, tree.right_subtree.n_leaves)
         main_term = (log_Kabc(a_main, b_main, c)
-            + self._compute_log_upper_bound_loose(tree.left_subtree, a_main, k_left, n)
-            + self._compute_log_upper_bound_loose(tree.right_subtree, b_main, k_right, n)
+            + self._compute_log_upper_bound_loose(tree.left_subtree, a_main, m, n)
+            + self._compute_log_upper_bound_loose(tree.right_subtree, b_main, m, n)
         )
 
         cumul = 1
@@ -334,21 +334,21 @@ class PartitioningFunctionUpperBound:
                 cumul += np.exp(-main_term)
             elif a == 1 and b == c-1:
                 cumul += np.exp(
-                    self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    self._compute_log_upper_bound_loose(tree.right_subtree, b, m, n)
                     - main_term)
             elif a == 1 and b == c:
                 cumul += np.exp(
                     np.log(c)
-                    + self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    + self._compute_log_upper_bound_loose(tree.right_subtree, b, m, n)
                     - main_term)
             elif b == 1 and a == c-1:
                 cumul += np.exp(
-                    self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    self._compute_log_upper_bound_loose(tree.left_subtree, a, m, n)
                     - main_term)
             elif b == 1 and a == c:
                 cumul += np.exp(
                     np.log(c)
-                    + self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    + self._compute_log_upper_bound_loose(tree.left_subtree, a, m, n)
                     - main_term)
             else:
                 pi_left = self._check_trivial_cases(k_left, a, tree.left_subtree.n_leaves)
@@ -358,12 +358,12 @@ class PartitioningFunctionUpperBound:
                     continue
 
                 if pi_left is None:
-                    log_pi_left = self._compute_log_upper_bound_loose(tree.left_subtree, a, k_left, n)
+                    log_pi_left = self._compute_log_upper_bound_loose(tree.left_subtree, a, m, n)
                 else:
                     log_pi_left = np.log(pi_left)
 
                 if pi_right is None:
-                    log_pi_right = self._compute_log_upper_bound_loose(tree.right_subtree, b, k_right, n)
+                    log_pi_right = self._compute_log_upper_bound_loose(tree.right_subtree, b, m, n)
                 else:
                     log_pi_right = np.log(pi_right)
 
