@@ -195,7 +195,7 @@ class OursHypInvPruning(Model):
         self.delta = delta
         self.mprime_ratio = mprime_ratio
         self.pfub_factor = pfub_factor
-        self.pfub_table = {}
+        # self.pfub_table = {}
 
     def _prune_tree(self, dataset) -> None:
         def bound_score(pruned_dtc, subtree):
@@ -205,7 +205,7 @@ class OursHypInvPruning(Model):
                 nominal_feat_dist=dataset.nominal_feat_dist,
                 ordinal_feat_dist=dataset.ordinal_feat_dist,
                 n_classes=dataset.n_classes,
-                pre_computed_tables=self.pfub_table,
+                # pre_computed_tables=self.pfub_table,
                 loose=True,
                 log=True
             )
