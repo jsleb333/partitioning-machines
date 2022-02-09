@@ -105,7 +105,7 @@ class BoundScore:
     def __call__(self, pruned_dtc, *args, **kwargs):
         log_growth_function = growth_function_upper_bound(
             pruned_dtc.tree,
-            self.dataset.n_features,
+            n_rl_feat=self.dataset.n_real_valued_features,
             nominal_feat_dist=self.dataset.nominal_feat_dist,
             ordinal_feat_dist=self.dataset.ordinal_feat_dist,
             n_classes=self.dataset.n_classes,
