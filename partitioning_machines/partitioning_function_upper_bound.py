@@ -108,7 +108,7 @@ class PartitioningFunctionUpperBound:
 
         # Modification 1: Check first in the table if value is already computed.
         if tree not in self.pfub_table:
-            self.pfub_table[tree] = {}
+            self.pfub_table[copy(tree)] = {}
         if (c, m, l, tuple(n[1:])) not in self.pfub_table[tree]:
             N = 0
             min_k = tree.left_subtree.n_leaves
@@ -232,7 +232,7 @@ class PartitioningFunctionUpperBound:
 
         # Modification 1: Check first in the table if value is already computed.
         if tree not in self.pfub_table:
-            self.pfub_table[tree] = {}
+            self.pfub_table[copy(tree)] = {}
         if (c, m, l, tuple(n[1:])) not in self.pfub_table[tree]:
             k_left = m - tree.right_subtree.n_leaves
             k_right = m - tree.left_subtree.n_leaves
@@ -303,7 +303,7 @@ class PartitioningFunctionUpperBound:
 
         # Modification 1: Check first in the table if value is already computed.
         if tree not in self.pfub_table:
-            self.pfub_table[tree] = {}
+            self.pfub_table[copy(tree)] = {}
         if (c, m, l, tuple(n[1:])) in self.pfub_table[tree]:
             return self.pfub_table[tree][c, m, l, tuple(n[1:])]
 
@@ -374,8 +374,7 @@ class PartitioningFunctionUpperBound:
             log_bound -= np.log(2)
 
         # Modification 3: Add value to lookup table.
-        result = min(log_bound, math.log(stirling(m, c)))
-        self.pfub_table[tree][c, m, l, tuple(n[1:])] = result
+        self.pfub_table[tree][c, m, l, tuple(n[1:])] = min(log_bound, math.log(stirling(m, c)))
 
         return self.pfub_table[tree][c, m, l, tuple(n[1:])]
 
