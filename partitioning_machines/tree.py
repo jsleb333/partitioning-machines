@@ -129,7 +129,10 @@ class Tree:
             else:
                 return False
 
-        if other.is_leaf():
+        if self.hash_value != other.hash_value:
+            return False
+
+        if self.n_leaves != other.n_leaves:
             return False
 
         if (self.left_subtree == other.left_subtree and self.right_subtree == other.right_subtree) \
