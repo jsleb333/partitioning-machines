@@ -104,4 +104,5 @@ if __name__ == "__main__":
         max_n_leaves=75,
         val_split_ratio=.15,
         test_split_ratio=.15,
+        error_prior_exponent=9.6,
     )
