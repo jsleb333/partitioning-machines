@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Callable, Any, Union
 from numbers import Number
 import numpy as np
 from sklearn.model_selection import KFold
@@ -8,7 +8,7 @@ from graal_utils import Timer
 import sys, os
 sys.path.append(os.getcwd())
 
-from partitioning_machines import DecisionTreeClassifier, gini_impurity_criterion
+from experiments.models import DecisionTreeClassifier
 
 
 class CrossValidator:
@@ -23,7 +23,26 @@ class CrossValidator:
             param_to_optimize: list,
             seed=37,
             verbose=False,
-        ):
+            return_best_param='first',
+        ) -> list[Any]:
+        """Cross validate a parameter by optimizing a function.
+
+        Args:
+            func_to_maximize (Callable[[DecisionTreeClassifier, np.ndarray, np.ndarray, Any], Number]):
+                Function used to quantify the performance of the model pruned with given parameter. The first argument is a DecisionTreeClassifier of decision tree, the second and third are the training examples and labels and the last is the parameter to be cross-validated.
+            param_to_optimize (list):
+                A list of parameter to be cross-validated.
+            seed (int, optional):
+                A random number generator seed. Defaults to 37.
+            verbose (bool, optional):
+                If True, will print information about the cross validation process. Defaults to False.
+            return_best_param (str, optional):
+                Can be either 'first' or 'all'. Defaults to 'first'. If 'first', the first parameter in the list 'param_to_optimize' that achieves the maximum is returned. Otherwise, the list of all parameters in 'param_to_optimize' that achieves the maximum is returned.
+
+        Returns:
+            list[Any]:
+                By default, returns a list of the parameters that optimizes the function 'func_to_maximize' (one for each fold). If 'return_best_param' is set to 'all', a list of list of parameters is returned instead (one list per fold).
+        """
         fold_idx = list(KFold(n_splits=self.n_folds,
                               shuffle=True,
                               random_state=seed).split(self.dataset.X_train))
@@ -43,9 +62,14 @@ class CrossValidator:
                 copy_of_dtc.tree = copy(dtc.tree)
                 objectives.append(func_to_maximize(copy_of_dtc, X_test, y_test, param))
 
-            best_params.append(param_to_optimize[np.argmax(objectives)])
+            best_params.append(
+                [p for p, o in zip(param_to_optimize, objectives) if o == np.max(objectives)]
+                )
+            # best_params.append(param_to_optimize[np.argmax(objectives)])
             if verbose:
                 print('Objectives:', objectives, '\n')
-
-        return best_params
+        if return_best_param == 'first':
+            return [b[0] for b in best_params]
+        else:
+            return best_params
 

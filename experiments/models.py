@@ -80,21 +80,23 @@ class NoPruning(Model):
 
 class OursShaweTaylorPruning(Model):
     def __init__(self, *,
-                 error_prior_exponent: float = 13.1,
+                 error_prior_exponent: float = 9.6,
+                #  error_prior_exponent: float = 13.1,
                  delta: float = 0.05,
                  **kwargs) -> None:
         super().__init__(**kwargs)
-        r = 1/2**error_prior_exponent
-        self.errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
+        self.error_prior_exponent = error_prior_exponent
         self.delta = delta
         self.pfub_table = {}
 
     def _prune_tree(self, dataset) -> None:
+        r = 1/2**self.error_prior_exponent
+        errors_logprob_prior = lambda n_err: np.log(1-r) + n_err * np.log(r)
         bound_score = BoundScore(
             dataset=dataset,
             bound=shawe_taylor_bound,
             table=self.pfub_table,
-            errors_logprob_prior=self.errors_logprob_prior,
+            errors_logprob_prior=errors_logprob_prior,
             delta=self.delta,
         )
         self.bound_value = prune_with_score(self, bound_score)
