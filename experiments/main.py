@@ -97,20 +97,6 @@ if __name__ == "__main__":
         # model_names=['ours_single_pass_hti', 'ours_shawe_taylor_pruning', 'ours_single_pass_st', 'kearns_mansour_pruning'],
         # datasets=[d.name for d in dataset_list][4:],
         # exp_name='exp06-test',
-        exp_name='exp06-bst10.5',
-        n_folds=5,
-        n_draws=25,
-        seed=37,
-        max_n_leaves=75,
-        val_split_ratio=.15,
-        test_split_ratio=.15,
-        error_prior_exponent=10.5,
-    )
-    launch_experiment(
-        model_names=['ours_shawe_taylor_pruning'],
-        # model_names=['ours_single_pass_hti', 'ours_shawe_taylor_pruning', 'ours_single_pass_st', 'kearns_mansour_pruning'],
-        # datasets=[d.name for d in dataset_list][4:],
-        # exp_name='exp06-test',
         exp_name='exp06-bst18.5',
         n_folds=5,
         n_draws=25,
@@ -118,5 +104,5 @@ if __name__ == "__main__":
         max_n_leaves=75,
         val_split_ratio=.15,
         test_split_ratio=.15,
-        error_prior_exponent=10.5,
+        error_prior_exponent=18.5,
     )

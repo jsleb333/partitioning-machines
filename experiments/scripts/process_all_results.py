@@ -145,5 +145,5 @@ def process_results(exp_name='exp02'):
 
 
 if __name__ == "__main__":
-    process_results(exp_name='exp06-bst')
+    process_results(exp_name='exp06-bst18.5')
     # process_results(exp_name='exp06-less-test')
