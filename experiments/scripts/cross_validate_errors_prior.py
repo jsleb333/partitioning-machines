@@ -6,18 +6,17 @@ from graal_utils import Timer
 from sklearn.metrics import accuracy_score
 
 from experiments.models import OursShaweTaylorPruning
-from experiments.datasets import Wine, VertebralColumn3C
+from experiments.datasets import Wine
 from experiments.cross_validator import CrossValidator
 
 n_folds = 5
-seed = 37
-n_draws = 5
+seed = 57
+n_draws = 10
 
-# dataset = Wine(shuffle=seed)
-dataset = VertebralColumn3C(shuffle=seed)
+dataset = Wine(shuffle=seed)
 model = OursShaweTaylorPruning(max_n_leaves=75, error_prior_exponent=1)
 model.fit_tree(dataset)
-exponents = np.linspace(1, 40, num=20)
+exponents = np.linspace(1, 20, num=20)
 cv = CrossValidator(dataset, model, n_folds)
 
 def func_to_maximize(dtc, X_test, y_test, param):
@@ -33,10 +32,10 @@ for draw in range(n_draws):
         for fold_exponents in draw_exponents:
             for e in fold_exponents:
                 best_exponents[e] += 1
-
-total = sum(best_exponents.values())
+values = np.array(list(best_exponents.values()))
+total = sum(values)
 mean = sum(k*v for k, v in best_exponents.items())/total
-mode = list(best_exponents)[np.argmax(list(best_exponents.values()))]
+modes = [k for k, v in best_exponents.items() if v == np.max(values)]
 cumul = 0
 for k, v in best_exponents.items():
     cumul += v
@@ -45,6 +44,6 @@ for k, v in best_exponents.items():
     median = k
 
 
-print(mean, mode, median)
+print(mean, modes, f'({np.mean(modes)})', median)
+# Prints 11.448275862068966 [8.0, 9.0, 10.0, 11.0] (9.5) 11.0
 print(best_exponents)
-# Prints 1.37e9

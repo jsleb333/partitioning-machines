@@ -49,7 +49,7 @@ def process_results(exp_name='exp02'):
 
     significance = 0.1
 
-    with open(path + '/iris/no_pruning_exp_config.py') as file:
+    with open(path + '/iris/ours_shawe_taylor_pruning_exp_config.py') as file:
         namespace = {}
         exec(file.read().replace('"', ''), namespace)
         exp_config = namespace['exp_config']
@@ -145,4 +145,5 @@ def process_results(exp_name='exp02'):
 
 
 if __name__ == "__main__":
-    process_results(exp_name='exp06-less-test')
+    process_results(exp_name='exp06-bst')
+    # process_results(exp_name='exp06-less-test')
