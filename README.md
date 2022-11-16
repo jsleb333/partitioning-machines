@@ -1,4 +1,4 @@
-# Partitioning Machines: A Framework to characterize the VC and Natarajan dimension of decision trees
+# Partitioning Machines: A Framework to characterize the VC dimension of decision trees
 
 ## Preface
 This package provides an implementation of the algorithms presented in the work of Leboeuf, LeBlanc and Marchand (2020) named "Decision trees as partitioning machines to characterize their generalization properties".
